@@ -24,7 +24,7 @@ let cache = {
   isLive: false,
 };
 
-const CACHE_TTL_LIVE    = 60 * 1000;       // 60 seconds when matches are live
+const CACHE_TTL_LIVE    = 30 * 1000;       // 30 seconds when matches are live
 const CACHE_TTL_IDLE    = 5 * 60 * 1000;   // 5 minutes when no live matches
 
 function isCacheValid() {

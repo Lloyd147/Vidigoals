@@ -368,9 +368,9 @@ export default function Vidiprinter({ user }) {
 
   useEffect(() => {
     fetchFeed();
-    // Poll every 5 minutes — the server cache handles 60-second freshness
-    // so all users share one API call per minute regardless of how many are online
-    const interval = setInterval(fetchFeed, 5 * 60 * 1000);
+    // Poll every 30 seconds — server cache ensures only 1 API call per 30s
+    // regardless of how many users are on the site simultaneously
+    const interval = setInterval(fetchFeed, 30 * 1000);
     return () => clearInterval(interval);
   }, [fetchFeed]);
 
