@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import styled, { createGlobalStyle } from 'styled-components';
+import AppShell from '../components/AppShell';
 
 const GlobalStyle = createGlobalStyle`
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -12,7 +13,6 @@ const GlobalStyle = createGlobalStyle`
   }
 `;
 
-// ── Layout ────────────────────────────────────────────────────────────────────
 const Wrapper = styled.div`
   max-width: 480px;
   margin: 0 auto;
@@ -22,110 +22,65 @@ const Wrapper = styled.div`
   background: #1a0a2e;
 `;
 
-const TopBar = styled.div`
+// ── GW Header ─────────────────────────────────────────────────────────────────
+const GWHeader = styled.div`
   background: #2d0a5e;
-  padding: 0.75rem 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-`;
-
-const Logo = styled.a`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1.3rem;
-  font-weight: 800;
-  color: #fff;
-  text-decoration: none;
-  span { color: #f5a623; }
-`;
-
-const LogoutBtn = styled.button`
-  background: transparent;
-  border: 1px solid #4a1a8e;
-  color: #8892b0;
-  font-size: 0.75rem;
-  padding: 0.35rem 0.7rem;
-  border-radius: 6px;
-  cursor: pointer;
-  &:hover { color: #fc8181; border-color: #fc8181; }
-`;
-
-const TeamHeader = styled.div`
-  background: #2d0a5e;
-  padding: 1rem;
+  padding: 0.85rem 1rem 1rem;
   border-bottom: 1px solid #4a1a8e;
-`;
-
-const TeamName = styled.h1`
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: #fff;
-  margin-bottom: 0.25rem;
-`;
-
-const ManagerName = styled.div`
-  font-size: 0.85rem;
-  color: #8892b0;
-  margin-bottom: 1rem;
 `;
 
 const GWNav = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 1.5rem;
+  margin-bottom: 0.85rem;
 `;
 
 const GWBtn = styled.button`
   background: transparent;
   border: none;
   color: #8892b0;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   cursor: pointer;
-  padding: 0.25rem 0.5rem;
+  line-height: 1;
+  padding: 0 0.25rem;
   &:hover { color: #fff; }
-  &:disabled { opacity: 0.3; cursor: not-allowed; }
+  &:disabled { opacity: 0.25; cursor: not-allowed; }
 `;
 
 const GWLabel = styled.div`
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.05rem;
   color: #fff;
-  min-width: 120px;
+  min-width: 140px;
   text-align: center;
 `;
 
 const StatsRow = styled.div`
   display: flex;
-  justify-content: space-between;
   gap: 0.5rem;
 `;
 
 const StatBox = styled.div`
   flex: 1;
   text-align: center;
-  background: rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.06);
   border-radius: 8px;
-  padding: 0.6rem 0.25rem;
+  padding: 0.65rem 0.25rem 0.5rem;
 `;
 
 const StatValue = styled.div`
-  font-size: ${({ large }) => large ? '1.6rem' : '1.1rem'};
+  font-size: ${({ large }) => large ? '1.5rem' : '1rem'};
   font-weight: 800;
   color: ${({ large }) => large ? '#f5a623' : '#fff'};
+  line-height: 1.1;
 `;
 
 const StatLabel = styled.div`
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   color: #8892b0;
-  margin-top: 2px;
+  margin-top: 3px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
@@ -135,51 +90,53 @@ const ChipBadge = styled.div`
   background: #f5a623;
   color: #1a0a2e;
   font-size: 0.7rem;
-  font-weight: 700;
-  padding: 2px 8px;
+  font-weight: 800;
+  padding: 3px 10px;
   border-radius: 10px;
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
+  letter-spacing: 0.5px;
 `;
 
 // ── Pitch ─────────────────────────────────────────────────────────────────────
 const PitchWrapper = styled.div`
   flex: 1;
-  padding: 0.5rem;
+  padding: 0.75rem;
+  overflow-y: auto;
 `;
 
 const Pitch = styled.div`
-  background: linear-gradient(180deg, #2d7a3a 0%, #1e5c2a 50%, #2d7a3a 100%);
+  background: linear-gradient(180deg,
+    #2e7d32 0%, #388e3c 20%, #2e7d32 50%, #388e3c 80%, #2e7d32 100%);
   border-radius: 10px;
-  padding: 1rem 0.5rem;
+  padding: 1.25rem 0.5rem 1rem;
   position: relative;
-  overflow: hidden;
+  /* Centre circle */
   &::before {
     content: '';
     position: absolute;
-    top: 50%;
-    left: 10%;
-    right: 10%;
-    height: 1px;
-    background: rgba(255,255,255,0.2);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.18);
+    pointer-events: none;
   }
+  /* Halfway line */
   &::after {
     content: '';
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    border: 1px solid rgba(255,255,255,0.2);
+    top: 50%; left: 8%; right: 8%;
+    height: 1px;
+    background: rgba(255,255,255,0.18);
+    pointer-events: none;
   }
 `;
 
 const PitchRow = styled.div`
   display: flex;
   justify-content: center;
-  gap: 0.25rem;
-  margin-bottom: 0.75rem;
+  gap: 4px;
+  margin-bottom: 0.85rem;
   flex-wrap: wrap;
 `;
 
@@ -187,36 +144,36 @@ const PlayerCard = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 68px;
-  cursor: default;
+  width: 64px;
 `;
 
-const PlayerShirt = styled.div`
-  width: 44px;
-  height: 44px;
-  border-radius: 50% 50% 40% 40%;
-  background: ${({ captain, vice }) => captain ? '#f5a623' : vice ? '#6c2eb9' : '#1a3a6e'};
+const PlayerCircle = styled.div`
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  background: ${({ captain }) => captain ? '#f5a623' : ({ vice }) => vice ? '#6c2eb9' : '#1a3a6e'};
+  background: ${({ captain, vice }) =>
+    captain ? '#f5a623' : vice ? '#6c2eb9' : '#1a3a6e'};
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.65rem;
-  font-weight: 700;
+  font-size: 0.62rem;
+  font-weight: 800;
   color: #fff;
   position: relative;
-  border: 2px solid ${({ captain, vice }) => captain ? '#f5a623' : vice ? '#9b59b6' : 'rgba(255,255,255,0.2)'};
-  margin-bottom: 3px;
+  border: 2px solid ${({ captain, vice }) =>
+    captain ? '#f5a623' : vice ? '#9b59b6' : 'rgba(255,255,255,0.25)'};
+  margin-bottom: 4px;
+  letter-spacing: 0.3px;
 `;
 
-const CaptainBadge = styled.span`
+const Badge = styled.span`
   position: absolute;
-  top: -4px;
-  right: -4px;
-  background: #f5a623;
-  color: #1a0a2e;
-  font-size: 0.55rem;
+  top: -3px; right: -3px;
+  background: ${({ type }) => type === 'C' ? '#f5a623' : '#9b59b6'};
+  color: ${({ type }) => type === 'C' ? '#1a0a2e' : '#fff'};
+  font-size: 0.5rem;
   font-weight: 800;
-  width: 14px;
-  height: 14px;
+  width: 13px; height: 13px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -224,39 +181,39 @@ const CaptainBadge = styled.span`
 `;
 
 const PlayerNameLabel = styled.div`
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 600;
   color: #fff;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 68px;
-  background: rgba(0,0,0,0.5);
-  border-radius: 3px;
-  padding: 1px 3px;
+  max-width: 64px;
 `;
 
 const PointsBadge = styled.div`
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: #fff;
   background: #1a0a2e;
   border-radius: 3px;
-  padding: 1px 5px;
+  padding: 1px 6px;
   margin-top: 2px;
+  min-width: 20px;
+  text-align: center;
 `;
 
+// ── Bench ─────────────────────────────────────────────────────────────────────
 const BenchSection = styled.div`
-  background: rgba(0,0,0,0.3);
+  background: rgba(0,0,0,0.25);
   border-radius: 8px;
   padding: 0.75rem 0.5rem 0.5rem;
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
 `;
 
 const BenchLabel = styled.div`
   text-align: center;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: #8892b0;
   font-weight: 700;
   letter-spacing: 1px;
@@ -266,8 +223,7 @@ const BenchLabel = styled.div`
 
 // ── Bottom Nav ────────────────────────────────────────────────────────────────
 const BottomNav = styled.nav`
-  position: sticky;
-  bottom: 0;
+  position: sticky; bottom: 0;
   background: #2d0a5e;
   display: flex;
   border-top: 1px solid #4a1a8e;
@@ -275,16 +231,11 @@ const BottomNav = styled.nav`
 `;
 
 const NavItem = styled.a`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 0.6rem 0.25rem;
-  text-decoration: none;
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 0.6rem 0.25rem; text-decoration: none;
   color: ${({ active }) => (active ? '#f5a623' : '#8892b0')};
-  font-size: 0.65rem;
-  gap: 3px;
+  font-size: 0.65rem; gap: 3px;
   border-top: 2px solid ${({ active }) => (active ? '#f5a623' : 'transparent')};
   &:hover { color: #f5a623; }
 `;
@@ -292,21 +243,14 @@ const NavItem = styled.a`
 const NavIcon = styled.span`font-size: 1.2rem;`;
 
 const StatusMsg = styled.div`
-  text-align: center;
-  padding: 3rem 1rem;
-  color: #8892b0;
-  font-size: 0.9rem;
-  line-height: 1.8;
+  text-align: center; padding: 3rem 1rem;
+  color: #8892b0; font-size: 0.9rem; line-height: 1.8;
   a { color: #f5a623; }
 `;
 
-// ── Group starting XI by position ─────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function groupByPosition(players) {
-  const gkp = players.filter(p => p.element_type === 1);
-  const def = players.filter(p => p.element_type === 2);
-  const mid = players.filter(p => p.element_type === 3);
-  const fwd = players.filter(p => p.element_type === 4);
-  return [gkp, def, mid, fwd];
+  return [1, 2, 3, 4].map(type => players.filter(p => p.element_type === type));
 }
 
 function PlayerTile({ player }) {
@@ -316,18 +260,18 @@ function PlayerTile({ player }) {
 
   return (
     <PlayerCard>
-      <PlayerShirt captain={player.is_captain} vice={player.is_vice_captain}>
+      <PlayerCircle captain={player.is_captain} vice={player.is_vice_captain}>
         {player.pos_label}
-        {player.is_captain && <CaptainBadge>C</CaptainBadge>}
-        {player.is_vice_captain && <CaptainBadge style={{ background: '#9b59b6' }}>V</CaptainBadge>}
-      </PlayerShirt>
+        {player.is_captain && <Badge type="C">C</Badge>}
+        {player.is_vice_captain && <Badge type="V">V</Badge>}
+      </PlayerCircle>
       <PlayerNameLabel>{player.web_name}</PlayerNameLabel>
       <PointsBadge>{pts}</PointsBadge>
     </PlayerCard>
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function MyTeam() {
   const [user, setUser]       = useState(null);
   const [picks, setPicks]     = useState(null);
@@ -340,7 +284,8 @@ export default function MyTeam() {
     try {
       const stored = localStorage.getItem('vidigoals_user');
       if (stored) setUser(JSON.parse(stored));
-    } catch {}
+      else setLoading(false);
+    } catch { setLoading(false); }
   }, []);
 
   useEffect(() => {
@@ -352,8 +297,10 @@ export default function MyTeam() {
     setLoading(true);
     setError(null);
     try {
-      const url = gameweek ? `/api/fpl-picks?id=${id}&gw=${gameweek}` : `/api/fpl-picks?id=${id}`;
-      const res = await fetch(url);
+      const url = gameweek
+        ? `/api/fpl-picks?id=${id}&gw=${gameweek}`
+        : `/api/fpl-picks?id=${id}`;
+      const res  = await fetch(url);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setPicks(data);
@@ -371,121 +318,110 @@ export default function MyTeam() {
     window.location.href = '/';
   };
 
-  if (!user) {
-    return (
-      <>
-        <GlobalStyle />
-        <Wrapper>
-          <TopBar>
-            <Logo href="/">⚽ Vidi<span>Goals</span></Logo>
-          </TopBar>
-          <StatusMsg>
-            You need to sign in to view your team.<br /><br />
-            <a href="/signin">Sign in with your FPL Manager ID →</a>
-          </StatusMsg>
-        </Wrapper>
-      </>
-    );
-  }
-
-  const rows = picks ? groupByPosition(picks.starting) : [];
-  const bench = picks?.bench || [];
   const history = picks?.entry_history;
+  const rows    = picks ? groupByPosition(picks.starting) : [];
+  const bench   = picks?.bench || [];
 
   return (
     <>
       <Head>
-        <title>{user.name || 'My Team'} — VidiGoals</title>
+        <title>{user?.name || 'My Team'} — VidiGoals</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <GlobalStyle />
       <Wrapper>
-        <TopBar>
-          <Logo href="/">⚽ Vidi<span>Goals</span></Logo>
-          <LogoutBtn onClick={handleLogout}>Logout</LogoutBtn>
-        </TopBar>
+        <AppShell user={user} page="team" onLogout={handleLogout}>
 
-        <TeamHeader>
-          <TeamName>{user.name || 'My Team'}</TeamName>
-          <ManagerName>{user.managerName}</ManagerName>
-
-          {/* GW navigation */}
-          <GWNav>
-            <GWBtn onClick={() => setGw(g => Math.max(1, (g || 1) - 1))} disabled={gw <= 1}>‹</GWBtn>
-            <GWLabel>Gameweek {gw || '—'}</GWLabel>
-            <GWBtn onClick={() => setGw(g => Math.min(maxGw, (g || maxGw) + 1))} disabled={gw >= maxGw}>›</GWBtn>
-          </GWNav>
-
-          {history && (
-            <StatsRow>
-              <StatBox>
-                <StatValue>{history.points_on_bench ?? '—'}</StatValue>
-                <StatLabel>Bench Pts</StatLabel>
-              </StatBox>
-              <StatBox large>
-                <StatValue large>{history.points ?? '—'}</StatValue>
-                <StatLabel>GW Points</StatLabel>
-              </StatBox>
-              <StatBox>
-                <StatValue>{history.rank?.toLocaleString() ?? '—'}</StatValue>
-                <StatLabel>GW Rank</StatLabel>
-              </StatBox>
-              <StatBox>
-                <StatValue>{history.event_transfers ?? '—'}</StatValue>
-                <StatLabel>Transfers</StatLabel>
-              </StatBox>
-            </StatsRow>
+          {/* No user — prompt to sign in */}
+          {!user && !loading && (
+            <StatusMsg>
+              Sign in to view your team.<br /><br />
+              <a href="/signin">Enter your FPL Manager ID →</a>
+            </StatusMsg>
           )}
 
-          {picks?.active_chip && (
-            <ChipBadge>{picks.active_chip.replace(/_/g, ' ').toUpperCase()}</ChipBadge>
-          )}
-        </TeamHeader>
-
-        <PitchWrapper>
-          {loading && <StatusMsg>Loading team…</StatusMsg>}
-          {error && <StatusMsg>Could not load team.<br />{error}</StatusMsg>}
-
-          {!loading && !error && picks && (
+          {user && (
             <>
-              <Pitch>
-                {rows.map((row, i) => (
-                  <PitchRow key={i}>
-                    {row.map(player => (
-                      <PlayerTile key={player.element} player={player} />
-                    ))}
-                  </PitchRow>
-                ))}
-              </Pitch>
+              {/* GW header */}
+              <GWHeader>
+                <GWNav>
+                  <GWBtn
+                    onClick={() => setGw(g => Math.max(1, (g || 1) - 1))}
+                    disabled={!gw || gw <= 1}
+                  >‹</GWBtn>
+                  <GWLabel>Gameweek {gw || '—'}</GWLabel>
+                  <GWBtn
+                    onClick={() => setGw(g => Math.min(maxGw, (g || maxGw) + 1))}
+                    disabled={!gw || gw >= maxGw}
+                  >›</GWBtn>
+                </GWNav>
 
-              <BenchSection>
-                <BenchLabel>Substitutes</BenchLabel>
-                <PitchRow>
-                  {bench.map(player => (
-                    <PlayerTile key={player.element} player={player} />
-                  ))}
-                </PitchRow>
-              </BenchSection>
+                {history && (
+                  <StatsRow>
+                    <StatBox>
+                      <StatValue large>{history.points ?? '—'}</StatValue>
+                      <StatLabel>GW Points</StatLabel>
+                    </StatBox>
+                    <StatBox>
+                      <StatValue>{history.rank?.toLocaleString() ?? '—'}</StatValue>
+                      <StatLabel>GW Rank</StatLabel>
+                    </StatBox>
+                    <StatBox>
+                      <StatValue>{history.overall_rank?.toLocaleString() ?? user.overallRank?.toLocaleString() ?? '—'}</StatValue>
+                      <StatLabel>Overall Rank</StatLabel>
+                    </StatBox>
+                    <StatBox>
+                      <StatValue>{history.event_transfers ?? '—'}</StatValue>
+                      <StatLabel>Transfers</StatLabel>
+                    </StatBox>
+                  </StatsRow>
+                )}
+
+                {picks?.active_chip && (
+                  <ChipBadge>
+                    {picks.active_chip.replace(/_/g, ' ').toUpperCase()}
+                  </ChipBadge>
+                )}
+              </GWHeader>
+
+              {/* Pitch */}
+              <PitchWrapper>
+                {loading && <StatusMsg>Loading team…</StatusMsg>}
+                {error   && <StatusMsg>Could not load team.<br />{error}</StatusMsg>}
+
+                {!loading && !error && picks && (
+                  <>
+                    <Pitch>
+                      {rows.map((row, i) => (
+                        <PitchRow key={i}>
+                          {row.map(player => (
+                            <PlayerTile key={player.element} player={player} />
+                          ))}
+                        </PitchRow>
+                      ))}
+                    </Pitch>
+
+                    <BenchSection>
+                      <BenchLabel>Substitutes</BenchLabel>
+                      <PitchRow>
+                        {bench.map(player => (
+                          <PlayerTile key={player.element} player={player} />
+                        ))}
+                      </PitchRow>
+                    </BenchSection>
+                  </>
+                )}
+              </PitchWrapper>
             </>
           )}
-        </PitchWrapper>
+        </AppShell>
 
         <BottomNav>
-          <NavItem href="/">
-            <NavIcon>⚽</NavIcon>Goals
-          </NavItem>
-          <NavItem href="/my-team" active={1}>
-            <NavIcon>👕</NavIcon>My Team
-          </NavItem>
-          <NavItem href="/signin">
-            <NavIcon>🏆</NavIcon>Leaderboard
-          </NavItem>
-          <NavItem href="#">
-            <NavIcon>📋</NavIcon>Matches
-          </NavItem>
-          <NavItem href="#">
-            <NavIcon>⚙️</NavIcon>Settings
-          </NavItem>
+          <NavItem href="/"><NavIcon>⚽</NavIcon>Goals</NavItem>
+          <NavItem href="/my-team" active={1}><NavIcon>👕</NavIcon>My Team</NavItem>
+          <NavItem href="#"><NavIcon>🏆</NavIcon>Leaderboard</NavItem>
+          <NavItem href="#"><NavIcon>📋</NavIcon>Matches</NavItem>
+          <NavItem href="#"><NavIcon>⚙️</NavIcon>Settings</NavItem>
         </BottomNav>
       </Wrapper>
     </>

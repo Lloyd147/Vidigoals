@@ -206,6 +206,8 @@ export default function SignIn() {
       };
       localStorage.setItem('vidigoals_user', JSON.stringify(userData));
       setTeam(data);
+      // Redirect to My Team page after short delay so user sees their data
+      setTimeout(() => { window.location.href = '/my-team'; }, 1500);
     } catch (err) {
       setError(err.message);
     } finally {
