@@ -133,35 +133,21 @@ export default function Home() {
     setResult(null);
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
-      const query = `
-        mutation Login($login: String!, $password: String!) {
-          login(login: $login, password: $password) {
-            success
-            message
-            first_name
-            last_name
-          }
-        }
-      `;
-
-      const res = await fetch(backendUrl, {
+      const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, variables: { login: email, password } }),
+        body: JSON.stringify({ login: email, password }),
       });
 
-      const { data, errors } = await res.json();
+      const data = await res.json();
 
-      if (errors) {
-        setResult({ success: false, message: errors[0].message });
-      } else if (data?.login?.success) {
+      if (data.success) {
         setResult({
           success: true,
-          message: `Welcome, ${data.login.first_name || 'Manager'}! Login successful.`,
+          message: `Welcome, ${data.first_name || 'Manager'}! Login successful.`,
         });
       } else {
-        setResult({ success: false, message: data?.login?.message || 'Login failed.' });
+        setResult({ success: false, message: data.message || 'Login failed.' });
       }
     } catch (err) {
       setResult({ success: false, message: 'Could not connect to the server.' });
