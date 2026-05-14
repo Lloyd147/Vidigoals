@@ -1,0 +1,36 @@
+type User {
+  id: ID!
+  email: String!
+  password: String!
+  profileID: String!
+  date_of_birth: String
+  dirty: Boolean
+  first_name: String
+  gender: String
+  last_name: String
+  entry: Int
+  region: Int
+  FPL_user_id: Int
+}
+
+type Query {
+  currentUser: User!
+}
+
+type Mutation {
+  login(login: String!, password: String!): AuthenticationPayload!
+}
+
+type AuthenticationPayload {
+  success: Boolean!
+  message: String!
+  profileID: String
+  date_of_birth: String
+  dirty: Boolean
+  first_name: String
+  gender: String
+  last_name: String
+  entry: Int
+  region: Int
+  FPL_user_id: Int
+}

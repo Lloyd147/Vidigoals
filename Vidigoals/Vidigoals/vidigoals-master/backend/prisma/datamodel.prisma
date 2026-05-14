@@ -1,0 +1,14 @@
+type User {
+  id: ID! @id
+  email: String! @unique
+  password: String!
+  profileID: String!
+  date_of_birth: String
+  dirty: Boolean
+  first_name: String
+  gender: String
+  last_name: String
+  entry: Int
+  region: Int
+  FPL_user_id: Int
+}
