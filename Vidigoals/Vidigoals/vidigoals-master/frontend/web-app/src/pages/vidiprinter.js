@@ -368,8 +368,9 @@ export default function Vidiprinter({ user }) {
 
   useEffect(() => {
     fetchFeed();
-    // Poll every 60 seconds when live
-    const interval = setInterval(fetchFeed, 60000);
+    // Poll every 5 minutes — the server cache handles 60-second freshness
+    // so all users share one API call per minute regardless of how many are online
+    const interval = setInterval(fetchFeed, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [fetchFeed]);
 
@@ -402,7 +403,7 @@ export default function Vidiprinter({ user }) {
               {timeStr} | {dateStr}
             </div>
           </UserInfo>
-          {!user && <SignInBtn href="/">Sign in</SignInBtn>}
+          {!user && <SignInBtn href="/signin">Sign in</SignInBtn>}
         </UserBar>
 
         {/* Points bar — only shown when logged in */}
