@@ -194,9 +194,18 @@ export default function SignIn() {
       const res = await fetch(`/api/fpl-team?id=${id}`);
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Could not find that FPL team');
+      
+      // Store user in localStorage for persistent login
+      const userData = {
+        id,
+        name: data.name,
+        managerName: `${data.player_first_name} ${data.player_last_name}`,
+        gwPoints: data.summary_event_points,
+        overallPoints: data.summary_overall_points,
+        overallRank: data.summary_overall_rank,
+      };
+      localStorage.setItem('vidigoals_user', JSON.stringify(userData));
       setTeam(data);
-      // Store in sessionStorage so vidiprinter can read it
-      sessionStorage.setItem('vidigoals_user', JSON.stringify(data));
     } catch (err) {
       setError(err.message);
     } finally {

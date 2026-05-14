@@ -18,7 +18,6 @@ const fadeIn = keyframes`
 `;
 
 // ── Layout ────────────────────────────────────────────────────────────────────
-
 const Wrapper = styled.div`
   max-width: 480px;
   margin: 0 auto;
@@ -70,8 +69,7 @@ const Toggle = styled.button`
   &::after {
     content: '';
     position: absolute;
-    width: 16px;
-    height: 16px;
+    width: 16px; height: 16px;
     border-radius: 50%;
     background: #fff;
     top: 3px;
@@ -85,7 +83,6 @@ const LeagueBanner = styled.div`
   padding: 0.6rem 1rem;
   font-weight: 700;
   font-size: 0.95rem;
-  letter-spacing: 0.5px;
 `;
 
 const UserBar = styled.div`
@@ -101,34 +98,52 @@ const UserInfo = styled.div`
   div:last-child  { font-size: 0.78rem; color: #8892b0; margin-top: 2px; }
 `;
 
-const SignInBtn = styled.a`
-  background: #f5a623;
-  color: #1a0a2e;
+const UserActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const ActionBtn = styled.a`
+  background: ${({ variant }) => variant === 'outline' ? 'transparent' : '#f5a623'};
+  color: ${({ variant }) => variant === 'outline' ? '#8892b0' : '#1a0a2e'};
+  border: ${({ variant }) => variant === 'outline' ? '1px solid #4a1a8e' : 'none'};
   font-weight: 700;
-  font-size: 0.85rem;
-  padding: 0.45rem 1.1rem;
+  font-size: 0.78rem;
+  padding: 0.4rem 0.85rem;
   border-radius: 6px;
   text-decoration: none;
   cursor: pointer;
-  &:hover { background: #e09510; }
+  white-space: nowrap;
+  &:hover {
+    background: ${({ variant }) => variant === 'outline' ? '#2d1a4e' : '#e09510'};
+  }
+`;
+
+const LogoutBtn = styled.button`
+  background: transparent;
+  border: 1px solid #4a1a8e;
+  color: #8892b0;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+  &:hover { color: #fc8181; border-color: #fc8181; }
 `;
 
 const PointsBar = styled.div`
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1rem;
   display: flex;
   gap: 2rem;
   border-bottom: 1px solid #2d1a4e;
+  background: rgba(108,46,185,0.1);
   font-size: 0.85rem;
   color: #8892b0;
-  span { color: #fff; font-weight: 700; }
+  span { color: #f5a623; font-weight: 700; }
 `;
 
 // ── Feed ──────────────────────────────────────────────────────────────────────
-
-const Feed = styled.div`
-  flex: 1;
-  overflow-y: auto;
-`;
+const Feed = styled.div`flex: 1; overflow-y: auto;`;
 
 const EventRow = styled.div`
   display: flex;
@@ -142,8 +157,7 @@ const EventRow = styled.div`
 `;
 
 const IconBox = styled.div`
-  width: 36px;
-  height: 36px;
+  width: 36px; height: 36px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -160,10 +174,7 @@ const MinuteBox = styled.div`
   text-align: center;
 `;
 
-const EventContent = styled.div`
-  flex: 1;
-  min-width: 0;
-`;
+const EventContent = styled.div`flex: 1; min-width: 0;`;
 
 const ScoreLine = styled.div`
   font-size: 0.88rem;
@@ -194,8 +205,7 @@ const AssistName = styled.span`
 `;
 
 const TeamBadge = styled.img`
-  width: 32px;
-  height: 32px;
+  width: 32px; height: 32px;
   object-fit: contain;
   flex-shrink: 0;
 `;
@@ -206,7 +216,7 @@ const HalfTimeRow = styled.div`
   padding: 0.6rem 1rem;
   border-bottom: 1px solid #2d1a4e;
   gap: 0.75rem;
-  background: rgba(108, 46, 185, 0.15);
+  background: rgba(108,46,185,0.15);
 `;
 
 const HTLabel = styled.div`
@@ -226,8 +236,6 @@ const HTScore = styled.div`
   flex: 1;
 `;
 
-// ── Status / Empty ────────────────────────────────────────────────────────────
-
 const StatusMsg = styled.div`
   text-align: center;
   padding: 3rem 1rem;
@@ -238,8 +246,7 @@ const StatusMsg = styled.div`
 
 const LiveDot = styled.span`
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: 8px; height: 8px;
   border-radius: 50%;
   background: #48bb78;
   margin-right: 6px;
@@ -262,8 +269,34 @@ const RefreshBtn = styled.button`
   &:hover { background: #7d3fd4; }
 `;
 
-// ── Event config ──────────────────────────────────────────────────────────────
+// ── Bottom Nav ────────────────────────────────────────────────────────────────
+const BottomNav = styled.nav`
+  position: sticky;
+  bottom: 0;
+  background: #2d0a5e;
+  display: flex;
+  border-top: 1px solid #4a1a8e;
+  z-index: 100;
+`;
 
+const NavItem = styled.a`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 0.25rem;
+  text-decoration: none;
+  color: ${({ active }) => (active ? '#f5a623' : '#8892b0')};
+  font-size: 0.65rem;
+  gap: 3px;
+  border-top: 2px solid ${({ active }) => (active ? '#f5a623' : 'transparent')};
+  &:hover { color: #f5a623; }
+`;
+
+const NavIcon = styled.span`font-size: 1.2rem;`;
+
+// ── Event config ──────────────────────────────────────────────────────────────
 const EVENT_CONFIG = {
   Goal:    { icon: '⚽', color: '#48bb78', label: 'Goal!' },
   Yellow:  { icon: '🟨', color: '#f5a623', label: 'Yellow' },
@@ -303,61 +336,49 @@ function EventItem({ event }) {
         <ScoreLine>{event.score}</ScoreLine>
         <EventDetail>
           {event.type === 'Sub' ? (
-            <>
-              Sub. <PlayerName color={cfg.color}>{event.player}</PlayerName>
-              {event.assist && <> ↓ {event.assist}</>}
-            </>
+            <>Sub. <PlayerName color={cfg.color}>{event.player}</PlayerName>{event.assist && <> ↓ {event.assist}</>}</>
           ) : event.type === 'Goal' ? (
-            <>
-              {cfg.label} <PlayerName color={cfg.color}>{event.player}</PlayerName>
-              {event.assist && (
-                <> · Assist <AssistName>{event.assist}</AssistName></>
-              )}
-            </>
+            <>{cfg.label} <PlayerName color={cfg.color}>{event.player}</PlayerName>{event.assist && <> · Assist <AssistName>{event.assist}</AssistName></>}</>
           ) : (
-            <>
-              {cfg.label} <PlayerName color={cfg.color}>{event.player}</PlayerName>
-            </>
+            <>{cfg.label} <PlayerName color={cfg.color}>{event.player}</PlayerName></>
           )}
         </EventDetail>
       </EventContent>
       {badgeSrc && (
-        <TeamBadge
-          src={badgeSrc}
-          alt={event.isHome ? event.homeTeam : event.awayTeam}
-          onError={(e) => { e.target.style.display = 'none'; }}
-        />
+        <TeamBadge src={badgeSrc} alt="" onError={(e) => { e.target.style.display = 'none'; }} />
       )}
     </EventRow>
   );
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
+export default function Vidiprinter() {
+  const [feed, setFeed]       = useState([]);
+  const [isLive, setIsLive]   = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
+  const [notifs, setNotifs]   = useState(true);
+  const [user, setUser]       = useState(null); // { id, name, gwPoints, overallPoints, managerName }
 
-export default function Vidiprinter({ user }) {
-  const [feed, setFeed]         = useState([]);
-  const [isLive, setIsLive]     = useState(false);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState(null);
-  const [notifs, setNotifs]     = useState(true);
-  const [lastUpdated, setLastUpdated] = useState(null);
+  // Load user from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('vidigoals_user');
+      if (stored) setUser(JSON.parse(stored));
+    } catch {}
+  }, []);
 
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('en-GB', {
-    day: '2-digit', month: 'short', year: 'numeric',
-  });
-  const timeStr = now.toLocaleTimeString('en-GB', {
-    hour: '2-digit', minute: '2-digit',
-  });
+  const now     = new Date();
+  const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
   const fetchFeed = useCallback(async () => {
     try {
-      const res = await fetch('/api/feed');
+      const res  = await fetch('/api/feed');
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setFeed(data.feed || []);
       setIsLive(data.isLive || false);
-      setLastUpdated(new Date());
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -368,11 +389,16 @@ export default function Vidiprinter({ user }) {
 
   useEffect(() => {
     fetchFeed();
-    // Poll every 30 seconds — server cache ensures only 1 API call per 30s
-    // regardless of how many users are on the site simultaneously
     const interval = setInterval(fetchFeed, 30 * 1000);
     return () => clearInterval(interval);
   }, [fetchFeed]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('vidigoals_user');
+    setUser(null);
+  };
+
+  const teamDisplayName = user?.name || user?.managerName || null;
 
   return (
     <>
@@ -387,7 +413,7 @@ export default function Vidiprinter({ user }) {
           <Logo>⚽ Vidi<span>Goals</span></Logo>
           <NotifToggle>
             Notifications
-            <Toggle on={notifs ? 1 : 0} onClick={() => setNotifs((n) => !n)} aria-label="Toggle notifications" />
+            <Toggle on={notifs ? 1 : 0} onClick={() => setNotifs(n => !n)} aria-label="Toggle notifications" />
           </NotifToggle>
         </TopBar>
 
@@ -397,61 +423,82 @@ export default function Vidiprinter({ user }) {
         {/* User bar */}
         <UserBar>
           <UserInfo>
-            <div>Hello {user ? user.first_name || 'Manager' : 'Guest'}</div>
+            <div>Hello {teamDisplayName ? teamDisplayName : 'Guest'}</div>
             <div>
               {isLive && <><LiveDot />Live · </>}
               {timeStr} | {dateStr}
             </div>
           </UserInfo>
-          {!user && <SignInBtn href="/signin">Sign in</SignInBtn>}
+          <UserActions>
+            {user ? (
+              <>
+                <ActionBtn href="/my-team">View Team</ActionBtn>
+                <LogoutBtn onClick={handleLogout}>Logout</LogoutBtn>
+              </>
+            ) : (
+              <ActionBtn href="/signin">Sign in</ActionBtn>
+            )}
+          </UserActions>
         </UserBar>
 
-        {/* Points bar — only shown when logged in */}
+        {/* Points bar — only when logged in */}
         {user && (
           <PointsBar>
             <div>GW Points <span>{user.gwPoints ?? '—'}</span></div>
-            <div>Overall <span>{user.overallPoints ?? '—'}</span></div>
+            <div>Overall Points <span>{user.overallPoints ?? '—'}</span></div>
           </PointsBar>
         )}
 
         {/* Feed */}
         <Feed>
-          {loading && (
-            <StatusMsg>Loading Premier League feed…</StatusMsg>
-          )}
+          {loading && <StatusMsg>Loading Premier League feed…</StatusMsg>}
 
           {!loading && error && (
             <StatusMsg>
               {error.includes('API key') ? (
-                <>API key not configured yet.<br />Add your API_FOOTBALL_KEY in Vercel environment variables.</>
+                <>API key not configured.<br />Add API_FOOTBALL_KEY in Vercel environment variables.</>
               ) : (
                 <>Could not load feed.<br />{error}</>
               )}
-              <br />
-              <RefreshBtn onClick={fetchFeed}>Try again</RefreshBtn>
+              <br /><RefreshBtn onClick={fetchFeed}>Try again</RefreshBtn>
             </StatusMsg>
           )}
 
           {!loading && !error && feed.length === 0 && (
             <StatusMsg>
-              No Premier League matches today.<br />
-              Check back on a matchday!
-              <br />
-              <RefreshBtn onClick={fetchFeed}>Refresh</RefreshBtn>
+              No Premier League matches today.<br />Check back on a matchday!
+              <br /><RefreshBtn onClick={fetchFeed}>Refresh</RefreshBtn>
             </StatusMsg>
           )}
 
-          {!loading && !error && feed.map((event) => (
+          {!loading && !error && feed.map(event => (
             <EventItem key={event.id} event={event} />
           ))}
         </Feed>
+
+        {/* Bottom nav */}
+        <BottomNav>
+          <NavItem href="/" active={1}>
+            <NavIcon>⚽</NavIcon>Goals
+          </NavItem>
+          <NavItem href={user ? '/my-team' : '/signin'}>
+            <NavIcon>👕</NavIcon>{user ? 'My Team' : 'Sign In'}
+          </NavItem>
+          <NavItem href="/signin">
+            <NavIcon>🏆</NavIcon>Leaderboard
+          </NavItem>
+          <NavItem href="#">
+            <NavIcon>📋</NavIcon>Matches
+          </NavItem>
+          <NavItem href="#">
+            <NavIcon>⚙️</NavIcon>Settings
+          </NavItem>
+        </BottomNav>
       </Wrapper>
     </>
   );
 }
 
-export async function getServerSideProps(context) {
-  // In future, read session cookie here to get logged-in user
-  // For now, always guest
-  return { props: { user: null } };
+export async function getServerSideProps() {
+  return { props: {} };
 }
