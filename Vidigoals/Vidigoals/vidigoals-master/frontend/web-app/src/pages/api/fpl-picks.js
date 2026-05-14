@@ -46,6 +46,11 @@ export default async function handler(req, res) {
       teamMap[t.id] = t;
     }
 
+    // Find the actual current/latest GW for navigation bounds
+    const latestGW = bootstrap.events?.find(e => e.is_current)?.id
+      || bootstrap.events?.filter(e => e.finished).pop()?.id
+      || 38;
+
     // Position names
     const posMap = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
 
@@ -65,6 +70,7 @@ export default async function handler(req, res) {
         pos_label: posMap[player.element_type] || '',
         team_name: team.name || '',
         team_short: team.short_name || '',
+        team_id: player.team || null,
         event_points: player.event_points ?? 0,
         total_points: player.total_points ?? 0,
         photo: player.photo ? player.photo.replace('.jpg', '.png') : null,
@@ -76,7 +82,8 @@ export default async function handler(req, res) {
     const bench = picks.filter(p => p.position > 11);
 
     const result = {
-      gameweek: currentGW,
+      gameweek: Number(currentGW),
+      latestGW,
       active_chip: picksData.active_chip,
       entry_history: picksData.entry_history,
       starting,

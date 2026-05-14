@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
-import styled, { createGlobalStyle } from 'styled-components';
+import styled, { createGlobalStyle, css } from 'styled-components';
 import AppShell from '../components/AppShell';
 
 const GlobalStyle = createGlobalStyle`
@@ -13,6 +13,118 @@ const GlobalStyle = createGlobalStyle`
   }
 `;
 
+// ── Team shirt colour map (by FPL team_id) ────────────────────────────────────
+// Colours only — no logos. Pattern: solid | stripes | hoops | halves
+const TEAM_COLOURS = {
+  1:  { primary: '#ef0107', secondary: '#ffffff', pattern: 'stripes' },   // Arsenal
+  2:  { primary: '#95bfe5', secondary: '#ffffff', pattern: 'solid' },     // Aston Villa (claret/blue - using away)
+  3:  { primary: '#d71920', secondary: '#ffffff', pattern: 'stripes' },   // Bournemouth
+  4:  { primary: '#e30613', secondary: '#ffffff', pattern: 'stripes' },   // Brentford
+  5:  { primary: '#0057b8', secondary: '#ffffff', pattern: 'stripes' },   // Brighton
+  6:  { primary: '#034694', secondary: '#ffffff', pattern: 'solid' },     // Chelsea
+  7:  { primary: '#1b458f', secondary: '#c8102e', pattern: 'halves' },    // Crystal Palace
+  8:  { primary: '#003399', secondary: '#ffffff', pattern: 'solid' },     // Everton
+  9:  { primary: '#ffffff', secondary: '#000000', pattern: 'stripes' },   // Fulham
+  10: { primary: '#003090', secondary: '#ffffff', pattern: 'solid' },     // Ipswich
+  11: { primary: '#0057a8', secondary: '#ffffff', pattern: 'solid' },     // Leicester
+  12: { primary: '#c8102e', secondary: '#ffffff', pattern: 'solid' },     // Liverpool
+  13: { primary: '#6cabdd', secondary: '#ffffff', pattern: 'solid' },     // Man City
+  14: { primary: '#da291c', secondary: '#000000', pattern: 'solid' },     // Man Utd
+  15: { primary: '#241f20', secondary: '#ffffff', pattern: 'stripes' },   // Newcastle
+  16: { primary: '#d71920', secondary: '#ffffff', pattern: 'solid' },     // Nottm Forest
+  17: { primary: '#132257', secondary: '#ffffff', pattern: 'solid' },     // Southampton
+  18: { primary: '#001c58', secondary: '#ffffff', pattern: 'solid' },     // Spurs
+  19: { primary: '#7a263a', secondary: '#ffffff', pattern: 'solid' },     // West Ham
+  20: { primary: '#fdbe11', secondary: '#231f20', pattern: 'solid' },     // Wolves
+};
+
+const GKP_COLOURS = { primary: '#f5a623', secondary: '#1a0a2e', pattern: 'solid' };
+const DEFAULT_COLOURS = { primary: '#1a3a6e', secondary: '#ffffff', pattern: 'solid' };
+
+function getShirtColours(teamId, isGkp) {
+  if (isGkp) return GKP_COLOURS;
+  return TEAM_COLOURS[teamId] || DEFAULT_COLOURS;
+}
+
+// ── Shirt SVG component ───────────────────────────────────────────────────────
+function ShirtSVG({ teamId, isGkp, isCaptain, isVice, size = 52 }) {
+  const { primary, secondary, pattern } = getShirtColours(teamId, isGkp);
+
+  const stripeCount = 5;
+  const stripeW = size / stripeCount;
+
+  return (
+    <svg width={size} height={size * 1.1} viewBox="0 0 52 58" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <clipPath id={`shirt-clip-${teamId}-${isGkp}`}>
+          {/* Shirt shape path */}
+          <path d="M14 2 L2 14 L10 18 L10 54 L42 54 L42 18 L50 14 L38 2 C36 8 28 10 26 10 C24 10 16 8 14 2Z" />
+        </clipPath>
+        {pattern === 'stripes' && (
+          <pattern id={`stripes-${teamId}-${isGkp}`} x="0" y="0" width={stripeW * 2} height="58" patternUnits="userSpaceOnUse">
+            <rect width={stripeW} height="58" fill={primary} />
+            <rect x={stripeW} width={stripeW} height="58" fill={secondary} />
+          </pattern>
+        )}
+        {pattern === 'hoops' && (
+          <pattern id={`hoops-${teamId}-${isGkp}`} x="0" y="0" width="52" height="10" patternUnits="userSpaceOnUse">
+            <rect width="52" height="5" fill={primary} />
+            <rect y="5" width="52" height="5" fill={secondary} />
+          </pattern>
+        )}
+      </defs>
+
+      {/* Shirt body */}
+      <path
+        d="M14 2 L2 14 L10 18 L10 54 L42 54 L42 18 L50 14 L38 2 C36 8 28 10 26 10 C24 10 16 8 14 2Z"
+        fill={
+          pattern === 'stripes' ? `url(#stripes-${teamId}-${isGkp})` :
+          pattern === 'hoops'   ? `url(#hoops-${teamId}-${isGkp})` :
+          pattern === 'halves'  ? primary : primary
+        }
+        stroke="rgba(255,255,255,0.15)"
+        strokeWidth="0.5"
+      />
+
+      {/* Right half for halves pattern */}
+      {pattern === 'halves' && (
+        <path
+          d="M26 10 L38 2 C36 8 28 10 26 10Z M26 10 L42 18 L42 54 L26 54Z"
+          fill={secondary}
+          clipPath={`url(#shirt-clip-${teamId}-${isGkp})`}
+        />
+      )}
+
+      {/* Collar */}
+      <path
+        d="M20 2 C22 6 24 8 26 8 C28 8 30 6 32 2"
+        fill="none"
+        stroke="rgba(255,255,255,0.4)"
+        strokeWidth="1.5"
+      />
+
+      {/* Sleeves shading */}
+      <path d="M2 14 L10 18 L10 28 L2 22Z" fill="rgba(0,0,0,0.15)" />
+      <path d="M50 14 L42 18 L42 28 L50 22Z" fill="rgba(0,0,0,0.15)" />
+
+      {/* Captain / Vice badge */}
+      {isCaptain && (
+        <>
+          <circle cx="42" cy="8" r="7" fill="#f5a623" />
+          <text x="42" y="12" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#1a0a2e">C</text>
+        </>
+      )}
+      {isVice && (
+        <>
+          <circle cx="42" cy="8" r="7" fill="#9b59b6" />
+          <text x="42" y="12" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#fff">V</text>
+        </>
+      )}
+    </svg>
+  );
+}
+
+// ── Styled components ─────────────────────────────────────────────────────────
 const Wrapper = styled.div`
   max-width: 480px;
   margin: 0 auto;
@@ -22,7 +134,6 @@ const Wrapper = styled.div`
   background: #1a0a2e;
 `;
 
-// ── GW Header ─────────────────────────────────────────────────────────────────
 const GWHeader = styled.div`
   background: #2d0a5e;
   padding: 0.85rem 1rem 1rem;
@@ -40,13 +151,13 @@ const GWNav = styled.div`
 const GWBtn = styled.button`
   background: transparent;
   border: none;
-  color: #8892b0;
-  font-size: 1.4rem;
-  cursor: pointer;
+  color: ${({ disabled }) => disabled ? '#4a1a8e' : '#8892b0'};
+  font-size: 1.5rem;
+  cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
   line-height: 1;
   padding: 0 0.25rem;
-  &:hover { color: #fff; }
-  &:disabled { opacity: 0.25; cursor: not-allowed; }
+  transition: color 0.15s;
+  &:hover:not(:disabled) { color: #fff; }
 `;
 
 const GWLabel = styled.div`
@@ -97,7 +208,6 @@ const ChipBadge = styled.div`
   letter-spacing: 0.5px;
 `;
 
-// ── Pitch ─────────────────────────────────────────────────────────────────────
 const PitchWrapper = styled.div`
   flex: 1;
   padding: 0.75rem;
@@ -110,7 +220,6 @@ const Pitch = styled.div`
   border-radius: 10px;
   padding: 1.25rem 0.5rem 1rem;
   position: relative;
-  /* Centre circle */
   &::before {
     content: '';
     position: absolute;
@@ -118,16 +227,15 @@ const Pitch = styled.div`
     transform: translate(-50%, -50%);
     width: 56px; height: 56px;
     border-radius: 50%;
-    border: 1px solid rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.2);
     pointer-events: none;
   }
-  /* Halfway line */
   &::after {
     content: '';
     position: absolute;
     top: 50%; left: 8%; right: 8%;
     height: 1px;
-    background: rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.2);
     pointer-events: none;
   }
 `;
@@ -135,8 +243,8 @@ const Pitch = styled.div`
 const PitchRow = styled.div`
   display: flex;
   justify-content: center;
-  gap: 4px;
-  margin-bottom: 0.85rem;
+  gap: 2px;
+  margin-bottom: 0.5rem;
   flex-wrap: wrap;
 `;
 
@@ -144,51 +252,20 @@ const PlayerCard = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 64px;
-`;
-
-const PlayerCircle = styled.div`
-  width: 46px; height: 46px;
-  border-radius: 50%;
-  background: ${({ captain }) => captain ? '#f5a623' : ({ vice }) => vice ? '#6c2eb9' : '#1a3a6e'};
-  background: ${({ captain, vice }) =>
-    captain ? '#f5a623' : vice ? '#6c2eb9' : '#1a3a6e'};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.62rem;
-  font-weight: 800;
-  color: #fff;
-  position: relative;
-  border: 2px solid ${({ captain, vice }) =>
-    captain ? '#f5a623' : vice ? '#9b59b6' : 'rgba(255,255,255,0.25)'};
-  margin-bottom: 4px;
-  letter-spacing: 0.3px;
-`;
-
-const Badge = styled.span`
-  position: absolute;
-  top: -3px; right: -3px;
-  background: ${({ type }) => type === 'C' ? '#f5a623' : '#9b59b6'};
-  color: ${({ type }) => type === 'C' ? '#1a0a2e' : '#fff'};
-  font-size: 0.5rem;
-  font-weight: 800;
-  width: 13px; height: 13px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 62px;
 `;
 
 const PlayerNameLabel = styled.div`
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 600;
   color: #fff;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 64px;
+  max-width: 62px;
+  margin-top: 2px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
 `;
 
 const PointsBadge = styled.div`
@@ -203,7 +280,6 @@ const PointsBadge = styled.div`
   text-align: center;
 `;
 
-// ── Bench ─────────────────────────────────────────────────────────────────────
 const BenchSection = styled.div`
   background: rgba(0,0,0,0.25);
   border-radius: 8px;
@@ -221,7 +297,6 @@ const BenchLabel = styled.div`
   margin-bottom: 0.5rem;
 `;
 
-// ── Bottom Nav ────────────────────────────────────────────────────────────────
 const BottomNav = styled.nav`
   position: sticky; bottom: 0;
   background: #2d0a5e;
@@ -257,14 +332,17 @@ function PlayerTile({ player }) {
   const pts = player.multiplier > 1
     ? player.event_points * player.multiplier
     : player.event_points;
+  const isGkp = player.element_type === 1;
 
   return (
     <PlayerCard>
-      <PlayerCircle captain={player.is_captain} vice={player.is_vice_captain}>
-        {player.pos_label}
-        {player.is_captain && <Badge type="C">C</Badge>}
-        {player.is_vice_captain && <Badge type="V">V</Badge>}
-      </PlayerCircle>
+      <ShirtSVG
+        teamId={player.team_id}
+        isGkp={isGkp}
+        isCaptain={player.is_captain}
+        isVice={player.is_vice_captain}
+        size={48}
+      />
       <PlayerNameLabel>{player.web_name}</PlayerNameLabel>
       <PointsBadge>{pts}</PointsBadge>
     </PlayerCard>
@@ -278,7 +356,7 @@ export default function MyTeam() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
   const [gw, setGw]           = useState(null);
-  const [maxGw, setMaxGw]     = useState(38);
+  const [latestGW, setLatestGW] = useState(38);
 
   useEffect(() => {
     try {
@@ -304,8 +382,10 @@ export default function MyTeam() {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setPicks(data);
+      // Only set gw on first load
       if (!gw) setGw(data.gameweek);
-      setMaxGw(data.gameweek);
+      // latestGW from API tells us the true maximum
+      if (data.latestGW) setLatestGW(data.latestGW);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -322,6 +402,9 @@ export default function MyTeam() {
   const rows    = picks ? groupByPosition(picks.starting) : [];
   const bench   = picks?.bench || [];
 
+  const canGoBack    = gw > 1;
+  const canGoForward = gw < latestGW;
+
   return (
     <>
       <Head>
@@ -332,7 +415,6 @@ export default function MyTeam() {
       <Wrapper>
         <AppShell user={user} page="team" onLogout={handleLogout}>
 
-          {/* No user — prompt to sign in */}
           {!user && !loading && (
             <StatusMsg>
               Sign in to view your team.<br /><br />
@@ -342,17 +424,18 @@ export default function MyTeam() {
 
           {user && (
             <>
-              {/* GW header */}
               <GWHeader>
                 <GWNav>
                   <GWBtn
-                    onClick={() => setGw(g => Math.max(1, (g || 1) - 1))}
-                    disabled={!gw || gw <= 1}
+                    onClick={() => canGoBack && setGw(g => g - 1)}
+                    disabled={!canGoBack}
+                    aria-label="Previous gameweek"
                   >‹</GWBtn>
                   <GWLabel>Gameweek {gw || '—'}</GWLabel>
                   <GWBtn
-                    onClick={() => setGw(g => Math.min(maxGw, (g || maxGw) + 1))}
-                    disabled={!gw || gw >= maxGw}
+                    onClick={() => canGoForward && setGw(g => g + 1)}
+                    disabled={!canGoForward}
+                    aria-label="Next gameweek"
                   >›</GWBtn>
                 </GWNav>
 
@@ -367,7 +450,7 @@ export default function MyTeam() {
                       <StatLabel>GW Rank</StatLabel>
                     </StatBox>
                     <StatBox>
-                      <StatValue>{history.overall_rank?.toLocaleString() ?? user.overallRank?.toLocaleString() ?? '—'}</StatValue>
+                      <StatValue>{(history.overall_rank ?? user.overallRank)?.toLocaleString() ?? '—'}</StatValue>
                       <StatLabel>Overall Rank</StatLabel>
                     </StatBox>
                     <StatBox>
@@ -384,7 +467,6 @@ export default function MyTeam() {
                 )}
               </GWHeader>
 
-              {/* Pitch */}
               <PitchWrapper>
                 {loading && <StatusMsg>Loading team…</StatusMsg>}
                 {error   && <StatusMsg>Could not load team.<br />{error}</StatusMsg>}
