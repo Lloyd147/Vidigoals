@@ -121,6 +121,17 @@ const FPLNote = styled.p`
   color: #4a5568;
 `;
 
+const GuestLink = styled.a`
+  display: block;
+  margin-top: 1.25rem;
+  text-align: center;
+  font-size: 0.88rem;
+  color: #8892b0;
+  cursor: pointer;
+  text-decoration: underline;
+  &:hover { color: #eaeaea; }
+`;
+
 export default function Home() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -198,6 +209,9 @@ export default function Home() {
           <FPLNote>
             Uses your official Fantasy Premier League credentials.
           </FPLNote>
+          <GuestLink href="/vidiprinter">
+            Continue as Guest →
+          </GuestLink>
         </Card>
       </PageWrapper>
     </>
