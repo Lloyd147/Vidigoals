@@ -308,7 +308,8 @@ export default function Matches() {
 
   async function toggleExpand(match) {
     const isFinished = ['FT', 'AET', 'PEN'].includes(match.status);
-    if (!isFinished) return; // Only expand finished matches
+    const isLive = ['1H', '2H', 'HT', 'ET', 'P', 'BT'].includes(match.status);
+    if (!isFinished && !isLive) return; // Only expand finished or live matches
 
     if (expanded === match.id) {
       setExpanded(null);
@@ -316,9 +317,10 @@ export default function Matches() {
     }
 
     setExpanded(match.id);
+    setActiveTab('details');
 
-    // Fetch details if not cached
-    if (!details[match.id]) {
+    // Fetch details if not cached (or if live, always refresh)
+    if (!details[match.id] || isLive) {
       setDetailLoading(match.id);
       try {
         const res = await fetch(`/api/match-details?fixtureId=${match.id}`);
