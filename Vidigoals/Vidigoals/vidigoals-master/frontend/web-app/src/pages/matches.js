@@ -79,6 +79,57 @@ const FixtureRow = styled.div`
   padding: 0.85rem 1rem;
   border-bottom: 1px solid #2d1a4e;
   gap: 0.5rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  &:hover { background: rgba(108,46,185,0.15); }
+`;
+
+const ExpandedDetails = styled.div`
+  padding: 0.75rem 1rem 1rem;
+  background: rgba(45, 10, 94, 0.3);
+  border-bottom: 1px solid #4a1a8e;
+`;
+
+const DetailSection = styled.div`
+  margin-bottom: 0.75rem;
+  &:last-child { margin-bottom: 0; }
+`;
+
+const DetailTitle = styled.div`
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #f5a623;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid #4a1a8e;
+`;
+
+const DetailRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+  font-size: 0.78rem;
+  color: #ccc;
+`;
+
+const DetailHome = styled.span`
+  text-align: left;
+  flex: 1;
+`;
+
+const DetailAway = styled.span`
+  text-align: right;
+  flex: 1;
+`;
+
+const LoadingDetail = styled.div`
+  text-align: center;
+  padding: 0.75rem;
+  font-size: 0.8rem;
+  color: #8892b0;
 `;
 
 const TeamSection = styled.div`
@@ -153,6 +204,9 @@ export default function Matches() {
   const [round, setRound]       = useState(null);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState(null);
+  const [expanded, setExpanded] = useState(null); // fixture id
+  const [details, setDetails]   = useState({});   // { [id]: data }
+  const [detailLoading, setDetailLoading] = useState(null);
 
   useEffect(() => {
     try {
@@ -168,6 +222,7 @@ export default function Matches() {
   async function fetchFixtures(gw) {
     setLoading(true);
     setError(null);
+    setExpanded(null);
     try {
       const url = gw ? `/api/fixtures?round=${gw}` : '/api/fixtures';
       const res = await fetch(url);
@@ -179,6 +234,31 @@ export default function Matches() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function toggleExpand(match) {
+    const isFinished = ['FT', 'AET', 'PEN'].includes(match.status);
+    if (!isFinished) return; // Only expand finished matches
+
+    if (expanded === match.id) {
+      setExpanded(null);
+      return;
+    }
+
+    setExpanded(match.id);
+
+    // Fetch details if not cached
+    if (!details[match.id]) {
+      setDetailLoading(match.id);
+      try {
+        const res = await fetch(`/api/match-details?fixtureId=${match.id}`);
+        const data = await res.json();
+        if (!data.error) {
+          setDetails(prev => ({ ...prev, [match.id]: data }));
+        }
+      } catch {}
+      setDetailLoading(null);
     }
   }
 
@@ -227,38 +307,123 @@ export default function Matches() {
                 {matches.map(match => {
                   const isFinished = ['FT', 'AET', 'PEN'].includes(match.status);
                   const isLive = ['1H', '2H', 'HT', 'ET'].includes(match.status);
+                  const isExpanded = expanded === match.id;
+                  const matchDetails = details[match.id];
 
                   return (
-                    <FixtureRow key={match.id}>
-                      <TeamSection align="right">
-                        <TeamName>{match.home.name}</TeamName>
-                        {match.home.logo && (
-                          <TeamLogo
-                            src={match.home.logo}
-                            alt={match.home.name}
-                            onError={e => { e.target.style.display = 'none'; }}
-                          />
-                        )}
-                      </TeamSection>
+                    <div key={match.id}>
+                      <FixtureRow onClick={() => toggleExpand(match)}>
+                        <TeamSection align="right">
+                          <TeamName>{match.home.name}</TeamName>
+                          {match.home.logo && (
+                            <TeamLogo
+                              src={match.home.logo}
+                              alt={match.home.name}
+                              onError={e => { e.target.style.display = 'none'; }}
+                            />
+                          )}
+                        </TeamSection>
 
-                      <ScoreBox finished={isFinished || isLive}>
-                        {isFinished || isLive
-                          ? `${match.home.score ?? 0} - ${match.away.score ?? 0}`
-                          : match.time
-                        }
-                      </ScoreBox>
+                        <ScoreBox finished={isFinished || isLive}>
+                          {isFinished || isLive
+                            ? `${match.home.score ?? 0} - ${match.away.score ?? 0}`
+                            : match.time
+                          }
+                        </ScoreBox>
 
-                      <TeamSection>
-                        {match.away.logo && (
-                          <TeamLogo
-                            src={match.away.logo}
-                            alt={match.away.name}
-                            onError={e => { e.target.style.display = 'none'; }}
-                          />
-                        )}
-                        <TeamName>{match.away.name}</TeamName>
-                      </TeamSection>
-                    </FixtureRow>
+                        <TeamSection>
+                          {match.away.logo && (
+                            <TeamLogo
+                              src={match.away.logo}
+                              alt={match.away.name}
+                              onError={e => { e.target.style.display = 'none'; }}
+                            />
+                          )}
+                          <TeamName>{match.away.name}</TeamName>
+                        </TeamSection>
+                      </FixtureRow>
+
+                      {isExpanded && (
+                        <ExpandedDetails>
+                          {detailLoading === match.id && (
+                            <LoadingDetail>Loading match details…</LoadingDetail>
+                          )}
+
+                          {matchDetails && (
+                            <>
+                              {/* Goals */}
+                              {(matchDetails.goals.home.length > 0 || matchDetails.goals.away.length > 0) && (
+                                <DetailSection>
+                                  <DetailTitle>Goals Scored</DetailTitle>
+                                  {Math.max(matchDetails.goals.home.length, matchDetails.goals.away.length) > 0 &&
+                                    Array.from({ length: Math.max(matchDetails.goals.home.length, matchDetails.goals.away.length) }).map((_, i) => (
+                                      <DetailRow key={`goal-${i}`}>
+                                        <DetailHome>{matchDetails.goals.home[i] ? `${matchDetails.goals.home[i].player} (${matchDetails.goals.home[i].minute})` : ''}</DetailHome>
+                                        <DetailAway>{matchDetails.goals.away[i] ? `${matchDetails.goals.away[i].player} (${matchDetails.goals.away[i].minute})` : ''}</DetailAway>
+                                      </DetailRow>
+                                    ))
+                                  }
+                                </DetailSection>
+                              )}
+
+                              {/* Assists */}
+                              {(matchDetails.assists.home.length > 0 || matchDetails.assists.away.length > 0) && (
+                                <DetailSection>
+                                  <DetailTitle>Assists</DetailTitle>
+                                  {Array.from({ length: Math.max(matchDetails.assists.home.length, matchDetails.assists.away.length) }).map((_, i) => (
+                                    <DetailRow key={`assist-${i}`}>
+                                      <DetailHome>{matchDetails.assists.home[i]?.player || ''}</DetailHome>
+                                      <DetailAway>{matchDetails.assists.away[i]?.player || ''}</DetailAway>
+                                    </DetailRow>
+                                  ))}
+                                </DetailSection>
+                              )}
+
+                              {/* Yellow Cards */}
+                              {(matchDetails.yellowCards.home.length > 0 || matchDetails.yellowCards.away.length > 0) && (
+                                <DetailSection>
+                                  <DetailTitle>Yellow Cards</DetailTitle>
+                                  {Array.from({ length: Math.max(matchDetails.yellowCards.home.length, matchDetails.yellowCards.away.length) }).map((_, i) => (
+                                    <DetailRow key={`yc-${i}`}>
+                                      <DetailHome>{matchDetails.yellowCards.home[i]?.player || ''}</DetailHome>
+                                      <DetailAway>{matchDetails.yellowCards.away[i]?.player || ''}</DetailAway>
+                                    </DetailRow>
+                                  ))}
+                                </DetailSection>
+                              )}
+
+                              {/* Red Cards */}
+                              {(matchDetails.redCards.home.length > 0 || matchDetails.redCards.away.length > 0) && (
+                                <DetailSection>
+                                  <DetailTitle>Red Cards</DetailTitle>
+                                  {Array.from({ length: Math.max(matchDetails.redCards.home.length, matchDetails.redCards.away.length) }).map((_, i) => (
+                                    <DetailRow key={`rc-${i}`}>
+                                      <DetailHome>{matchDetails.redCards.home[i]?.player || ''}</DetailHome>
+                                      <DetailAway>{matchDetails.redCards.away[i]?.player || ''}</DetailAway>
+                                    </DetailRow>
+                                  ))}
+                                </DetailSection>
+                              )}
+
+                              {/* Saves */}
+                              {(matchDetails.saves.home.length > 0 || matchDetails.saves.away.length > 0) && (
+                                <DetailSection>
+                                  <DetailTitle>Saves</DetailTitle>
+                                  <DetailRow>
+                                    <DetailHome>{matchDetails.saves.home[0] ? `${matchDetails.saves.home[0].player} (${matchDetails.saves.home[0].count})` : ''}</DetailHome>
+                                    <DetailAway>{matchDetails.saves.away[0] ? `${matchDetails.saves.away[0].player} (${matchDetails.saves.away[0].count})` : ''}</DetailAway>
+                                  </DetailRow>
+                                </DetailSection>
+                              )}
+                            </>
+                          )}
+
+                          {!matchDetails && !detailLoading && (
+                            <LoadingDetail>No details available</LoadingDetail>
+                          )}
+                        </ExpandedDetails>
+                      )}
+                    </div>
                   );
                 })}
               </div>

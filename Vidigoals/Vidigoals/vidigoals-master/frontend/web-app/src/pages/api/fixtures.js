@@ -70,9 +70,13 @@ export default async function handler(req, res) {
       if (match) currentRound = parseInt(match[1]);
     }
 
-    // Group fixtures by date
+    // Group fixtures by date — sorted chronologically
+    const sorted = [...fixtures].sort((a, b) =>
+      new Date(a.fixture?.date) - new Date(b.fixture?.date)
+    );
+
     const grouped = {};
-    for (const f of fixtures) {
+    for (const f of sorted) {
       const date = new Date(f.fixture?.date);
       const dateKey = date.toLocaleDateString('en-GB', {
         weekday: 'short',
