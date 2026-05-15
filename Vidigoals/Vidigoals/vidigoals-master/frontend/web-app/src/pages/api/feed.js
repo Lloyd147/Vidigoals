@@ -16,7 +16,8 @@
 const API_KEY = process.env.API_FOOTBALL_KEY;
 const BASE_URL = 'https://v3.football.api-sports.io';
 const PL_LEAGUE_ID = 39;
-const SEASON = 2025;
+// API-Football may file current fixtures under either season depending on timing
+const SEASONS = [2025, 2024];
 
 // ── Cache ─────────────────────────────────────────────────────────────────────
 let feedCache = { data: null, fetchedAt: 0, isLive: false };
@@ -49,32 +50,39 @@ async function buildFeed() {
 
   // 1. Check live matches
   try {
-    const liveData = await apiFetch(`/fixtures?live=all&league=${PL_LEAGUE_ID}&season=${SEASON}`);
-    const live = liveData.response || [];
-    if (live.length > 0) {
-      isLive = true;
-      allFixtures.push(...live);
+    for (const season of SEASONS) {
+      const liveData = await apiFetch(`/fixtures?live=all&league=${PL_LEAGUE_ID}&season=${season}`);
+      const live = liveData.response || [];
+      if (live.length > 0) {
+        isLive = true;
+        allFixtures.push(...live);
+        break; // Found live matches, no need to check other season
+      }
     }
   } catch {}
 
   // 2. Today's fixtures
   try {
-    const todayData = await apiFetch(`/fixtures?date=${dateStr(0)}&league=${PL_LEAGUE_ID}&season=${SEASON}`);
-    const today = todayData.response || [];
-    for (const f of today) {
-      if (!allFixtures.some(af => af.fixture?.id === f.fixture?.id)) {
-        allFixtures.push(f);
+    for (const season of SEASONS) {
+      const todayData = await apiFetch(`/fixtures?date=${dateStr(0)}&league=${PL_LEAGUE_ID}&season=${season}`);
+      const today = todayData.response || [];
+      for (const f of today) {
+        if (!allFixtures.some(af => af.fixture?.id === f.fixture?.id)) {
+          allFixtures.push(f);
+        }
       }
     }
   } catch {}
 
   // 3. Yesterday's fixtures
   try {
-    const yestData = await apiFetch(`/fixtures?date=${dateStr(1)}&league=${PL_LEAGUE_ID}&season=${SEASON}`);
-    const yest = yestData.response || [];
-    for (const f of yest) {
-      if (!allFixtures.some(af => af.fixture?.id === f.fixture?.id)) {
-        allFixtures.push(f);
+    for (const season of SEASONS) {
+      const yestData = await apiFetch(`/fixtures?date=${dateStr(1)}&league=${PL_LEAGUE_ID}&season=${season}`);
+      const yest = yestData.response || [];
+      for (const f of yest) {
+        if (!allFixtures.some(af => af.fixture?.id === f.fixture?.id)) {
+          allFixtures.push(f);
+        }
       }
     }
   } catch {}
@@ -82,18 +90,24 @@ async function buildFeed() {
   // 4. If still empty, try 2 days ago
   if (allFixtures.length === 0) {
     try {
-      const data = await apiFetch(`/fixtures?date=${dateStr(2)}&league=${PL_LEAGUE_ID}&season=${SEASON}`);
-      const fixtures = data.response || [];
-      allFixtures.push(...fixtures);
+      for (const season of SEASONS) {
+        const data = await apiFetch(`/fixtures?date=${dateStr(2)}&league=${PL_LEAGUE_ID}&season=${season}`);
+        const fixtures = data.response || [];
+        allFixtures.push(...fixtures);
+        if (allFixtures.length > 0) break;
+      }
     } catch {}
   }
 
   // 5. If still empty, try 3 days ago
   if (allFixtures.length === 0) {
     try {
-      const data = await apiFetch(`/fixtures?date=${dateStr(3)}&league=${PL_LEAGUE_ID}&season=${SEASON}`);
-      const fixtures = data.response || [];
-      allFixtures.push(...fixtures);
+      for (const season of SEASONS) {
+        const data = await apiFetch(`/fixtures?date=${dateStr(3)}&league=${PL_LEAGUE_ID}&season=${season}`);
+        const fixtures = data.response || [];
+        allFixtures.push(...fixtures);
+        if (allFixtures.length > 0) break;
+      }
     } catch {}
   }
 
