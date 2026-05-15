@@ -20,6 +20,8 @@ const Wrapper = styled.div`
   display: flex;
   flex-direction: column;
   background: #1a0a2e;
+  position: relative;
+  overflow: visible;
 `;
 
 // ── GW Navigation ─────────────────────────────────────────────────────────────
@@ -245,6 +247,7 @@ const BottomNav = styled.nav`
   display: flex;
   border-top: 1px solid #4a1a8e;
   z-index: 9999;
+  pointer-events: auto;
 `;
 
 const NavItem = styled.a`
@@ -254,6 +257,9 @@ const NavItem = styled.a`
   color: ${({ active }) => (active ? '#f5a623' : '#8892b0')};
   font-size: 0.65rem; gap: 3px;
   border-top: 2px solid ${({ active }) => (active ? '#f5a623' : 'transparent')};
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
   &:hover { color: #f5a623; }
 `;
 
@@ -533,9 +539,9 @@ export default function Matches() {
         <BottomNav>
           <NavItem href="/"><NavIcon>⚽</NavIcon>Goals</NavItem>
           <NavItem href={user ? '/my-team' : '/signin'}><NavIcon>👕</NavIcon>My Team</NavItem>
-          <NavItem href="#"><NavIcon>🏆</NavIcon>Leaderboard</NavItem>
+          <NavItem href="/leaderboard"><NavIcon>🏆</NavIcon>Leaderboard</NavItem>
           <NavItem href="/matches" active={1}><NavIcon>📋</NavIcon>Matches</NavItem>
-          <NavItem href="#"><NavIcon>⚙️</NavIcon>Settings</NavItem>
+          <NavItem href="/settings"><NavIcon>⚙️</NavIcon>Settings</NavItem>
         </BottomNav>
       </Wrapper>
     </>
