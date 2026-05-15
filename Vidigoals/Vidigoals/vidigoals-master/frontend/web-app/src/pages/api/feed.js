@@ -117,14 +117,22 @@ async function buildFeed() {
   for (const fixture of allFixtures) {
     const fix = fixture.fixture;
     const teams = fixture.teams;
-    const events = fixture.events || [];
+    let events = fixture.events || [];
 
     if (!fix || !teams) continue;
 
+    // If no events inline, fetch them separately
+    if (events.length === 0 && fix.id) {
+      try {
+        const evData = await apiFetch(`/fixtures/events?fixture=${fix.id}`);
+        events = evData.response || [];
+      } catch {}
+    }
+
     const homeTeam = teams.home;
     const awayTeam = teams.away;
-    const homeGoals = fix.goals?.home ?? fixture.goals?.home ?? 0;
-    const awayGoals = fix.goals?.away ?? fixture.goals?.away ?? 0;
+    const homeGoals = fixture.goals?.home ?? 0;
+    const awayGoals = fixture.goals?.away ?? 0;
 
     // HT marker
     if (fix.score?.halftime?.home != null) {
@@ -162,7 +170,7 @@ async function buildFeed() {
       });
     }
 
-    // Skip if no events
+    // Skip individual events if none
     if (events.length === 0) continue;
 
     // Individual events
