@@ -10,7 +10,8 @@ const API_KEY = process.env.API_FOOTBALL_KEY;
 const BASE_URL = 'https://v3.football.api-sports.io';
 
 const detailsCache = new Map();
-const CACHE_TTL = 10 * 60 * 1000;
+const CACHE_TTL_IDLE = 10 * 60 * 1000; // 10 minutes for finished matches
+const CACHE_TTL_LIVE = 30 * 1000;      // 30 seconds for live matches
 
 async function apiFetch(path) {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -37,8 +38,11 @@ export default async function handler(req, res) {
 
   // Check cache
   const cached = detailsCache.get(fixtureId);
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL) {
-    return res.status(200).json(cached.data);
+  if (cached) {
+    const ttl = cached.isLive ? CACHE_TTL_LIVE : CACHE_TTL_IDLE;
+    if (Date.now() - cached.fetchedAt < ttl) {
+      return res.status(200).json(cached.data);
+    }
   }
 
   try {
@@ -184,7 +188,11 @@ export default async function handler(req, res) {
       stats: statsDisplay,
     };
 
-    detailsCache.set(fixtureId, { data: result, fetchedAt: Date.now() });
+    // Determine if match is live
+    const liveStatuses = ['1H', '2H', 'HT', 'ET', 'P', 'BT'];
+    const isLive = liveStatuses.includes(fixture.fixture?.status?.short);
+
+    detailsCache.set(fixtureId, { data: result, fetchedAt: Date.now(), isLive });
     return res.status(200).json(result);
   } catch (err) {
     console.error('Match details error:', err.message);

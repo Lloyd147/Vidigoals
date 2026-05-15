@@ -10,9 +10,10 @@
 const API_KEY = process.env.API_FOOTBALL_KEY;
 const BASE_URL = 'https://v3.football.api-sports.io';
 
-// Cache per round — rounds don't change once finished
+// Cache per round — shorter TTL if live matches detected
 const roundCache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_IDLE = 5 * 60 * 1000; // 5 minutes when no live matches
+const CACHE_TTL_LIVE = 30 * 1000;     // 30 seconds when live matches
 
 async function apiFetch(path) {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -32,8 +33,11 @@ export default async function handler(req, res) {
   // Check cache
   const cacheKey = round || 'current';
   const cached = roundCache.get(cacheKey);
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL) {
-    return res.status(200).json(cached.data);
+  if (cached) {
+    const ttl = cached.isLive ? CACHE_TTL_LIVE : CACHE_TTL_IDLE;
+    if (Date.now() - cached.fetchedAt < ttl) {
+      return res.status(200).json(cached.data);
+    }
   }
 
   try {
@@ -105,14 +109,19 @@ export default async function handler(req, res) {
       });
     }
 
+    // Determine if any fixtures are live
+    const liveStatuses = ['1H', '2H', 'HT', 'ET', 'P', 'BT'];
+    const hasLive = fixtures.some(f => liveStatuses.includes(f.fixture?.status?.short));
+
     const result = {
       round: currentRound,
       totalRounds: 38,
       fixtures: grouped,
       fixtureCount: fixtures.length,
+      isLive: hasLive,
     };
 
-    roundCache.set(cacheKey, { data: result, fetchedAt: Date.now() });
+    roundCache.set(cacheKey, { data: result, fetchedAt: Date.now(), isLive: hasLive });
     return res.status(200).json(result);
   } catch (err) {
     console.error('Fixtures error:', err.message);
