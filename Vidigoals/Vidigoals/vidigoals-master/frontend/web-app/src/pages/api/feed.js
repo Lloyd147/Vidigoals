@@ -87,29 +87,31 @@ async function buildFeed() {
     }
   } catch {}
 
-  // 4. If still empty, try 2 days ago
-  if (allFixtures.length === 0) {
-    try {
-      for (const season of SEASONS) {
-        const data = await apiFetch(`/fixtures?date=${dateStr(2)}&league=${PL_LEAGUE_ID}&season=${season}`);
-        const fixtures = data.response || [];
-        allFixtures.push(...fixtures);
-        if (allFixtures.length > 0) break;
+  // 4. 2 days ago — ALWAYS check (not just when empty)
+  try {
+    for (const season of SEASONS) {
+      const data = await apiFetch(`/fixtures?date=${dateStr(2)}&league=${PL_LEAGUE_ID}&season=${season}`);
+      const fixtures = data.response || [];
+      for (const f of fixtures) {
+        if (!allFixtures.some(af => af.fixture?.id === f.fixture?.id)) {
+          allFixtures.push(f);
+        }
       }
-    } catch {}
-  }
+    }
+  } catch {}
 
-  // 5. If still empty, try 3 days ago
-  if (allFixtures.length === 0) {
-    try {
-      for (const season of SEASONS) {
-        const data = await apiFetch(`/fixtures?date=${dateStr(3)}&league=${PL_LEAGUE_ID}&season=${season}`);
-        const fixtures = data.response || [];
-        allFixtures.push(...fixtures);
-        if (allFixtures.length > 0) break;
+  // 5. 3 days ago — ALWAYS check
+  try {
+    for (const season of SEASONS) {
+      const data = await apiFetch(`/fixtures?date=${dateStr(3)}&league=${PL_LEAGUE_ID}&season=${season}`);
+      const fixtures = data.response || [];
+      for (const f of fixtures) {
+        if (!allFixtures.some(af => af.fixture?.id === f.fixture?.id)) {
+          allFixtures.push(f);
+        }
       }
-    } catch {}
-  }
+    }
+  } catch {}
 
   // Build event feed
   const feed = [];
