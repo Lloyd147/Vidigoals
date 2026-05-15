@@ -428,12 +428,11 @@ export default function Matches() {
                         </TeamSection>
 
                         <ScoreBox finished={isFinished || isLive} live={isLive}>
+                          {isLive && <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#48bb78', marginBottom: '2px' }}>LIVE {match.elapsed ? `${match.elapsed}'` : ''}</div>}
                           {isFinished || isLive
                             ? `${match.home.score ?? 0} - ${match.away.score ?? 0}`
                             : match.time
                           }
-                          {isLive && <LiveBadge>LIVE</LiveBadge>}
-                          {isLive && match.elapsed && <MinuteBadge>{match.elapsed}'</MinuteBadge>}
                         </ScoreBox>
 
                         <TeamSection>
