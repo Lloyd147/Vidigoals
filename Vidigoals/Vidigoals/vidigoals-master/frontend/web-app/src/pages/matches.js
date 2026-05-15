@@ -61,6 +61,7 @@ const FixturesWrapper = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 0.5rem 0;
+  padding-bottom: 60px;
 `;
 
 const DateHeader = styled.div`
@@ -234,11 +235,16 @@ const StatusMsg = styled.div`
 
 // ── Bottom Nav ────────────────────────────────────────────────────────────────
 const BottomNav = styled.nav`
-  position: sticky; bottom: 0;
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
   background: #2d0a5e;
   display: flex;
   border-top: 1px solid #4a1a8e;
-  z-index: 100;
+  z-index: 9999;
 `;
 
 const NavItem = styled.a`
