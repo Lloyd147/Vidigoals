@@ -221,10 +221,42 @@ const ScoreBox = styled.div`
   text-align: center;
   font-size: 0.85rem;
   font-weight: 700;
-  color: ${({ finished }) => finished ? '#fff' : '#f5a623'};
-  background: ${({ finished }) => finished ? 'rgba(255,255,255,0.08)' : 'transparent'};
+  color: ${({ live }) => live ? '#48bb78' : ({ finished }) => finished ? '#fff' : '#f5a623'};
+  color: ${({ live, finished }) => live ? '#48bb78' : finished ? '#fff' : '#f5a623'};
+  background: ${({ live, finished }) => live ? 'rgba(72,187,120,0.15)' : finished ? 'rgba(255,255,255,0.08)' : 'transparent'};
   border-radius: 4px;
   padding: 0.3rem 0.5rem;
+  ${({ live }) => live && 'animation: pulse-live 1.5s infinite;'}
+  @keyframes pulse-live {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+`;
+
+const LiveBadge = styled.span`
+  display: inline-block;
+  background: #48bb78;
+  color: #1a0a2e;
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 4px;
+  letter-spacing: 0.5px;
+`;
+
+const MinuteBadge = styled.span`
+  font-size: 0.65rem;
+  color: #48bb78;
+  margin-left: 3px;
+`;
+
+const ExpandIcon = styled.span`
+  font-size: 0.7rem;
+  color: #8892b0;
+  margin-left: auto;
+  transition: transform 0.2s;
+  transform: ${({ expanded }) => expanded ? 'rotate(180deg)' : 'rotate(0deg)'};
 `;
 
 const StatusMsg = styled.div`
@@ -395,11 +427,13 @@ export default function Matches() {
                           )}
                         </TeamSection>
 
-                        <ScoreBox finished={isFinished || isLive}>
+                        <ScoreBox finished={isFinished || isLive} live={isLive}>
                           {isFinished || isLive
                             ? `${match.home.score ?? 0} - ${match.away.score ?? 0}`
                             : match.time
                           }
+                          {isLive && <LiveBadge>LIVE</LiveBadge>}
+                          {isLive && match.elapsed && <MinuteBadge>{match.elapsed}'</MinuteBadge>}
                         </ScoreBox>
 
                         <TeamSection>
@@ -412,6 +446,8 @@ export default function Matches() {
                           )}
                           <TeamName>{match.away.name}</TeamName>
                         </TeamSection>
+
+                        {(isFinished || isLive) && <ExpandIcon expanded={isExpanded}>▼</ExpandIcon>}
                       </FixtureRow>
 
                       {isExpanded && (

@@ -96,6 +96,7 @@ export default async function handler(req, res) {
         time: date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
         status: f.fixture?.status?.short,
         statusLong: f.fixture?.status?.long,
+        elapsed: f.fixture?.status?.elapsed || null,
         home: {
           name: f.teams?.home?.name,
           logo: f.teams?.home?.logo,

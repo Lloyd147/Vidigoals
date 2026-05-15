@@ -54,10 +54,23 @@ export default async function handler(req, res) {
     // Position names
     const posMap = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
 
+    // Get GW-specific player points from the live endpoint
+    let gwPoints = {};
+    try {
+      const liveData = await fplFetch(`https://fantasy.premierleague.com/api/event/${currentGW}/live/`);
+      if (liveData?.elements) {
+        for (const el of liveData.elements) {
+          gwPoints[el.id] = el.stats?.total_points ?? 0;
+        }
+      }
+    } catch {}
+
     // Enrich picks with player data
     const picks = (picksData.picks || []).map(pick => {
       const player = playerMap[pick.element] || {};
       const team = teamMap[player.team] || {};
+      // Use GW-specific points if available, otherwise fall back to bootstrap
+      const eventPts = gwPoints[pick.element] ?? player.event_points ?? 0;
       return {
         element: pick.element,
         position: pick.position,
@@ -71,7 +84,7 @@ export default async function handler(req, res) {
         team_name: team.name || '',
         team_short: team.short_name || '',
         team_id: player.team || null,
-        event_points: player.event_points ?? 0,
+        event_points: eventPts,
         total_points: player.total_points ?? 0,
         photo: player.photo ? player.photo.replace('.jpg', '.png') : null,
       };
