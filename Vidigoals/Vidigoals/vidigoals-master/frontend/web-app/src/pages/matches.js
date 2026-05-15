@@ -418,11 +418,11 @@ export default function Matches() {
                                   {/* Goals */}
                                   {(matchDetails.goals.home.length > 0 || matchDetails.goals.away.length > 0) && (
                                     <DetailSection>
-                                      <DetailTitle>Goals Scored</DetailTitle>
+                                      <DetailTitle>⚽ Goals Scored</DetailTitle>
                                       {Array.from({ length: Math.max(matchDetails.goals.home.length, matchDetails.goals.away.length) }).map((_, i) => (
                                         <DetailRow key={`goal-${i}`}>
-                                          <DetailHome>{matchDetails.goals.home[i] ? `${matchDetails.goals.home[i].player} (${matchDetails.goals.home[i].minute})` : ''}</DetailHome>
-                                          <DetailAway>{matchDetails.goals.away[i] ? `${matchDetails.goals.away[i].player} (${matchDetails.goals.away[i].minute})` : ''}</DetailAway>
+                                          <DetailHome>{matchDetails.goals.home[i] ? `⚽ ${matchDetails.goals.home[i].player} (${matchDetails.goals.home[i].minute})` : ''}</DetailHome>
+                                          <DetailAway>{matchDetails.goals.away[i] ? `${matchDetails.goals.away[i].player} (${matchDetails.goals.away[i].minute}) ⚽` : ''}</DetailAway>
                                         </DetailRow>
                                       ))}
                                     </DetailSection>
@@ -444,11 +444,11 @@ export default function Matches() {
                                   {/* Yellow Cards */}
                                   {(matchDetails.yellowCards.home.length > 0 || matchDetails.yellowCards.away.length > 0) && (
                                     <DetailSection>
-                                      <DetailTitle>Yellow Cards</DetailTitle>
+                                      <DetailTitle>🟨 Yellow Cards</DetailTitle>
                                       {Array.from({ length: Math.max(matchDetails.yellowCards.home.length, matchDetails.yellowCards.away.length) }).map((_, i) => (
                                         <DetailRow key={`yc-${i}`}>
-                                          <DetailHome>{matchDetails.yellowCards.home[i]?.player || ''}</DetailHome>
-                                          <DetailAway>{matchDetails.yellowCards.away[i]?.player || ''}</DetailAway>
+                                          <DetailHome>{matchDetails.yellowCards.home[i] ? `${matchDetails.yellowCards.home[i].player} (${matchDetails.yellowCards.home[i].minute || ''})` : ''}</DetailHome>
+                                          <DetailAway>{matchDetails.yellowCards.away[i] ? `${matchDetails.yellowCards.away[i].player} (${matchDetails.yellowCards.away[i].minute || ''})` : ''}</DetailAway>
                                         </DetailRow>
                                       ))}
                                     </DetailSection>
@@ -457,23 +457,23 @@ export default function Matches() {
                                   {/* Red Cards */}
                                   {(matchDetails.redCards.home.length > 0 || matchDetails.redCards.away.length > 0) && (
                                     <DetailSection>
-                                      <DetailTitle>Red Cards</DetailTitle>
+                                      <DetailTitle>🟥 Red Cards</DetailTitle>
                                       {Array.from({ length: Math.max(matchDetails.redCards.home.length, matchDetails.redCards.away.length) }).map((_, i) => (
                                         <DetailRow key={`rc-${i}`}>
-                                          <DetailHome>{matchDetails.redCards.home[i]?.player || ''}</DetailHome>
-                                          <DetailAway>{matchDetails.redCards.away[i]?.player || ''}</DetailAway>
+                                          <DetailHome>{matchDetails.redCards.home[i] ? `${matchDetails.redCards.home[i].player} (${matchDetails.redCards.home[i].minute || ''})` : ''}</DetailHome>
+                                          <DetailAway>{matchDetails.redCards.away[i] ? `${matchDetails.redCards.away[i].player} (${matchDetails.redCards.away[i].minute || ''})` : ''}</DetailAway>
                                         </DetailRow>
                                       ))}
                                     </DetailSection>
                                   )}
 
                                   {/* Saves */}
-                                  {(matchDetails.saves.home > 0 || matchDetails.saves.away > 0) && (
+                                  {(matchDetails.saves.home || matchDetails.saves.away) && (
                                     <DetailSection>
-                                      <DetailTitle>Saves</DetailTitle>
+                                      <DetailTitle>🧤 Saves</DetailTitle>
                                       <DetailRow>
-                                        <DetailHome>{matchDetails.saves.home || 0}</DetailHome>
-                                        <DetailAway>{matchDetails.saves.away || 0}</DetailAway>
+                                        <DetailHome>{matchDetails.saves.home ? `${matchDetails.saves.home.player} (${matchDetails.saves.home.count})` : ''}</DetailHome>
+                                        <DetailAway>{matchDetails.saves.away ? `${matchDetails.saves.away.player} (${matchDetails.saves.away.count})` : ''}</DetailAway>
                                       </DetailRow>
                                     </DetailSection>
                                   )}

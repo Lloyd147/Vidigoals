@@ -266,9 +266,9 @@ export default function Vidiprinter() {
         <BottomNav>
           <NavItem href="/" active={1}><NavIcon>⚽</NavIcon>Goals</NavItem>
           <NavItem href={user ? '/my-team' : '/signin'}><NavIcon>👕</NavIcon>My Team</NavItem>
-          <NavItem href="#"><NavIcon>🏆</NavIcon>Leaderboard</NavItem>
+          <NavItem href="/leaderboard"><NavIcon>🏆</NavIcon>Leaderboard</NavItem>
           <NavItem href="/matches"><NavIcon>📋</NavIcon>Matches</NavItem>
-          <NavItem href="#"><NavIcon>⚙️</NavIcon>Settings</NavItem>
+          <NavItem href="/settings"><NavIcon>⚙️</NavIcon>Settings</NavItem>
         </BottomNav>
       </Wrapper>
     </>

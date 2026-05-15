@@ -76,15 +76,16 @@ export default async function handler(req, res) {
         }
       } else if (event.type === 'Card') {
         if (event.detail?.includes('Yellow')) {
-          yellowCards[side].push({ player: playerName });
+          yellowCards[side].push({ player: playerName, minute: timeStr });
         } else if (event.detail?.includes('Red')) {
-          redCards[side].push({ player: playerName });
+          redCards[side].push({ player: playerName, minute: timeStr });
         }
       }
     }
 
     // ── Match Stats from API-Football ─────────────────────────────────────
     let matchStats = { home: {}, away: {} };
+    let saves = { home: null, away: null };
     try {
       const statsData = await apiFetch(`/fixtures/statistics?fixture=${fixtureId}`);
       const stats = statsData.response || [];
@@ -98,6 +99,24 @@ export default async function handler(req, res) {
         matchStats[side] = statMap;
       }
     } catch {}
+
+    // Get goalkeeper names from lineups
+    try {
+      const lineupsData = await apiFetch(`/fixtures/lineups?fixture=${fixtureId}`);
+      const lineups = lineupsData.response || [];
+      for (const lineup of lineups) {
+        const isHome = lineup.team?.id === homeTeam?.id;
+        const side = isHome ? 'home' : 'away';
+        const gk = lineup.startXI?.find(p => p.player?.pos === 'G');
+        const gkName = gk?.player?.name || 'Goalkeeper';
+        const savesCount = matchStats[side]['Goalkeeper Saves'] || 0;
+        saves[side] = { player: gkName, count: savesCount };
+      }
+    } catch {
+      // Fallback if lineups not available
+      saves.home = { player: 'Goalkeeper', count: matchStats.home['Goalkeeper Saves'] || 0 };
+      saves.away = { player: 'Goalkeeper', count: matchStats.away['Goalkeeper Saves'] || 0 };
+    }
 
     // Format stats for display
     const statsDisplay = [
@@ -180,10 +199,7 @@ export default async function handler(req, res) {
       assists,
       yellowCards,
       redCards,
-      saves: {
-        home: matchStats.home['Goalkeeper Saves'] || 0,
-        away: matchStats.away['Goalkeeper Saves'] || 0,
-      },
+      saves,
       bonus,
       stats: statsDisplay,
     };
