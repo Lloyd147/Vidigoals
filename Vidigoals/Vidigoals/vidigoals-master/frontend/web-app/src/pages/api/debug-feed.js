@@ -1,6 +1,6 @@
 /**
- * Debug endpoint — shows raw API-Football responses to diagnose feed issues.
- * Visit /api/debug-feed to see what's happening.
+ * Debug endpoint — step by step diagnosis of the feed.
+ * Visit /api/debug-feed to see exactly what's happening.
  */
 
 const API_KEY = process.env.API_FOOTBALL_KEY;
@@ -10,8 +10,7 @@ async function apiFetch(path) {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { 'x-apisports-key': API_KEY },
   });
-  const data = await res.json();
-  return { status: res.status, path, data };
+  return { status: res.status, ok: res.ok, data: await res.json() };
 }
 
 function dateStr(daysAgo = 0) {
@@ -19,46 +18,88 @@ function dateStr(daysAgo = 0) {
 }
 
 export default async function handler(req, res) {
-  if (!API_KEY) {
-    return res.status(500).json({ error: 'No API key' });
-  }
+  if (!API_KEY) return res.status(500).json({ error: 'No API key', keyLength: 0 });
 
-  const results = {};
-
-  // Try both seasons
-  try {
-    results.live_2025 = await apiFetch('/fixtures?live=all&league=39&season=2025');
-  } catch (e) { results.live_2025_error = e.message; }
-
-  try {
-    results.today_2025 = await apiFetch(`/fixtures?date=${dateStr(0)}&league=39&season=2025`);
-  } catch (e) { results.today_2025_error = e.message; }
-
-  try {
-    results.yesterday_2025 = await apiFetch(`/fixtures?date=${dateStr(1)}&league=39&season=2025`);
-  } catch (e) { results.yesterday_2025_error = e.message; }
-
-  try {
-    results.today_2024 = await apiFetch(`/fixtures?date=${dateStr(0)}&league=39&season=2024`);
-  } catch (e) { results.today_2024_error = e.message; }
-
-  try {
-    results.yesterday_2024 = await apiFetch(`/fixtures?date=${dateStr(1)}&league=39&season=2024`);
-  } catch (e) { results.yesterday_2024_error = e.message; }
-
-  try {
-    results.two_days_ago_2025 = await apiFetch(`/fixtures?date=${dateStr(2)}&league=39&season=2025`);
-  } catch (e) { results.two_days_ago_error = e.message; }
-
-  try {
-    results.two_days_ago_2024 = await apiFetch(`/fixtures?date=${dateStr(2)}&league=39&season=2024`);
-  } catch (e) { results.two_days_ago_2024_error = e.message; }
-
-  results.dates_checked = {
-    today: dateStr(0),
-    yesterday: dateStr(1),
-    two_days_ago: dateStr(2),
+  const debug = {
+    apiKeyFirstChars: API_KEY.substring(0, 6) + '...',
+    apiKeyLength: API_KEY.length,
+    dates: { today: dateStr(0), yesterday: dateStr(1), twoDaysAgo: dateStr(2) },
+    steps: [],
   };
 
-  return res.status(200).json(results);
+  // Step 1: Find fixtures from 2 days ago (Man City game)
+  try {
+    const result = await apiFetch(`/fixtures?date=${dateStr(2)}&league=39&season=2024`);
+    const fixtures = result.data?.response || [];
+    debug.steps.push({
+      step: '1. Fixtures 2 days ago (season 2024)',
+      status: result.status,
+      fixtureCount: fixtures.length,
+      fixtures: fixtures.map(f => ({
+        id: f.fixture?.id,
+        date: f.fixture?.date,
+        status: f.fixture?.status?.short,
+        home: f.teams?.home?.name,
+        away: f.teams?.away?.name,
+        score: `${f.goals?.home}-${f.goals?.away}`,
+        eventsCount: f.events?.length || 0,
+        hasScore: f.fixture?.score != null,
+      })),
+    });
+
+    // Step 2: If we found a fixture, fetch it by ID to get events
+    if (fixtures.length > 0) {
+      const fixtureId = fixtures[0].fixture?.id;
+      const fullResult = await apiFetch(`/fixtures?id=${fixtureId}`);
+      const fullFixture = fullResult.data?.response?.[0];
+      debug.steps.push({
+        step: `2. Full fixture by ID (${fixtureId})`,
+        status: fullResult.status,
+        hasEvents: (fullFixture?.events?.length || 0) > 0,
+        eventsCount: fullFixture?.events?.length || 0,
+        eventsSample: (fullFixture?.events || []).slice(0, 3).map(e => ({
+          type: e.type,
+          detail: e.detail,
+          player: e.player?.name,
+          minute: e.time?.elapsed,
+          team: e.team?.name,
+        })),
+        goals: fullFixture?.goals,
+        score: fullFixture?.score,
+        teams: {
+          home: fullFixture?.teams?.home?.name,
+          away: fullFixture?.teams?.away?.name,
+        },
+      });
+    }
+  } catch (e) {
+    debug.steps.push({ step: '1-2 ERROR', error: e.message });
+  }
+
+  // Step 3: Check today (season 2025)
+  try {
+    const result = await apiFetch(`/fixtures?date=${dateStr(0)}&league=39&season=2025`);
+    debug.steps.push({
+      step: '3. Today fixtures (season 2025)',
+      status: result.status,
+      fixtureCount: result.data?.response?.length || 0,
+      errors: result.data?.errors,
+    });
+  } catch (e) {
+    debug.steps.push({ step: '3 ERROR', error: e.message });
+  }
+
+  // Step 4: Check API account status
+  try {
+    const result = await apiFetch('/status');
+    debug.steps.push({
+      step: '4. API account status',
+      status: result.status,
+      account: result.data?.response,
+    });
+  } catch (e) {
+    debug.steps.push({ step: '4 ERROR', error: e.message });
+  }
+
+  return res.status(200).json(debug);
 }
