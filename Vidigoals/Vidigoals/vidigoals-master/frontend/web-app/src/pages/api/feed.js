@@ -121,11 +121,14 @@ async function buildFeed() {
 
     if (!fix || !teams) continue;
 
-    // If no events inline, fetch them separately
+    // If no events inline, re-fetch the full fixture by ID (includes events)
     if (events.length === 0 && fix.id) {
       try {
-        const evData = await apiFetch(`/fixtures/events?fixture=${fix.id}`);
-        events = evData.response || [];
+        const fullData = await apiFetch(`/fixtures?id=${fix.id}`);
+        const fullFixture = fullData.response?.[0];
+        if (fullFixture?.events?.length > 0) {
+          events = fullFixture.events;
+        }
       } catch {}
     }
 
