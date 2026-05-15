@@ -56,17 +56,44 @@ async function buildFeed() {
     fixtures = fixturesData.response || [];
   }
 
-  // 3. Fall back to last 10 fixtures (most recent gameweek)
+  // 3. Fall back to yesterday's fixtures
+  if (fixtures.length === 0) {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    fixturesData = await apiFetch(`/fixtures?date=${yesterday}&league=${PL_LEAGUE_ID}&season=${SEASON}`);
+    fixtures = fixturesData.response || [];
+  }
+
+  // 4. Fall back to 2 days ago
+  if (fixtures.length === 0) {
+    const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0];
+    fixturesData = await apiFetch(`/fixtures?date=${twoDaysAgo}&league=${PL_LEAGUE_ID}&season=${SEASON}`);
+    fixtures = fixturesData.response || [];
+  }
+
+  // 5. Last resort — last 10 fixtures
   if (fixtures.length === 0) {
     fixturesData = await apiFetch(`/fixtures?league=${PL_LEAGUE_ID}&season=${SEASON}&last=10`);
     fixtures = fixturesData.response || [];
   }
 
+  // For finished fixtures that don't have events, fetch events separately
+  for (let i = 0; i < fixtures.length; i++) {
+    const f = fixtures[i];
+    if ((!f.events || f.events.length === 0) && f.fixture?.id) {
+      try {
+        const evData = await apiFetch(`/fixtures/events?fixture=${f.fixture.id}`);
+        fixtures[i] = { ...f, events: evData.response || [] };
+      } catch {}
+    }
+  }
+
   const feed = [];
 
   for (const fixture of fixtures) {
-    const { fixture: fix, teams, events } = fixture;
-    if (!events || events.length === 0) continue;
+    const { fixture: fix, teams } = fixture;
+    // Events can be at fixture.events (inline) or as a flat array (fetched separately)
+    const events = Array.isArray(fixture.events) ? fixture.events : [];
+    if (events.length === 0) continue;
 
     const homeTeam  = teams?.home;
     const awayTeam  = teams?.away;
