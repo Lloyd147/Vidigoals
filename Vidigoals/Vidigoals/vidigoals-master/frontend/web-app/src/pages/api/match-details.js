@@ -1,21 +1,30 @@
 /**
- * API Route: /api/match-details?fixtureId={api-football-id}
+ * API Route: /api/match-details?fixtureId={id}&fplFixtureId={fplId}
  *
- * Fetches match details: events from API-Football + bonus from FPL.
- * Returns goals, assists, cards, saves, bonus points.
+ * Returns:
+ * - Match Details: goals, assists, cards, saves, bonus (from FPL)
+ * - Match Stats: possession, shots, xG, corners, fouls etc (from API-Football)
  */
 
 const API_KEY = process.env.API_FOOTBALL_KEY;
 const BASE_URL = 'https://v3.football.api-sports.io';
 
 const detailsCache = new Map();
-const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+const CACHE_TTL = 10 * 60 * 1000;
 
 async function apiFetch(path) {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { 'x-apisports-key': API_KEY },
   });
   if (!res.ok) throw new Error(`API-Football error: ${res.status}`);
+  return res.json();
+}
+
+async function fplFetch(url) {
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; VidiGoals/1.0)' },
+  });
+  if (!res.ok) return null;
   return res.json();
 }
 
@@ -36,16 +45,13 @@ export default async function handler(req, res) {
     // Fetch full fixture with events
     const fixtureData = await apiFetch(`/fixtures?id=${fixtureId}`);
     const fixture = fixtureData.response?.[0];
-
-    if (!fixture) {
-      return res.status(404).json({ error: 'Fixture not found' });
-    }
+    if (!fixture) return res.status(404).json({ error: 'Fixture not found' });
 
     const events = fixture.events || [];
     const homeTeam = fixture.teams?.home;
     const awayTeam = fixture.teams?.away;
 
-    // Categorize events
+    // ── Match Details ─────────────────────────────────────────────────────
     const goals = { home: [], away: [] };
     const assists = { home: [], away: [] };
     const yellowCards = { home: [], away: [] };
@@ -62,7 +68,7 @@ export default async function handler(req, res) {
       if (event.type === 'Goal' && event.detail !== 'Missed Penalty') {
         goals[side].push({ player: playerName, minute: timeStr });
         if (event.assist?.name) {
-          assists[side].push({ player: event.assist.name, minute: timeStr });
+          assists[side].push({ player: event.assist.name });
         }
       } else if (event.type === 'Card') {
         if (event.detail?.includes('Yellow')) {
@@ -73,17 +79,89 @@ export default async function handler(req, res) {
       }
     }
 
-    // Fetch statistics for saves
-    let saves = { home: [], away: [] };
+    // ── Match Stats from API-Football ─────────────────────────────────────
+    let matchStats = { home: {}, away: {} };
     try {
       const statsData = await apiFetch(`/fixtures/statistics?fixture=${fixtureId}`);
       const stats = statsData.response || [];
       for (const teamStats of stats) {
         const isHome = teamStats.team?.id === homeTeam?.id;
         const side = isHome ? 'home' : 'away';
-        const saveStat = teamStats.statistics?.find(s => s.type === 'Goalkeeper Saves');
-        if (saveStat?.value) {
-          saves[side].push({ player: 'Goalkeeper', count: saveStat.value });
+        const statMap = {};
+        for (const s of (teamStats.statistics || [])) {
+          statMap[s.type] = s.value;
+        }
+        matchStats[side] = statMap;
+      }
+    } catch {}
+
+    // Format stats for display
+    const statsDisplay = [
+      { label: 'Possession', home: matchStats.home['Ball Possession'] || '—', away: matchStats.away['Ball Possession'] || '—' },
+      { label: 'Expected Goals (xG)', home: matchStats.home['expected_goals'] || matchStats.home['Expected Goals'] || '—', away: matchStats.away['expected_goals'] || matchStats.away['Expected Goals'] || '—' },
+      { label: 'Total Shots', home: matchStats.home['Total Shots'] || '—', away: matchStats.away['Total Shots'] || '—' },
+      { label: 'Shots on Target', home: matchStats.home['Shots on Goal'] || '—', away: matchStats.away['Shots on Goal'] || '—' },
+      { label: 'Shots off Target', home: matchStats.home['Shots off Goal'] || '—', away: matchStats.away['Shots off Goal'] || '—' },
+      { label: 'Corners', home: matchStats.home['Corner Kicks'] || '—', away: matchStats.away['Corner Kicks'] || '—' },
+      { label: 'Fouls', home: matchStats.home['Fouls'] || '—', away: matchStats.away['Fouls'] || '—' },
+      { label: 'Offsides', home: matchStats.home['Offsides'] || '—', away: matchStats.away['Offsides'] || '—' },
+      { label: 'Goalkeeper Saves', home: matchStats.home['Goalkeeper Saves'] || '—', away: matchStats.away['Goalkeeper Saves'] || '—' },
+      { label: 'Passes', home: matchStats.home['Total passes'] || '—', away: matchStats.away['Total passes'] || '—' },
+      { label: 'Pass Accuracy', home: matchStats.home['Passes %'] || '—', away: matchStats.away['Passes %'] || '—' },
+    ];
+
+    // ── Bonus Points from FPL ─────────────────────────────────────────────
+    let bonus = { home: [], away: [] };
+    try {
+      // FPL fixtures endpoint — find matching fixture by team IDs
+      const fplFixtures = await fplFetch('https://fantasy.premierleague.com/api/fixtures/');
+      if (fplFixtures) {
+        // Get FPL bootstrap for team mapping
+        const bootstrap = await fplFetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+        if (bootstrap) {
+          // Map API-Football team names to FPL team IDs
+          const fplTeams = bootstrap.teams || [];
+          const homeNameLower = homeTeam?.name?.toLowerCase() || '';
+          const awayNameLower = awayTeam?.name?.toLowerCase() || '';
+
+          const fplHome = fplTeams.find(t =>
+            homeNameLower.includes(t.short_name?.toLowerCase()) ||
+            t.name?.toLowerCase().includes(homeNameLower.split(' ')[0])
+          );
+          const fplAway = fplTeams.find(t =>
+            awayNameLower.includes(t.short_name?.toLowerCase()) ||
+            t.name?.toLowerCase().includes(awayNameLower.split(' ')[0])
+          );
+
+          if (fplHome && fplAway) {
+            // Find the FPL fixture
+            const fplFixture = fplFixtures.find(f =>
+              f.team_h === fplHome.id && f.team_a === fplAway.id && f.finished
+            );
+
+            if (fplFixture?.stats) {
+              const bonusStat = fplFixture.stats.find(s => s.identifier === 'bonus');
+              if (bonusStat) {
+                const playerMap = {};
+                for (const p of bootstrap.elements || []) {
+                  playerMap[p.id] = p;
+                }
+
+                for (const entry of (bonusStat.h || [])) {
+                  const player = playerMap[entry.element];
+                  if (player) {
+                    bonus.home.push({ player: player.web_name, value: entry.value });
+                  }
+                }
+                for (const entry of (bonusStat.a || [])) {
+                  const player = playerMap[entry.element];
+                  if (player) {
+                    bonus.away.push({ player: player.web_name, value: entry.value });
+                  }
+                }
+              }
+            }
+          }
         }
       }
     } catch {}
@@ -98,7 +176,12 @@ export default async function handler(req, res) {
       assists,
       yellowCards,
       redCards,
-      saves,
+      saves: {
+        home: matchStats.home['Goalkeeper Saves'] || 0,
+        away: matchStats.away['Goalkeeper Saves'] || 0,
+      },
+      bonus,
+      stats: statsDisplay,
     };
 
     detailsCache.set(fixtureId, { data: result, fetchedAt: Date.now() });

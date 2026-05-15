@@ -90,6 +90,26 @@ const ExpandedDetails = styled.div`
   border-bottom: 1px solid #4a1a8e;
 `;
 
+const TabRow = styled.div`
+  display: flex;
+  gap: 0;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid #4a1a8e;
+`;
+
+const Tab = styled.button`
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: ${({ active }) => active ? '#f5a623' : '#8892b0'};
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.5rem 0.25rem;
+  cursor: pointer;
+  border-bottom: 2px solid ${({ active }) => active ? '#f5a623' : 'transparent'};
+  &:hover { color: #f5a623; }
+`;
+
 const DetailSection = styled.div`
   margin-bottom: 0.75rem;
   &:last-child { margin-bottom: 0; }
@@ -123,6 +143,42 @@ const DetailHome = styled.span`
 const DetailAway = styled.span`
   text-align: right;
   flex: 1;
+`;
+
+const StatRow = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(74, 26, 142, 0.3);
+`;
+
+const StatValue = styled.span`
+  width: 50px;
+  text-align: ${({ align }) => align || 'center'};
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fff;
+`;
+
+const StatLabel = styled.span`
+  flex: 1;
+  text-align: center;
+  font-size: 0.72rem;
+  color: #8892b0;
+`;
+
+const BonusRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  padding: 0.2rem 0;
+  font-size: 0.78rem;
+  color: #ccc;
+`;
+
+const BonusValue = styled.span`
+  color: #f5a623;
+  font-weight: 700;
+  margin-left: 4px;
 `;
 
 const LoadingDetail = styled.div`
@@ -207,6 +263,7 @@ export default function Matches() {
   const [expanded, setExpanded] = useState(null); // fixture id
   const [details, setDetails]   = useState({});   // { [id]: data }
   const [detailLoading, setDetailLoading] = useState(null);
+  const [activeTab, setActiveTab] = useState('details'); // 'details' | 'stats'
 
   useEffect(() => {
     try {
@@ -351,68 +408,104 @@ export default function Matches() {
 
                           {matchDetails && (
                             <>
-                              {/* Goals */}
-                              {(matchDetails.goals.home.length > 0 || matchDetails.goals.away.length > 0) && (
-                                <DetailSection>
-                                  <DetailTitle>Goals Scored</DetailTitle>
-                                  {Math.max(matchDetails.goals.home.length, matchDetails.goals.away.length) > 0 &&
-                                    Array.from({ length: Math.max(matchDetails.goals.home.length, matchDetails.goals.away.length) }).map((_, i) => (
-                                      <DetailRow key={`goal-${i}`}>
-                                        <DetailHome>{matchDetails.goals.home[i] ? `${matchDetails.goals.home[i].player} (${matchDetails.goals.home[i].minute})` : ''}</DetailHome>
-                                        <DetailAway>{matchDetails.goals.away[i] ? `${matchDetails.goals.away[i].player} (${matchDetails.goals.away[i].minute})` : ''}</DetailAway>
+                              <TabRow>
+                                <Tab active={activeTab === 'details'} onClick={() => setActiveTab('details')}>Match Details</Tab>
+                                <Tab active={activeTab === 'stats'} onClick={() => setActiveTab('stats')}>Match Stats</Tab>
+                              </TabRow>
+
+                              {activeTab === 'details' && (
+                                <>
+                                  {/* Goals */}
+                                  {(matchDetails.goals.home.length > 0 || matchDetails.goals.away.length > 0) && (
+                                    <DetailSection>
+                                      <DetailTitle>Goals Scored</DetailTitle>
+                                      {Array.from({ length: Math.max(matchDetails.goals.home.length, matchDetails.goals.away.length) }).map((_, i) => (
+                                        <DetailRow key={`goal-${i}`}>
+                                          <DetailHome>{matchDetails.goals.home[i] ? `${matchDetails.goals.home[i].player} (${matchDetails.goals.home[i].minute})` : ''}</DetailHome>
+                                          <DetailAway>{matchDetails.goals.away[i] ? `${matchDetails.goals.away[i].player} (${matchDetails.goals.away[i].minute})` : ''}</DetailAway>
+                                        </DetailRow>
+                                      ))}
+                                    </DetailSection>
+                                  )}
+
+                                  {/* Assists */}
+                                  {(matchDetails.assists.home.length > 0 || matchDetails.assists.away.length > 0) && (
+                                    <DetailSection>
+                                      <DetailTitle>Assists</DetailTitle>
+                                      {Array.from({ length: Math.max(matchDetails.assists.home.length, matchDetails.assists.away.length) }).map((_, i) => (
+                                        <DetailRow key={`assist-${i}`}>
+                                          <DetailHome>{matchDetails.assists.home[i]?.player || ''}</DetailHome>
+                                          <DetailAway>{matchDetails.assists.away[i]?.player || ''}</DetailAway>
+                                        </DetailRow>
+                                      ))}
+                                    </DetailSection>
+                                  )}
+
+                                  {/* Yellow Cards */}
+                                  {(matchDetails.yellowCards.home.length > 0 || matchDetails.yellowCards.away.length > 0) && (
+                                    <DetailSection>
+                                      <DetailTitle>Yellow Cards</DetailTitle>
+                                      {Array.from({ length: Math.max(matchDetails.yellowCards.home.length, matchDetails.yellowCards.away.length) }).map((_, i) => (
+                                        <DetailRow key={`yc-${i}`}>
+                                          <DetailHome>{matchDetails.yellowCards.home[i]?.player || ''}</DetailHome>
+                                          <DetailAway>{matchDetails.yellowCards.away[i]?.player || ''}</DetailAway>
+                                        </DetailRow>
+                                      ))}
+                                    </DetailSection>
+                                  )}
+
+                                  {/* Red Cards */}
+                                  {(matchDetails.redCards.home.length > 0 || matchDetails.redCards.away.length > 0) && (
+                                    <DetailSection>
+                                      <DetailTitle>Red Cards</DetailTitle>
+                                      {Array.from({ length: Math.max(matchDetails.redCards.home.length, matchDetails.redCards.away.length) }).map((_, i) => (
+                                        <DetailRow key={`rc-${i}`}>
+                                          <DetailHome>{matchDetails.redCards.home[i]?.player || ''}</DetailHome>
+                                          <DetailAway>{matchDetails.redCards.away[i]?.player || ''}</DetailAway>
+                                        </DetailRow>
+                                      ))}
+                                    </DetailSection>
+                                  )}
+
+                                  {/* Saves */}
+                                  {(matchDetails.saves.home > 0 || matchDetails.saves.away > 0) && (
+                                    <DetailSection>
+                                      <DetailTitle>Saves</DetailTitle>
+                                      <DetailRow>
+                                        <DetailHome>{matchDetails.saves.home || 0}</DetailHome>
+                                        <DetailAway>{matchDetails.saves.away || 0}</DetailAway>
                                       </DetailRow>
-                                    ))
-                                  }
-                                </DetailSection>
+                                    </DetailSection>
+                                  )}
+
+                                  {/* Bonus Points */}
+                                  {(matchDetails.bonus.home.length > 0 || matchDetails.bonus.away.length > 0) && (
+                                    <DetailSection>
+                                      <DetailTitle>Bonus Points</DetailTitle>
+                                      {Array.from({ length: Math.max(matchDetails.bonus.home.length, matchDetails.bonus.away.length) }).map((_, i) => (
+                                        <BonusRow key={`bonus-${i}`}>
+                                          <DetailHome>
+                                            {matchDetails.bonus.home[i] ? <>{matchDetails.bonus.home[i].player}<BonusValue>({matchDetails.bonus.home[i].value})</BonusValue></> : ''}
+                                          </DetailHome>
+                                          <DetailAway>
+                                            {matchDetails.bonus.away[i] ? <>{matchDetails.bonus.away[i].player}<BonusValue>({matchDetails.bonus.away[i].value})</BonusValue></> : ''}
+                                          </DetailAway>
+                                        </BonusRow>
+                                      ))}
+                                    </DetailSection>
+                                  )}
+                                </>
                               )}
 
-                              {/* Assists */}
-                              {(matchDetails.assists.home.length > 0 || matchDetails.assists.away.length > 0) && (
+                              {activeTab === 'stats' && matchDetails.stats && (
                                 <DetailSection>
-                                  <DetailTitle>Assists</DetailTitle>
-                                  {Array.from({ length: Math.max(matchDetails.assists.home.length, matchDetails.assists.away.length) }).map((_, i) => (
-                                    <DetailRow key={`assist-${i}`}>
-                                      <DetailHome>{matchDetails.assists.home[i]?.player || ''}</DetailHome>
-                                      <DetailAway>{matchDetails.assists.away[i]?.player || ''}</DetailAway>
-                                    </DetailRow>
+                                  {matchDetails.stats.map((stat, i) => (
+                                    <StatRow key={i}>
+                                      <StatValue align="right">{stat.home}</StatValue>
+                                      <StatLabel>{stat.label}</StatLabel>
+                                      <StatValue align="left">{stat.away}</StatValue>
+                                    </StatRow>
                                   ))}
-                                </DetailSection>
-                              )}
-
-                              {/* Yellow Cards */}
-                              {(matchDetails.yellowCards.home.length > 0 || matchDetails.yellowCards.away.length > 0) && (
-                                <DetailSection>
-                                  <DetailTitle>Yellow Cards</DetailTitle>
-                                  {Array.from({ length: Math.max(matchDetails.yellowCards.home.length, matchDetails.yellowCards.away.length) }).map((_, i) => (
-                                    <DetailRow key={`yc-${i}`}>
-                                      <DetailHome>{matchDetails.yellowCards.home[i]?.player || ''}</DetailHome>
-                                      <DetailAway>{matchDetails.yellowCards.away[i]?.player || ''}</DetailAway>
-                                    </DetailRow>
-                                  ))}
-                                </DetailSection>
-                              )}
-
-                              {/* Red Cards */}
-                              {(matchDetails.redCards.home.length > 0 || matchDetails.redCards.away.length > 0) && (
-                                <DetailSection>
-                                  <DetailTitle>Red Cards</DetailTitle>
-                                  {Array.from({ length: Math.max(matchDetails.redCards.home.length, matchDetails.redCards.away.length) }).map((_, i) => (
-                                    <DetailRow key={`rc-${i}`}>
-                                      <DetailHome>{matchDetails.redCards.home[i]?.player || ''}</DetailHome>
-                                      <DetailAway>{matchDetails.redCards.away[i]?.player || ''}</DetailAway>
-                                    </DetailRow>
-                                  ))}
-                                </DetailSection>
-                              )}
-
-                              {/* Saves */}
-                              {(matchDetails.saves.home.length > 0 || matchDetails.saves.away.length > 0) && (
-                                <DetailSection>
-                                  <DetailTitle>Saves</DetailTitle>
-                                  <DetailRow>
-                                    <DetailHome>{matchDetails.saves.home[0] ? `${matchDetails.saves.home[0].player} (${matchDetails.saves.home[0].count})` : ''}</DetailHome>
-                                    <DetailAway>{matchDetails.saves.away[0] ? `${matchDetails.saves.away[0].player} (${matchDetails.saves.away[0].count})` : ''}</DetailAway>
-                                  </DetailRow>
                                 </DetailSection>
                               )}
                             </>
