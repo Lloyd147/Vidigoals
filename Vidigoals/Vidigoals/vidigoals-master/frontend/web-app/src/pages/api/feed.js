@@ -16,7 +16,7 @@
 const API_KEY = process.env.API_FOOTBALL_KEY;
 const BASE_URL = 'https://v3.football.api-sports.io';
 const PL_LEAGUE_ID = 39;
-const SEASON = 2024;
+const SEASON = 2025;
 
 // ── Cache ─────────────────────────────────────────────────────────────────────
 let feedCache = { data: null, fetchedAt: 0, isLive: false };
