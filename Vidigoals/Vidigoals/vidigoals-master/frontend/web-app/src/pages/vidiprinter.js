@@ -38,38 +38,41 @@ const Feed = styled.div`flex: 1; overflow-y: auto;`;
 
 const EventRow = styled.div`
   display: flex;
-  align-items: center;
-  padding: 0.85rem 1rem;
+  align-items: flex-start;
+  padding: 1rem 1.2rem;
   border-bottom: 1px solid #2d1a4e;
-  gap: 0.75rem;
+  gap: 0.85rem;
   animation: ${fadeIn} 0.3s ease;
   background: ${({ highlight }) => (highlight ? 'rgba(245,166,35,0.06)' : 'transparent')};
   &:hover { background: rgba(255,255,255,0.03); }
 `;
 
 const IconBox = styled.div`
-  width: 36px; height: 36px;
+  width: 42px; height: 42px;
   flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.4rem;
+  font-size: 1.6rem;
 `;
 
 const MinuteBox = styled.div`
-  width: 32px; flex-shrink: 0;
-  font-size: 0.82rem; font-weight: 700;
+  width: 36px; flex-shrink: 0;
+  font-size: 0.95rem; font-weight: 700;
   color: #8892b0; text-align: center;
+  padding-top: 2px;
 `;
 
 const EventContent = styled.div`flex: 1; min-width: 0;`;
 
 const ScoreLine = styled.div`
-  font-size: 0.88rem; font-weight: 600; color: #ccc;
+  font-size: 0.95rem; font-weight: 400; color: #ccc;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 3px;
 `;
 
-const EventDetail = styled.div`
-  font-size: 0.82rem; margin-top: 2px;
+const EventDetailLine = styled.div`
+  font-size: 0.92rem; margin-top: 1px;
   font-style: italic; color: #8892b0;
+  line-height: 1.4;
 `;
 
 const PlayerName = styled.span`
@@ -77,31 +80,44 @@ const PlayerName = styled.span`
   color: ${({ color }) => color || '#fff'};
 `;
 
+const PointsBadge = styled.span`
+  font-weight: 700; font-style: normal;
+  color: ${({ positive }) => positive ? '#48bb78' : '#fc8181'};
+  margin-left: 3px;
+`;
+
+const AssistLine = styled.div`
+  font-size: 0.88rem; margin-top: 2px;
+  font-style: italic; color: #8892b0;
+`;
+
 const AssistName = styled.span`
   font-weight: 700; font-style: normal; color: #48bb78;
 `;
 
+const SubPlayer = styled.span`
+  font-style: normal; color: #8892b0;
+`;
+
 const TeamBadge = styled.img`
-  width: 32px; height: 32px;
+  width: 38px; height: 38px;
   object-fit: contain; flex-shrink: 0;
 `;
 
 const HalfTimeRow = styled.div`
   display: flex; align-items: center;
-  padding: 0.6rem 1rem;
+  padding: 0.75rem 1.2rem;
   border-bottom: 1px solid #2d1a4e;
-  gap: 0.75rem;
+  gap: 0.85rem;
   background: rgba(108,46,185,0.15);
 `;
 
 const HTLabel = styled.div`
-  width: 36px; font-size: 0.75rem; font-weight: 800;
-  color: #6c2eb9; text-align: center;
-  background: rgba(108,46,185,0.3);
-  border-radius: 4px; padding: 2px 4px;
+  width: 42px; font-size: 0.9rem; font-weight: 800;
+  color: #fff; text-align: center;
 `;
 
-const HTScore = styled.div`font-size: 0.88rem; color: #8892b0; flex: 1;`;
+const HTScore = styled.div`font-size: 0.95rem; color: #8892b0; flex: 1;`;
 
 const StatusMsg = styled.div`
   text-align: center; padding: 3rem 1rem;
@@ -170,15 +186,62 @@ function EventItem({ event }) {
       <MinuteBox>{formatMinute(event.minute, event.extraMinute)}</MinuteBox>
       <EventContent>
         <ScoreLine>{event.score}</ScoreLine>
-        <EventDetail>
-          {event.type === 'Sub' ? (
-            <>Sub. <PlayerName color={cfg.color}>{event.player}</PlayerName>{event.assist && <> ↓ {event.assist}</>}</>
-          ) : event.type === 'Goal' ? (
-            <>{cfg.label} <PlayerName color={cfg.color}>{event.player}</PlayerName>{event.assist && <> · Assist <AssistName>{event.assist}</AssistName></>}</>
-          ) : (
-            <>{cfg.label} <PlayerName color={cfg.color}>{event.player}</PlayerName></>
-          )}
-        </EventDetail>
+
+        {event.type === 'Goal' && (
+          <>
+            <EventDetailLine>
+              {cfg.label} <PlayerName color={cfg.color}>{event.player}</PlayerName>
+              <PointsBadge positive>+4</PointsBadge>
+            </EventDetailLine>
+            {event.assist && (
+              <AssistLine>
+                Assist <AssistName>{event.assist}</AssistName>
+                <PointsBadge positive>+3</PointsBadge>
+              </AssistLine>
+            )}
+          </>
+        )}
+
+        {event.type === 'Sub' && (
+          <EventDetailLine>
+            Sub. <PlayerName color={cfg.color}>{event.player}</PlayerName>
+            {event.assist && <><br /><SubPlayer>{event.assist}</SubPlayer></>}
+          </EventDetailLine>
+        )}
+
+        {event.type === 'Yellow' && (
+          <EventDetailLine>
+            {cfg.label} <PlayerName color={cfg.color}>{event.player}</PlayerName>
+            <PointsBadge>-1</PointsBadge>
+          </EventDetailLine>
+        )}
+
+        {event.type === 'Red' && (
+          <EventDetailLine>
+            {cfg.label} <PlayerName color={cfg.color}>{event.player}</PlayerName>
+            <PointsBadge>-3</PointsBadge>
+          </EventDetailLine>
+        )}
+
+        {event.type === 'PenMiss' && (
+          <EventDetailLine>
+            {cfg.label} <PlayerName color={cfg.color}>{event.player}</PlayerName>
+            <PointsBadge>-4</PointsBadge>
+          </EventDetailLine>
+        )}
+
+        {event.type === 'PenSave' && (
+          <EventDetailLine>
+            {cfg.label} <PlayerName color={cfg.color}>{event.player}</PlayerName>
+            <PointsBadge positive>+4</PointsBadge>
+          </EventDetailLine>
+        )}
+
+        {event.type === 'VarGoal' && (
+          <EventDetailLine>
+            {cfg.label} <PlayerName color={cfg.color}>{event.player}</PlayerName>
+          </EventDetailLine>
+        )}
       </EventContent>
       {(event.teamLogo || event.homeLogo) && (
         <TeamBadge src={event.teamLogo || event.homeLogo} alt="" onError={e => { e.target.style.display = 'none'; }} />
@@ -193,11 +256,17 @@ export default function Vidiprinter() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
   const [user, setUser]       = useState(null);
+  const [prefs, setPrefs]     = useState({
+    showGoals: true, showCards: true, showSubs: false,
+    showHtFt: true, showPenMiss: true, showPenSave: true,
+  });
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem('vidigoals_user');
       if (stored) setUser(JSON.parse(stored));
+      const p = localStorage.getItem('vidigoals_prefs');
+      if (p) setPrefs(JSON.parse(p));
     } catch {}
   }, []);
 
@@ -257,7 +326,15 @@ export default function Vidiprinter() {
               </StatusMsg>
             )}
 
-            {!loading && !error && feed.map(event => (
+            {!loading && !error && feed.filter(event => {
+              if (event.type === 'Goal' && !prefs.showGoals) return false;
+              if ((event.type === 'Yellow' || event.type === 'Red') && !prefs.showCards) return false;
+              if (event.type === 'Sub' && !prefs.showSubs) return false;
+              if ((event.type === 'HT' || event.type === 'FT') && !prefs.showHtFt) return false;
+              if (event.type === 'PenMiss' && !prefs.showPenMiss) return false;
+              if (event.type === 'PenSave' && !prefs.showPenSave) return false;
+              return true;
+            }).map(event => (
               <EventItem key={event.id} event={event} />
             ))}
           </Feed>
