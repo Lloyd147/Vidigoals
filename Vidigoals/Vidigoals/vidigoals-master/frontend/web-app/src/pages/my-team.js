@@ -502,7 +502,7 @@ export default function MyTeam() {
           <NavItem href="/"><NavIcon>⚽</NavIcon>Goals</NavItem>
           <NavItem href="/my-team" active={1}><NavIcon>👕</NavIcon>My Team</NavItem>
           <NavItem href="#"><NavIcon>🏆</NavIcon>Leaderboard</NavItem>
-          <NavItem href="#"><NavIcon>📋</NavIcon>Matches</NavItem>
+          <NavItem href="/matches"><NavIcon>📋</NavIcon>Matches</NavItem>
           <NavItem href="#"><NavIcon>⚙️</NavIcon>Settings</NavItem>
         </BottomNav>
       </Wrapper>
