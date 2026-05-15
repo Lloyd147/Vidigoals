@@ -3,21 +3,16 @@
  *
  * Fetches Premier League fixture events from API-Football.
  *
- * SIMPLIFIED STRATEGY:
- * - Check live matches (1 call)
- * - Get today's fixtures (1 call)
- * - Get yesterday's fixtures (1 call)
- * - Total: 2-3 API calls per cache miss
- * - Cache: 30s live, 5min idle
+ * Uses the from/to date range approach:
+ * - Fetches last 7 days + today in a single API call
+ * - Fetches events for each fixture that has finished
+ * - Shows goals, cards, subs, HT/FT scores
  *
- * Premier League ID: 39 | Season: 2024
+ * Premier League: league=39, season=2025
  */
 
 const API_KEY = process.env.API_FOOTBALL_KEY;
 const BASE_URL = 'https://v3.football.api-sports.io';
-const PL_LEAGUE_ID = 39;
-// API-Football may file current fixtures under either season depending on timing
-const SEASONS = [2025, 2024];
 
 // ── Cache ─────────────────────────────────────────────────────────────────────
 let feedCache = { data: null, fetchedAt: 0, isLive: false };
@@ -30,7 +25,7 @@ function isCacheValid() {
   return Date.now() - feedCache.fetchedAt < ttl;
 }
 
-// ── API helper ────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 async function apiFetch(path) {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { 'x-apisports-key': API_KEY },
@@ -39,91 +34,44 @@ async function apiFetch(path) {
   return res.json();
 }
 
-function dateStr(daysAgo = 0) {
+function formatDate(daysAgo = 0) {
   return new Date(Date.now() - daysAgo * 86400000).toISOString().split('T')[0];
 }
 
 // ── Build feed ────────────────────────────────────────────────────────────────
 async function buildFeed() {
+  const today = formatDate(0);
+  const sevenDaysAgo = formatDate(7);
   let isLive = false;
-  const allFixtures = [];
 
-  // 1. Check live matches
-  try {
-    for (const season of SEASONS) {
-      const liveData = await apiFetch(`/fixtures?live=all&league=${PL_LEAGUE_ID}&season=${season}`);
-      const live = liveData.response || [];
-      if (live.length > 0) {
-        isLive = true;
-        allFixtures.push(...live);
-        break; // Found live matches, no need to check other season
-      }
-    }
-  } catch {}
+  // Single API call: get all PL fixtures from last 7 days to today
+  const fixturesData = await apiFetch(
+    `/fixtures?league=39&season=2025&from=${sevenDaysAgo}&to=${today}`
+  );
+  const fixtures = fixturesData.response || [];
 
-  // 2. Today's fixtures
-  try {
-    for (const season of SEASONS) {
-      const todayData = await apiFetch(`/fixtures?date=${dateStr(0)}&league=${PL_LEAGUE_ID}&season=${season}`);
-      const today = todayData.response || [];
-      for (const f of today) {
-        if (!allFixtures.some(af => af.fixture?.id === f.fixture?.id)) {
-          allFixtures.push(f);
-        }
-      }
-    }
-  } catch {}
-
-  // 3. Yesterday's fixtures
-  try {
-    for (const season of SEASONS) {
-      const yestData = await apiFetch(`/fixtures?date=${dateStr(1)}&league=${PL_LEAGUE_ID}&season=${season}`);
-      const yest = yestData.response || [];
-      for (const f of yest) {
-        if (!allFixtures.some(af => af.fixture?.id === f.fixture?.id)) {
-          allFixtures.push(f);
-        }
-      }
-    }
-  } catch {}
-
-  // 4. 2 days ago — ALWAYS check (not just when empty)
-  try {
-    for (const season of SEASONS) {
-      const data = await apiFetch(`/fixtures?date=${dateStr(2)}&league=${PL_LEAGUE_ID}&season=${season}`);
-      const fixtures = data.response || [];
-      for (const f of fixtures) {
-        if (!allFixtures.some(af => af.fixture?.id === f.fixture?.id)) {
-          allFixtures.push(f);
-        }
-      }
-    }
-  } catch {}
-
-  // 5. 3 days ago — ALWAYS check
-  try {
-    for (const season of SEASONS) {
-      const data = await apiFetch(`/fixtures?date=${dateStr(3)}&league=${PL_LEAGUE_ID}&season=${season}`);
-      const fixtures = data.response || [];
-      for (const f of fixtures) {
-        if (!allFixtures.some(af => af.fixture?.id === f.fixture?.id)) {
-          allFixtures.push(f);
-        }
-      }
-    }
-  } catch {}
+  // Check if any are currently live
+  const liveStatuses = ['1H', '2H', 'HT', 'ET', 'P', 'BT'];
+  isLive = fixtures.some(f => liveStatuses.includes(f.fixture?.status?.short));
 
   // Build event feed
   const feed = [];
 
-  for (const fixture of allFixtures) {
+  for (const fixture of fixtures) {
     const fix = fixture.fixture;
     const teams = fixture.teams;
     let events = fixture.events || [];
 
     if (!fix || !teams) continue;
 
-    // If no events inline, re-fetch the full fixture by ID (includes events)
+    const status = fix.status?.short;
+    const isFinished = ['FT', 'AET', 'PEN'].includes(status);
+    const isInProgress = liveStatuses.includes(status);
+
+    // Skip fixtures that haven't started
+    if (!isFinished && !isInProgress) continue;
+
+    // If no events inline, fetch by fixture ID (includes events)
     if (events.length === 0 && fix.id) {
       try {
         const fullData = await apiFetch(`/fixtures?id=${fix.id}`);
@@ -157,14 +105,12 @@ async function buildFeed() {
     }
 
     // FT marker
-    if (['FT', 'AET', 'PEN'].includes(fix.status?.short)) {
-      const ftHome = fixture.goals?.home ?? homeGoals;
-      const ftAway = fixture.goals?.away ?? awayGoals;
+    if (isFinished) {
       feed.push({
         id: `${fix.id}-FT`,
         type: 'FT',
         minute: 90,
-        score: `${homeTeam?.name} ${ftHome} - ${ftAway} ${awayTeam?.name}`,
+        score: `${homeTeam?.name} ${homeGoals} - ${awayGoals} ${awayTeam?.name}`,
         homeLogo: homeTeam?.logo,
         awayLogo: awayTeam?.logo,
         homeTeam: homeTeam?.name,
@@ -175,10 +121,9 @@ async function buildFeed() {
       });
     }
 
-    // Skip individual events if none
+    // Individual events (goals, cards, subs)
     if (events.length === 0) continue;
 
-    // Individual events
     for (const event of events) {
       const isHome = event.team?.id === homeTeam?.id;
       const teamLogo = isHome ? homeTeam?.logo : awayTeam?.logo;
@@ -225,7 +170,7 @@ async function buildFeed() {
     return (b.minute || 0) - (a.minute || 0);
   });
 
-  return { feed: feed.slice(0, 100), isLive, fixtureCount: allFixtures.length };
+  return { feed: feed.slice(0, 100), isLive, fixtureCount: fixtures.length };
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
