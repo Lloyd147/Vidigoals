@@ -7,12 +7,21 @@
  * - Fetches last 7 days + today in a single API call
  * - Fetches events for each fixture that has finished
  * - Shows goals, cards, subs, HT/FT scores
+ * - Reconciles assists with FPL during live matches
  *
  * Premier League: league=39, season=2025
  */
 
 const API_KEY = process.env.API_FOOTBALL_KEY;
 const BASE_URL = 'https://v3.football.api-sports.io';
+
+// Import assist tracker (only works if KV is configured)
+let assistTracker = null;
+try {
+  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+    assistTracker = require('../../lib/assist-tracker');
+  }
+} catch {}
 
 // ── Cache ─────────────────────────────────────────────────────────────────────
 let feedCache = { data: null, fetchedAt: 0, isLive: false };
@@ -173,6 +182,51 @@ async function buildFeed() {
   return { feed: feed.slice(0, 100), isLive, fixtureCount: fixtures.length };
 }
 
+// ── Assist reconciliation for live matches ────────────────────────────────────
+async function reconcileLiveAssists(feed, isLive) {
+  if (!isLive || !assistTracker) return feed;
+
+  try {
+    // Find goal events in the feed from live matches
+    const liveGoals = feed.filter(e => e.type === 'Goal');
+    if (liveGoals.length === 0) return feed;
+
+    // Group goals by fixture
+    const goalsByFixture = {};
+    for (const goal of liveGoals) {
+      const key = `${goal.homeTeam}-${goal.awayTeam}`;
+      if (!goalsByFixture[key]) goalsByFixture[key] = [];
+      goalsByFixture[key].push(goal);
+    }
+
+    // For each fixture with goals, check assist status
+    for (const [fixtureKey, goals] of Object.entries(goalsByFixture)) {
+      const fixtureId = goals[0]?.id?.split('-')[0]; // Extract fixture ID from event ID
+      if (!fixtureId) continue;
+
+      const assistMap = await assistTracker.getFixtureAssists(fixtureId);
+      if (!assistMap || Object.keys(assistMap).length === 0) continue;
+
+      // Update assists in the feed based on reconciled data
+      for (let i = 0; i < goals.length; i++) {
+        const assistInfo = assistMap[i];
+        if (assistInfo) {
+          if (assistInfo.status === 'confirmed') {
+            goals[i].assist = assistInfo.assist;
+          } else if (assistInfo.status === 'no_assist') {
+            goals[i].assist = null;
+          }
+          // If still 'watching', keep API-Football's assist (already set)
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Assist reconciliation error:', err.message);
+  }
+
+  return feed;
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -189,6 +243,12 @@ export default async function handler(req, res) {
 
   try {
     const result = await buildFeed();
+
+    // Reconcile assists for live matches
+    if (result.isLive && assistTracker) {
+      result.feed = await reconcileLiveAssists(result.feed, result.isLive);
+    }
+
     feedCache = { data: result, fetchedAt: Date.now(), isLive: result.isLive };
     return res.status(200).json(result);
   } catch (err) {
