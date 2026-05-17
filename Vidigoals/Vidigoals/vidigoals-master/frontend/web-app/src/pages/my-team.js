@@ -402,6 +402,12 @@ export default function MyTeam() {
   const rows    = picks ? groupByPosition(picks.starting) : [];
   const bench   = picks?.bench || [];
 
+  // Calculate live GW points from starting XI (handles case where entry_history.points is 0)
+  const liveGwPoints = picks?.starting
+    ? picks.starting.reduce((sum, p) => sum + (p.event_points || 0) * (p.multiplier || 1), 0) - (history?.event_transfers_cost || 0)
+    : null;
+  const displayGwPoints = (history?.points && history.points > 0) ? history.points : (liveGwPoints || history?.points || '—');
+
   const canGoBack    = gw > 1;
   const canGoForward = gw < latestGW;
 
@@ -442,7 +448,7 @@ export default function MyTeam() {
                 {history && (
                   <StatsRow>
                     <StatBox>
-                      <StatValue large>{history.points ?? '—'}</StatValue>
+                      <StatValue large>{displayGwPoints}</StatValue>
                       <StatLabel>GW Points</StatLabel>
                     </StatBox>
                     <StatBox>
