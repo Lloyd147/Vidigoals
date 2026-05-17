@@ -214,6 +214,68 @@ let feedCache = { data: null, fetchedAt: 0, isLive: false };
 const CACHE_TTL_LIVE = 30 * 1000;
 const CACHE_TTL_IDLE = 5 * 60 * 1000;
 
+// ── Live Assist Mapping Store ─────────────────────────────────────────────────
+// Tracks FPL assists as they're awarded during live matches.
+// Key: fixtureId → { lastKnownAssists: {playerName: count}, mappings: [{player, goalMinute}] }
+const liveAssistStore = new Map();
+
+/**
+ * During live matches, detect new FPL assists and map them to the most recent
+ * goal (within 5 minutes) that doesn't have an assist.
+ * This gives us accurate goal-to-assist mapping based on timing.
+ */
+function reconcileLiveAssistMapping(fixtureId, sideGoals, fplAssistNames, side) {
+  const storeKey = `${fixtureId}-${side}`;
+  let store = liveAssistStore.get(storeKey);
+  if (!store) {
+    store = { lastKnownAssists: {}, mappings: [] };
+    liveAssistStore.set(storeKey, store);
+  }
+
+  // Count current FPL assists per player
+  const currentCounts = {};
+  for (const name of fplAssistNames) {
+    currentCounts[name] = (currentCounts[name] || 0) + 1;
+  }
+
+  // Detect NEW assists (count increased since last poll)
+  const newAssists = [];
+  for (const [player, count] of Object.entries(currentCounts)) {
+    const prev = store.lastKnownAssists[player] || 0;
+    if (count > prev) {
+      // New assist(s) detected for this player
+      for (let i = 0; i < count - prev; i++) {
+        newAssists.push(player);
+      }
+    }
+  }
+
+  // For each new assist, find the most recent goal without an assist
+  // "Most recent" = highest minute that doesn't already have a mapping
+  if (newAssists.length > 0) {
+    const mappedMinutes = new Set(store.mappings.map(m => m.goalMinute));
+
+    for (const assistPlayer of newAssists) {
+      // Find goals without an assist, sorted by minute descending (most recent first)
+      const candidates = sideGoals
+        .filter(g => !g.assist && !mappedMinutes.has(g.minute))
+        .sort((a, b) => (b.minute || 0) - (a.minute || 0));
+
+      if (candidates.length > 0) {
+        // Assign to the most recent unassisted goal
+        const target = candidates[0];
+        store.mappings.push({ player: assistPlayer, goalMinute: target.minute });
+        mappedMinutes.add(target.minute);
+      }
+    }
+  }
+
+  // Update last known counts
+  store.lastKnownAssists = { ...currentCounts };
+
+  return store.mappings;
+}
+
 function isCacheValid() {
   if (!feedCache.data) return false;
   const ttl = feedCache.isLive ? CACHE_TTL_LIVE : CACHE_TTL_IDLE;
@@ -467,14 +529,10 @@ async function buildFeed() {
     return (b.minute || 0) - (a.minute || 0);
   });
 
-  // ── Direct FPL assist fallback (works even without Redis) ─────────────────
-  // FPL is authoritative for assist COUNTS per player.
-  // Logic: keep API-Football assists where they exist (they know the exact goal),
-  // then fill in remaining FPL assists to goals missing an assist.
-  // e.g. FPL says Bruno has 2 assists, API-Football gave Bruno for Mbeumo's goal →
-  // the remaining 1 Bruno assist goes to the first goal without an assist (Shaw's goal)
+  // ── FPL Assist Reconciliation ─────────────────────────────────────────────
+  // During live matches: track when FPL adds assists and map to most recent goal
+  // After FT: use stored mappings, fall back to chronological for any unmapped
   try {
-    // Group goals by fixture
     const goalsByFixture = {};
     for (const event of feed) {
       if (event.type === 'Goal' && event.fixtureId) {
@@ -484,68 +542,94 @@ async function buildFeed() {
     }
 
     for (const [fid, goals] of Object.entries(goalsByFixture)) {
-      // Sort by minute ascending
       goals.sort((a, b) => (a.minute || 0) - (b.minute || 0));
 
       const fplData = await getFplAssistsForFixture(goals[0].homeTeam, goals[0].awayTeam, goals[0].timestamp);
       if (fplData.count === 0) continue;
 
-      // Split goals by team side
       const homeGoals = goals.filter(g => g.isHome);
       const awayGoals = goals.filter(g => !g.isHome);
 
-      // For each side, reconcile FPL assists with API-Football assists
-      function reconcileSide(sideGoals, fplAssistNames) {
+      // Check if this fixture is currently live
+      const fixtureLive = goals.some(g => {
+        const ev = feed.find(e => e.fixtureId === fid && (e.type === 'HT' || e.type === 'FT'));
+        return !feed.some(e => e.fixtureId === fid && e.type === 'FT');
+      });
+
+      function reconcileSide(sideGoals, fplAssistNames, side) {
         if (fplAssistNames.length === 0) return;
 
-        // Count how many assists each FPL player should have
-        const fplCounts = {};
-        for (const name of fplAssistNames) {
-          fplCounts[name] = (fplCounts[name] || 0) + 1;
-        }
+        if (fixtureLive) {
+          // LIVE: use timing-based mapping
+          const mappings = reconcileLiveAssistMapping(fid, sideGoals, fplAssistNames, side);
 
-        // Count how many assists API-Football already assigned per player
-        const apiCounts = {};
-        for (const goal of sideGoals) {
-          if (goal.assist) {
-            // Normalize: FPL uses web_name (e.g. "B.Fernandes"), API uses full name (e.g. "Bruno Fernandes")
-            // Match by checking if any FPL name is contained in or matches the API assist
-            for (const fplName of Object.keys(fplCounts)) {
-              const fplLast = fplName.split('.').pop()?.toLowerCase() || fplName.toLowerCase();
-              const apiLast = goal.assist.split(' ').pop()?.toLowerCase() || goal.assist.toLowerCase();
-              if (fplLast === apiLast || goal.assist.toLowerCase().includes(fplLast)) {
-                apiCounts[fplName] = (apiCounts[fplName] || 0) + 1;
-                break;
+          // Apply stored mappings
+          for (const mapping of mappings) {
+            const goal = sideGoals.find(g => g.minute === mapping.goalMinute && !g.assist);
+            if (goal) {
+              goal.assist = mapping.player;
+            }
+          }
+        } else {
+          // FINISHED: use stored mappings first, then fill remaining chronologically
+          const storeKey = `${fid}-${side}`;
+          const store = liveAssistStore.get(storeKey);
+          const mappings = store ? store.mappings : [];
+
+          // Apply stored mappings from live tracking
+          for (const mapping of mappings) {
+            const goal = sideGoals.find(g => g.minute === mapping.goalMinute && !g.assist);
+            if (goal) {
+              goal.assist = mapping.player;
+            }
+          }
+
+          // For any remaining FPL assists not yet mapped, use chronological fallback
+          const fplCounts = {};
+          for (const name of fplAssistNames) {
+            fplCounts[name] = (fplCounts[name] || 0) + 1;
+          }
+
+          // Count already-assigned assists per player (from API-Football + mappings)
+          const assignedCounts = {};
+          for (const goal of sideGoals) {
+            if (goal.assist) {
+              // Match FPL name to assigned assist
+              for (const fplName of Object.keys(fplCounts)) {
+                const fplLast = fplName.split('.').pop()?.toLowerCase() || fplName.toLowerCase();
+                const goalLast = goal.assist.split(' ').pop()?.toLowerCase() || goal.assist.toLowerCase();
+                if (fplLast === goalLast || goal.assist.toLowerCase().includes(fplLast)) {
+                  assignedCounts[fplName] = (assignedCounts[fplName] || 0) + 1;
+                  break;
+                }
               }
             }
           }
-        }
 
-        // Calculate remaining assists to distribute (FPL total - already assigned by API)
-        const remaining = [];
-        for (const [player, fplCount] of Object.entries(fplCounts)) {
-          const alreadyAssigned = apiCounts[player] || 0;
-          const toAdd = fplCount - alreadyAssigned;
-          for (let i = 0; i < toAdd; i++) {
-            remaining.push(player);
+          // Fill remaining
+          const remaining = [];
+          for (const [player, fplCount] of Object.entries(fplCounts)) {
+            const assigned = assignedCounts[player] || 0;
+            for (let i = 0; i < fplCount - assigned; i++) {
+              remaining.push(player);
+            }
           }
-        }
 
-        // Apply remaining assists to goals that don't have one (chronological order)
-        let remainIdx = 0;
-        for (const goal of sideGoals) {
-          if (!goal.assist && remainIdx < remaining.length) {
-            goal.assist = remaining[remainIdx];
-            remainIdx++;
+          let remainIdx = 0;
+          for (const goal of sideGoals) {
+            if (!goal.assist && remainIdx < remaining.length) {
+              goal.assist = remaining[remainIdx];
+              remainIdx++;
+            }
           }
         }
       }
 
-      reconcileSide(homeGoals, fplData.homeAssists);
-      reconcileSide(awayGoals, fplData.awayAssists);
+      reconcileSide(homeGoals, fplData.homeAssists, 'home');
+      reconcileSide(awayGoals, fplData.awayAssists, 'away');
     }
   } catch (err) {
-    console.warn('Direct FPL assist fallback error:', err.message);
+    console.warn('FPL assist reconciliation error:', err.message);
   }
 
   return { feed: feed.slice(0, 100), isLive, fixtureCount: fixtures.length };
