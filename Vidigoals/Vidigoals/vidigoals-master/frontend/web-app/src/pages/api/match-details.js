@@ -118,20 +118,37 @@ export default async function handler(req, res) {
       }
     } catch {}
 
-    // Get goalkeeper names from lineups
+    // Get goalkeeper names from lineups + full lineup data
+    let lineups = { home: { startXI: [], subs: [], formation: '' }, away: { startXI: [], subs: [], formation: '' } };
     try {
       const lineupsData = await apiFetch(`/fixtures/lineups?fixture=${fixtureId}`);
-      const lineups = lineupsData.response || [];
-      for (const lineup of lineups) {
+      const lineupsResponse = lineupsData.response || [];
+      for (const lineup of lineupsResponse) {
         const isHome = lineup.team?.id === homeTeam?.id;
         const side = isHome ? 'home' : 'away';
+
+        // Get GK name for saves
         const gk = lineup.startXI?.find(p => p.player?.pos === 'G');
         const gkName = gk?.player?.name || 'Goalkeeper';
         const savesCount = matchStats[side]['Goalkeeper Saves'] || 0;
         saves[side] = { player: gkName, count: savesCount };
+
+        // Store full lineup
+        lineups[side] = {
+          formation: lineup.formation || '',
+          startXI: (lineup.startXI || []).map(p => ({
+            name: p.player?.name,
+            number: p.player?.number,
+            pos: p.player?.pos,
+          })),
+          subs: (lineup.substitutes || []).map(p => ({
+            name: p.player?.name,
+            number: p.player?.number,
+            pos: p.player?.pos,
+          })),
+        };
       }
     } catch {
-      // Fallback if lineups not available
       saves.home = { player: 'Goalkeeper', count: matchStats.home['Goalkeeper Saves'] || 0 };
       saves.away = { player: 'Goalkeeper', count: matchStats.away['Goalkeeper Saves'] || 0 };
     }
@@ -218,6 +235,7 @@ export default async function handler(req, res) {
       yellowCards: groupedYellowCards,
       redCards: groupedRedCards,
       saves,
+      lineups,
       bonus,
       stats: statsDisplay,
     };

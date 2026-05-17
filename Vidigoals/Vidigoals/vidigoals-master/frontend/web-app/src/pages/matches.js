@@ -460,6 +460,7 @@ export default function Matches() {
                               <TabRow>
                                 <Tab active={activeTab === 'details'} onClick={() => setActiveTab('details')}>Match Details</Tab>
                                 <Tab active={activeTab === 'stats'} onClick={() => setActiveTab('stats')}>Match Stats</Tab>
+                                <Tab active={activeTab === 'lineups'} onClick={() => setActiveTab('lineups')}>Lineups</Tab>
                               </TabRow>
 
                               {activeTab === 'details' && (
@@ -554,6 +555,55 @@ export default function Matches() {
                                       <StatLabel>{stat.label}</StatLabel>
                                       <StatValue align="left">{stat.away}</StatValue>
                                     </StatRow>
+                                  ))}
+                                </DetailSection>
+                              )}
+
+                              {activeTab === 'lineups' && matchDetails.lineups && (
+                                <DetailSection>
+                                  <DetailRow>
+                                    <DetailHome style={{ fontWeight: 700, color: '#f5a623' }}>
+                                      {matchDetails.lineups.home?.formation || ''}
+                                    </DetailHome>
+                                    <DetailAway style={{ fontWeight: 700, color: '#f5a623' }}>
+                                      {matchDetails.lineups.away?.formation || ''}
+                                    </DetailAway>
+                                  </DetailRow>
+                                  <DetailTitle>Starting XI</DetailTitle>
+                                  {Array.from({ length: Math.max(
+                                    matchDetails.lineups.home?.startXI?.length || 0,
+                                    matchDetails.lineups.away?.startXI?.length || 0
+                                  ) }).map((_, i) => (
+                                    <DetailRow key={`xi-${i}`}>
+                                      <DetailHome>
+                                        {matchDetails.lineups.home?.startXI?.[i]
+                                          ? `${matchDetails.lineups.home.startXI[i].number || ''} ${matchDetails.lineups.home.startXI[i].name}`
+                                          : ''}
+                                      </DetailHome>
+                                      <DetailAway>
+                                        {matchDetails.lineups.away?.startXI?.[i]
+                                          ? `${matchDetails.lineups.away.startXI[i].name} ${matchDetails.lineups.away.startXI[i].number || ''}`
+                                          : ''}
+                                      </DetailAway>
+                                    </DetailRow>
+                                  ))}
+                                  <DetailTitle style={{ marginTop: '0.75rem' }}>Substitutes</DetailTitle>
+                                  {Array.from({ length: Math.max(
+                                    matchDetails.lineups.home?.subs?.length || 0,
+                                    matchDetails.lineups.away?.subs?.length || 0
+                                  ) }).map((_, i) => (
+                                    <DetailRow key={`sub-${i}`}>
+                                      <DetailHome style={{ color: '#6b7280' }}>
+                                        {matchDetails.lineups.home?.subs?.[i]
+                                          ? `${matchDetails.lineups.home.subs[i].number || ''} ${matchDetails.lineups.home.subs[i].name}`
+                                          : ''}
+                                      </DetailHome>
+                                      <DetailAway style={{ color: '#6b7280' }}>
+                                        {matchDetails.lineups.away?.subs?.[i]
+                                          ? `${matchDetails.lineups.away.subs[i].name} ${matchDetails.lineups.away.subs[i].number || ''}`
+                                          : ''}
+                                      </DetailAway>
+                                    </DetailRow>
                                   ))}
                                 </DetailSection>
                               )}
