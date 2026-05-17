@@ -104,185 +104,24 @@ export default async function handler(req, res) {
       }));
     }
 
-    // ── Apply FPL assists (authoritative source) for live and finished matches ──
-    const liveStatuses2 = ['1H', '2H', 'HT', 'ET', 'P', 'BT'];
-    const isCurrentlyLive = liveStatuses2.includes(fixture.fixture?.status?.short);
-    const isStartedOrFinished = isCurrentlyLive || ['FT', 'AET', 'PEN'].includes(fixture.fixture?.status?.short);
-    if (isStartedOrFinished) {
-      let foundReconciled = false;
-
-      // Try Redis first
-      if (assistTracker) {
-        try {
-          const assistMap = await assistTracker.getFixtureAssists(fixtureId);
-          if (assistMap && Object.keys(assistMap).length > 0) {
-            foundReconciled = true;
-            const allGoals = [];
-            for (const event of events) {
-              if (event.type === 'Goal' && event.detail !== 'Missed Penalty') {
-                const isHome = event.team?.id === homeTeam?.id;
-                const minute = event.time?.elapsed;
-                const extra = event.time?.extra;
-                const timeStr = extra ? `${minute}+${extra}'` : `${minute}'`;
-                allGoals.push({ isHome, minute, timeStr });
-              }
-            }
-
-            assists.home = [];
-            assists.away = [];
-            for (let i = 0; i < allGoals.length; i++) {
-              const info = assistMap[i];
-              if (info && info.assist) {
-                const side = allGoals[i].isHome ? 'home' : 'away';
-                assists[side].push({ player: info.assist, minute: allGoals[i].timeStr });
-              }
-            }
-          }
-        } catch (err) {
-          console.warn('Match details Redis assist error:', err.message);
-        }
+    // Group assists by player with count: "B.Fernandes (2)" format
+    function groupAssistsByCount(entries) {
+      const map = {};
+      for (const e of entries) {
+        if (!map[e.player]) map[e.player] = 0;
+        map[e.player] += e.value || 1;
       }
-
-      // Direct FPL fallback if Redis had nothing — FPL is authoritative for assists
-      if (!foundReconciled && (goals.home.length > 0 || goals.away.length > 0)) {
-        try {
-          const bootstrap = await fplFetch('https://fantasy.premierleague.com/api/bootstrap-static/');
-          if (bootstrap) {
-            const fplTeams = bootstrap.teams || [];
-            const playerMap = {};
-            for (const p of bootstrap.elements || []) {
-              playerMap[p.id] = p;
-            }
-
-            function matchTeamForAssist(apiName, fplTeam) {
-              const TEAM_NAME_MAP = {
-                'arsenal': 'arsenal', 'aston villa': 'aston villa',
-                'bournemouth': 'bournemouth', 'afc bournemouth': 'bournemouth',
-                'brentford': 'brentford', 'brighton': 'brighton',
-                'brighton and hove albion': 'brighton', 'chelsea': 'chelsea',
-                'crystal palace': 'crystal palace', 'everton': 'everton',
-                'fulham': 'fulham', 'ipswich': 'ipswich', 'ipswich town': 'ipswich',
-                'leicester': 'leicester', 'leicester city': 'leicester',
-                'liverpool': 'liverpool', 'manchester city': 'man city',
-                'manchester united': 'man utd', 'newcastle': 'newcastle',
-                'newcastle united': 'newcastle', 'nottingham forest': "nott'm forest",
-                'southampton': 'southampton', 'tottenham': 'spurs',
-                'tottenham hotspur': 'spurs', 'west ham': 'west ham',
-                'west ham united': 'west ham', 'wolverhampton': 'wolves',
-                'wolverhampton wanderers': 'wolves', 'wolves': 'wolves',
-              };
-              const name = (apiName || '').toLowerCase().trim();
-              const fplName = (fplTeam.name || '').toLowerCase().trim();
-              if (name === fplName) return true;
-              const mapped = TEAM_NAME_MAP[name];
-              if (mapped && mapped === fplName) return true;
-              return false;
-            }
-
-            const fplHome = fplTeams.find(t => matchTeamForAssist(homeTeam?.name, t));
-            const fplAway = fplTeams.find(t => matchTeamForAssist(awayTeam?.name, t));
-
-            if (fplHome && fplAway) {
-              const fplFixtures = await fplFetch('https://fantasy.premierleague.com/api/fixtures/');
-              if (fplFixtures) {
-                const apiKickoff = fixture.fixture?.date ? new Date(fixture.fixture.date).getTime() : null;
-
-                const fplFixture = fplFixtures.find(f => {
-                  const hasTeams = (f.team_h === fplHome.id && f.team_a === fplAway.id) ||
-                                   (f.team_h === fplAway.id && f.team_a === fplHome.id);
-                  if (!hasTeams) return false;
-                  if (apiKickoff && f.kickoff_time) {
-                    const fplKickoff = new Date(f.kickoff_time).getTime();
-                    return Math.abs(apiKickoff - fplKickoff) < 2 * 60 * 60 * 1000;
-                  }
-                  return false;
-                });
-
-                if (fplFixture) {
-                  const swapped = fplFixture.team_h === fplAway.id;
-                  let fplHomeAssists = [];
-                  let fplAwayAssists = [];
-
-                  // Try fixture stats first
-                  const assistStat = fplFixture.stats ? fplFixture.stats.find(s => s.identifier === 'assists') : null;
-                  if (assistStat) {
-                    const homeEntries = swapped ? assistStat.a : assistStat.h;
-                    const awayEntries = swapped ? assistStat.h : assistStat.a;
-                    for (const entry of (homeEntries || [])) {
-                      const player = playerMap[entry.element];
-                      if (player) {
-                        for (let i = 0; i < entry.value; i++) fplHomeAssists.push(player.web_name);
-                      }
-                    }
-                    for (const entry of (awayEntries || [])) {
-                      const player = playerMap[entry.element];
-                      if (player) {
-                        for (let i = 0; i < entry.value; i++) fplAwayAssists.push(player.web_name);
-                      }
-                    }
-                  }
-
-                  // If fixture stats empty, try FPL live endpoint
-                  if (fplHomeAssists.length === 0 && fplAwayAssists.length === 0 &&
-                      fplFixture.started && !fplFixture.finished_provisional) {
-                    try {
-                      const liveData = await fplFetch(`https://fantasy.premierleague.com/api/event/${fplFixture.event}/live/`);
-                      if (liveData && liveData.elements) {
-                        const fixtureTeamIds = [fplFixture.team_h, fplFixture.team_a];
-                        const fixturePlayers = (bootstrap.elements || []).filter(p => fixtureTeamIds.includes(p.team));
-                        const homeTeamId = swapped ? fplFixture.team_a : fplFixture.team_h;
-
-                        for (const fp of fixturePlayers) {
-                          const liveEl = liveData.elements.find(e => e.id === fp.id);
-                          if (liveEl && liveEl.stats && liveEl.stats.assists > 0) {
-                            const fixtureExplain = liveEl.explain?.find(ex => ex.fixture === fplFixture.id);
-                            let assistsInFixture = 0;
-                            if (fixtureExplain) {
-                              const aStat = fixtureExplain.stats?.find(s => s.identifier === 'assists');
-                              assistsInFixture = aStat ? aStat.value : 0;
-                            } else {
-                              assistsInFixture = liveEl.stats.assists;
-                            }
-                            if (assistsInFixture > 0) {
-                              for (let i = 0; i < assistsInFixture; i++) {
-                                if (fp.team === homeTeamId) {
-                                  fplHomeAssists.push(fp.web_name);
-                                } else {
-                                  fplAwayAssists.push(fp.web_name);
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    } catch (liveErr) {
-                      console.warn('Match details FPL live endpoint error:', liveErr.message);
-                    }
-                  }
-
-                  // FPL is authoritative — replace assists entirely when FPL has data
-                  if (fplHomeAssists.length > 0 || fplAwayAssists.length > 0) {
-                    assists.home = [];
-                    assists.away = [];
-                    for (let i = 0; i < fplHomeAssists.length && i < goals.home.length; i++) {
-                      assists.home.push({ player: fplHomeAssists[i], minute: goals.home[i]?.minute || '' });
-                    }
-                    for (let i = 0; i < fplAwayAssists.length && i < goals.away.length; i++) {
-                      assists.away.push({ player: fplAwayAssists[i], minute: goals.away[i]?.minute || '' });
-                    }
-                  }
-                }
-              }
-            }
-          }
-        } catch (err) {
-          console.warn('Match details FPL assist fallback error:', err.message);
-        }
-      }
+      return Object.entries(map).map(([player, count]) => ({
+        player,
+        minute: `${count}`,
+      }));
     }
 
     const groupedGoals = { home: groupPlayers(goals.home), away: groupPlayers(goals.away) };
-    const groupedAssists = { home: groupPlayers(assists.home), away: groupPlayers(assists.away) };
+    // If assists have 'value' field (from FPL), use count format; otherwise group by minute
+    const groupedAssists = (assists.home.length > 0 && assists.home[0].value !== undefined)
+      ? { home: groupAssistsByCount(assists.home), away: groupAssistsByCount(assists.away) }
+      : { home: groupPlayers(assists.home), away: groupPlayers(assists.away) };
     const groupedYellowCards = { home: groupPlayers(yellowCards.home), away: groupPlayers(yellowCards.away) };
     const groupedRedCards = { home: groupPlayers(redCards.home), away: groupPlayers(redCards.away) };
 
@@ -505,6 +344,14 @@ export default async function handler(req, res) {
               // Defensive Contribution — direct from FPL, top 5 per side
               const dcData = extractStat('defensive_contribution', 5);
               defensiveContribution = dcData;
+
+              // FPL Assists — authoritative, override API-Football assists
+              const fplAssistData = extractStat('assists');
+              if (fplAssistData.home.length > 0 || fplAssistData.away.length > 0) {
+                // Override assists with FPL data (player name + count format)
+                assists.home = fplAssistData.home.map(a => ({ player: a.player, value: a.value }));
+                assists.away = fplAssistData.away.map(a => ({ player: a.player, value: a.value }));
+              }
             }
           }
         }
