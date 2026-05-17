@@ -72,7 +72,7 @@ export default async function handler(req, res) {
       if (event.type === 'Goal' && event.detail !== 'Missed Penalty') {
         goals[side].push({ player: playerName, minute: timeStr });
         if (event.assist?.name) {
-          assists[side].push({ player: event.assist.name });
+          assists[side].push({ player: event.assist.name, minute: timeStr });
         }
       } else if (event.type === 'Card') {
         if (event.detail?.includes('Yellow')) {
@@ -82,6 +82,24 @@ export default async function handler(req, res) {
         }
       }
     }
+
+    // Group players with multiple entries: "O. Watkins (57', 73')" instead of listing twice
+    function groupPlayers(entries) {
+      const map = {};
+      for (const e of entries) {
+        if (!map[e.player]) map[e.player] = [];
+        map[e.player].push(e.minute);
+      }
+      return Object.entries(map).map(([player, minutes]) => ({
+        player,
+        minute: minutes.join(', '),
+      }));
+    }
+
+    const groupedGoals = { home: groupPlayers(goals.home), away: groupPlayers(goals.away) };
+    const groupedAssists = { home: groupPlayers(assists.home), away: groupPlayers(assists.away) };
+    const groupedYellowCards = { home: groupPlayers(yellowCards.home), away: groupPlayers(yellowCards.away) };
+    const groupedRedCards = { home: groupPlayers(redCards.home), away: groupPlayers(redCards.away) };
 
     // ── Match Stats from API-Football ─────────────────────────────────────
     let matchStats = { home: {}, away: {} };
@@ -195,10 +213,10 @@ export default async function handler(req, res) {
       homeLogo: homeTeam?.logo,
       awayLogo: awayTeam?.logo,
       score: `${fixture.goals?.home ?? 0} - ${fixture.goals?.away ?? 0}`,
-      goals,
-      assists,
-      yellowCards,
-      redCards,
+      goals: groupedGoals,
+      assists: groupedAssists,
+      yellowCards: groupedYellowCards,
+      redCards: groupedRedCards,
       saves,
       bonus,
       stats: statsDisplay,
