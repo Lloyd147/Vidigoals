@@ -142,7 +142,7 @@ export default async function handler(req, res) {
         }
       }
 
-      // Direct FPL fallback if Redis had nothing and we have goals without assists
+      // Direct FPL fallback if Redis had nothing — FPL is authoritative for assists
       if (!foundReconciled && (goals.home.length > 0 || goals.away.length > 0)) {
         try {
           const bootstrap = await fplFetch('https://fantasy.premierleague.com/api/bootstrap-static/');
@@ -190,7 +190,6 @@ export default async function handler(req, res) {
             if (fplHome && fplAway) {
               const fplFixtures = await fplFetch('https://fantasy.premierleague.com/api/fixtures/');
               if (fplFixtures) {
-                // Match by kickoff time — guarantees exact same fixture
                 const apiKickoff = fixture.fixture?.date ? new Date(fixture.fixture.date).getTime() : null;
 
                 const fplFixture = fplFixtures.find(f => {
@@ -204,207 +203,78 @@ export default async function handler(req, res) {
                   return false;
                 });
 
-                if (fplFixture?.stats) {
+                if (fplFixture) {
                   const swapped = fplFixture.team_h === fplAway.id;
-                  const assistStat = fplFixture.stats.find(s => s.identifier === 'assists');
+                  let fplHomeAssists = [];
+                  let fplAwayAssists = [];
+
+                  // Try fixture stats first
+                  const assistStat = fplFixture.stats ? fplFixture.stats.find(s => s.identifier === 'assists') : null;
                   if (assistStat) {
-                    const homeAssistEntries = swapped ? assistStat.a : assistStat.h;
-                    const awayAssistEntries = swapped ? assistStat.h : assistStat.a;
-
-                    const fplHomeAssists = [];
-                    for (const entry of (homeAssistEntries || [])) {
+                    const homeEntries = swapped ? assistStat.a : assistStat.h;
+                    const awayEntries = swapped ? assistStat.h : assistStat.a;
+                    for (const entry of (homeEntries || [])) {
                       const player = playerMap[entry.element];
                       if (player) {
-                        for (let i = 0; i < entry.value; i++) {
-                          fplHomeAssists.push(player.web_name);
-                        }
+                        for (let i = 0; i < entry.value; i++) fplHomeAssists.push(player.web_name);
                       }
                     }
-                    const fplAwayAssists = [];
-                    for (const entry of (awayAssistEntries || [])) {
+                    for (const entry of (awayEntries || [])) {
                       const player = playerMap[entry.element];
                       if (player) {
-                        for (let i = 0; i < entry.value; i++) {
-                          fplAwayAssists.push(player.web_name);
-                        }
-                      }
-                    }
-
-                    // If fixture stats are empty during live match, try FPL live endpoint
-                    if (fplHomeAssists.length === 0 && fplAwayAssists.length === 0 &&
-                        fplFixture.started && !fplFixture.finished_provisional) {
-                      try {
-                        const liveData = await fplFetch(`https://fantasy.premierleague.com/api/event/${fplFixture.event}/live/`);
-                        if (liveData && liveData.elements) {
-                          const fixtureTeamIds = [fplFixture.team_h, fplFixture.team_a];
-                          const fixturePlayers = (bootstrap.elements || []).filter(p => fixtureTeamIds.includes(p.team));
-
-                          const homeTeamId = swapped ? fplFixture.team_a : fplFixture.team_h;
-                          const awayTeamId = swapped ? fplFixture.team_h : fplFixture.team_a;
-
-                          for (const fp of fixturePlayers) {
-                            const liveEl = liveData.elements.find(e => e.id === fp.id);
-                            if (liveEl && liveEl.stats && liveEl.stats.assists > 0) {
-                              const fixtureExplain = liveEl.explain?.find(ex => ex.fixture === fplFixture.id);
-                              let assistsInFixture = 0;
-                              if (fixtureExplain) {
-                                const aStat = fixtureExplain.stats?.find(s => s.identifier === 'assists');
-                                assistsInFixture = aStat ? aStat.value : 0;
-                              } else {
-                                assistsInFixture = liveEl.stats.assists;
-                              }
-                              if (assistsInFixture > 0) {
-                                for (let i = 0; i < assistsInFixture; i++) {
-                                  if (fp.team === homeTeamId) {
-                                    fplHomeAssists.push(fp.web_name);
-                                  } else {
-                                    fplAwayAssists.push(fp.web_name);
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      } catch (liveErr) {
-                        console.warn('Match details FPL live endpoint error:', liveErr.message);
-                      }
-                    }
-
-                    // Add FPL assists for goals that don't have one
-                    if (fplHomeAssists.length > assists.home.length) {
-                      const goalsWithoutAssist = goals.home.filter(g =>
-                        !assists.home.some(a => a.minute === g.minute)
-                      );
-                      for (let i = 0; i < fplHomeAssists.length - assists.home.length && i < goalsWithoutAssist.length; i++) {
-                        assists.home.push({ player: fplHomeAssists[assists.home.length + i], minute: goalsWithoutAssist[i]?.minute || '' });
-                      }
-                    }
-                    if (fplAwayAssists.length > assists.away.length) {
-                      const goalsWithoutAssist = goals.away.filter(g =>
-                        !assists.away.some(a => a.minute === g.minute)
-                      );
-                      for (let i = 0; i < fplAwayAssists.length - assists.away.length && i < goalsWithoutAssist.length; i++) {
-                        assists.away.push({ player: fplAwayAssists[assists.away.length + i], minute: goalsWithoutAssist[i]?.minute || '' });
-                      }
-                    }
-                  } else {
-                    // No assistStat in fixture stats — try live endpoint directly
-                    if (fplFixture.started && !fplFixture.finished_provisional) {
-                      try {
-                        const liveData = await fplFetch(`https://fantasy.premierleague.com/api/event/${fplFixture.event}/live/`);
-                        if (liveData && liveData.elements) {
-                          const swapped2 = fplFixture.team_h === fplAway.id;
-                          const fixtureTeamIds = [fplFixture.team_h, fplFixture.team_a];
-                          const fixturePlayers = (bootstrap.elements || []).filter(p => fixtureTeamIds.includes(p.team));
-
-                          const homeTeamId = swapped2 ? fplFixture.team_a : fplFixture.team_h;
-                          const awayTeamId = swapped2 ? fplFixture.team_h : fplFixture.team_a;
-
-                          const fplHomeAssists2 = [];
-                          const fplAwayAssists2 = [];
-
-                          for (const fp of fixturePlayers) {
-                            const liveEl = liveData.elements.find(e => e.id === fp.id);
-                            if (liveEl && liveEl.stats && liveEl.stats.assists > 0) {
-                              const fixtureExplain = liveEl.explain?.find(ex => ex.fixture === fplFixture.id);
-                              let assistsInFixture = 0;
-                              if (fixtureExplain) {
-                                const aStat = fixtureExplain.stats?.find(s => s.identifier === 'assists');
-                                assistsInFixture = aStat ? aStat.value : 0;
-                              } else {
-                                assistsInFixture = liveEl.stats.assists;
-                              }
-                              if (assistsInFixture > 0) {
-                                for (let i = 0; i < assistsInFixture; i++) {
-                                  if (fp.team === homeTeamId) {
-                                    fplHomeAssists2.push(fp.web_name);
-                                  } else {
-                                    fplAwayAssists2.push(fp.web_name);
-                                  }
-                                }
-                              }
-                            }
-                          }
-
-                          if (fplHomeAssists2.length > assists.home.length) {
-                            const goalsWithoutAssist = goals.home.filter(g =>
-                              !assists.home.some(a => a.minute === g.minute)
-                            );
-                            for (let i = 0; i < fplHomeAssists2.length - assists.home.length && i < goalsWithoutAssist.length; i++) {
-                              assists.home.push({ player: fplHomeAssists2[assists.home.length + i], minute: goalsWithoutAssist[i]?.minute || '' });
-                            }
-                          }
-                          if (fplAwayAssists2.length > assists.away.length) {
-                            const goalsWithoutAssist = goals.away.filter(g =>
-                              !assists.away.some(a => a.minute === g.minute)
-                            );
-                            for (let i = 0; i < fplAwayAssists2.length - assists.away.length && i < goalsWithoutAssist.length; i++) {
-                              assists.away.push({ player: fplAwayAssists2[assists.away.length + i], minute: goalsWithoutAssist[i]?.minute || '' });
-                            }
-                          }
-                        }
-                      } catch (liveErr) {
-                        console.warn('Match details FPL live endpoint (no stats) error:', liveErr.message);
+                        for (let i = 0; i < entry.value; i++) fplAwayAssists.push(player.web_name);
                       }
                     }
                   }
-                } else if (fplFixture && fplFixture.started && !fplFixture.finished_provisional) {
-                  // No stats at all on fixture — try live endpoint
-                  try {
-                    const swapped3 = fplFixture.team_h === fplAway.id;
-                    const liveData = await fplFetch(`https://fantasy.premierleague.com/api/event/${fplFixture.event}/live/`);
-                    if (liveData && liveData.elements) {
-                      const fixtureTeamIds = [fplFixture.team_h, fplFixture.team_a];
-                      const fixturePlayers = (bootstrap.elements || []).filter(p => fixtureTeamIds.includes(p.team));
 
-                      const homeTeamId = swapped3 ? fplFixture.team_a : fplFixture.team_h;
-                      const awayTeamId = swapped3 ? fplFixture.team_h : fplFixture.team_a;
+                  // If fixture stats empty, try FPL live endpoint
+                  if (fplHomeAssists.length === 0 && fplAwayAssists.length === 0 &&
+                      fplFixture.started && !fplFixture.finished_provisional) {
+                    try {
+                      const liveData = await fplFetch(`https://fantasy.premierleague.com/api/event/${fplFixture.event}/live/`);
+                      if (liveData && liveData.elements) {
+                        const fixtureTeamIds = [fplFixture.team_h, fplFixture.team_a];
+                        const fixturePlayers = (bootstrap.elements || []).filter(p => fixtureTeamIds.includes(p.team));
+                        const homeTeamId = swapped ? fplFixture.team_a : fplFixture.team_h;
 
-                      const fplHomeAssists3 = [];
-                      const fplAwayAssists3 = [];
-
-                      for (const fp of fixturePlayers) {
-                        const liveEl = liveData.elements.find(e => e.id === fp.id);
-                        if (liveEl && liveEl.stats && liveEl.stats.assists > 0) {
-                          const fixtureExplain = liveEl.explain?.find(ex => ex.fixture === fplFixture.id);
-                          let assistsInFixture = 0;
-                          if (fixtureExplain) {
-                            const aStat = fixtureExplain.stats?.find(s => s.identifier === 'assists');
-                            assistsInFixture = aStat ? aStat.value : 0;
-                          } else {
-                            assistsInFixture = liveEl.stats.assists;
-                          }
-                          if (assistsInFixture > 0) {
-                            for (let i = 0; i < assistsInFixture; i++) {
-                              if (fp.team === homeTeamId) {
-                                fplHomeAssists3.push(fp.web_name);
-                              } else {
-                                fplAwayAssists3.push(fp.web_name);
+                        for (const fp of fixturePlayers) {
+                          const liveEl = liveData.elements.find(e => e.id === fp.id);
+                          if (liveEl && liveEl.stats && liveEl.stats.assists > 0) {
+                            const fixtureExplain = liveEl.explain?.find(ex => ex.fixture === fplFixture.id);
+                            let assistsInFixture = 0;
+                            if (fixtureExplain) {
+                              const aStat = fixtureExplain.stats?.find(s => s.identifier === 'assists');
+                              assistsInFixture = aStat ? aStat.value : 0;
+                            } else {
+                              assistsInFixture = liveEl.stats.assists;
+                            }
+                            if (assistsInFixture > 0) {
+                              for (let i = 0; i < assistsInFixture; i++) {
+                                if (fp.team === homeTeamId) {
+                                  fplHomeAssists.push(fp.web_name);
+                                } else {
+                                  fplAwayAssists.push(fp.web_name);
+                                }
                               }
                             }
                           }
                         }
                       }
-
-                      if (fplHomeAssists3.length > assists.home.length) {
-                        const goalsWithoutAssist = goals.home.filter(g =>
-                          !assists.home.some(a => a.minute === g.minute)
-                        );
-                        for (let i = 0; i < fplHomeAssists3.length - assists.home.length && i < goalsWithoutAssist.length; i++) {
-                          assists.home.push({ player: fplHomeAssists3[assists.home.length + i], minute: goalsWithoutAssist[i]?.minute || '' });
-                        }
-                      }
-                      if (fplAwayAssists3.length > assists.away.length) {
-                        const goalsWithoutAssist = goals.away.filter(g =>
-                          !assists.away.some(a => a.minute === g.minute)
-                        );
-                        for (let i = 0; i < fplAwayAssists3.length - assists.away.length && i < goalsWithoutAssist.length; i++) {
-                          assists.away.push({ player: fplAwayAssists3[assists.away.length + i], minute: goalsWithoutAssist[i]?.minute || '' });
-                        }
-                      }
+                    } catch (liveErr) {
+                      console.warn('Match details FPL live endpoint error:', liveErr.message);
                     }
-                  } catch (liveErr) {
-                    console.warn('Match details FPL live endpoint (no fixture stats) error:', liveErr.message);
+                  }
+
+                  // FPL is authoritative — replace assists entirely when FPL has data
+                  if (fplHomeAssists.length > 0 || fplAwayAssists.length > 0) {
+                    assists.home = [];
+                    assists.away = [];
+                    for (let i = 0; i < fplHomeAssists.length && i < goals.home.length; i++) {
+                      assists.home.push({ player: fplHomeAssists[i], minute: goals.home[i]?.minute || '' });
+                    }
+                    for (let i = 0; i < fplAwayAssists.length && i < goals.away.length; i++) {
+                      assists.away.push({ player: fplAwayAssists[i], minute: goals.away[i]?.minute || '' });
+                    }
                   }
                 }
               }
