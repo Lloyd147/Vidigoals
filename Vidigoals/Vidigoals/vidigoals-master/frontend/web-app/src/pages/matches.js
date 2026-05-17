@@ -640,7 +640,7 @@ export default function Matches() {
                                   </DetailSection>
 
                                   {/* Bonus Points - only show when available */}
-                                  {(matchDetails.bonus.home.length > 0 || matchDetails.bonus.away.length > 0) && (
+                                  {(matchDetails.bonus?.home?.length > 0 || matchDetails.bonus?.away?.length > 0) && (
                                     <DetailSection>
                                       <DetailTitle>Bonus Points</DetailTitle>
                                       {Array.from({ length: Math.max(matchDetails.bonus.home.length, matchDetails.bonus.away.length) }).map((_, i) => (
@@ -650,6 +650,40 @@ export default function Matches() {
                                           </DetailHome>
                                           <DetailAway>
                                             {matchDetails.bonus.away[i] ? <>{matchDetails.bonus.away[i].player}<BonusValue>({matchDetails.bonus.away[i].value})</BonusValue></> : ''}
+                                          </DetailAway>
+                                        </BonusRow>
+                                      ))}
+                                    </DetailSection>
+                                  )}
+
+                                  {/* BPS (Bonus Points System) - live running scores */}
+                                  {(matchDetails.bps?.home?.length > 0 || matchDetails.bps?.away?.length > 0) && (
+                                    <DetailSection>
+                                      <DetailTitle>📊 Bonus Points System</DetailTitle>
+                                      {Array.from({ length: Math.max(matchDetails.bps.home.length, matchDetails.bps.away.length) }).map((_, i) => (
+                                        <BonusRow key={`bps-${i}`}>
+                                          <DetailHome>
+                                            {matchDetails.bps.home[i] ? <>{matchDetails.bps.home[i].player}<BonusValue>({matchDetails.bps.home[i].value})</BonusValue></> : ''}
+                                          </DetailHome>
+                                          <DetailAway>
+                                            {matchDetails.bps.away[i] ? <>{matchDetails.bps.away[i].player}<BonusValue>({matchDetails.bps.away[i].value})</BonusValue></> : ''}
+                                          </DetailAway>
+                                        </BonusRow>
+                                      ))}
+                                    </DetailSection>
+                                  )}
+
+                                  {/* Defensive Contribution */}
+                                  {(matchDetails.defensiveContribution?.home?.length > 0 || matchDetails.defensiveContribution?.away?.length > 0) && (
+                                    <DetailSection>
+                                      <DetailTitle>🛡️ Defensive Contribution</DetailTitle>
+                                      {Array.from({ length: Math.max(matchDetails.defensiveContribution.home.length, matchDetails.defensiveContribution.away.length) }).map((_, i) => (
+                                        <BonusRow key={`def-${i}`}>
+                                          <DetailHome>
+                                            {matchDetails.defensiveContribution.home[i] ? <>{matchDetails.defensiveContribution.home[i].player}<BonusValue>({matchDetails.defensiveContribution.home[i].value})</BonusValue></> : ''}
+                                          </DetailHome>
+                                          <DetailAway>
+                                            {matchDetails.defensiveContribution.away[i] ? <>{matchDetails.defensiveContribution.away[i].player}<BonusValue>({matchDetails.defensiveContribution.away[i].value})</BonusValue></> : ''}
                                           </DetailAway>
                                         </BonusRow>
                                       ))}

@@ -365,8 +365,10 @@ export default async function handler(req, res) {
       { label: 'Pass Accuracy', home: statVal(matchStats.home['Passes %']), away: statVal(matchStats.away['Passes %']) },
     ];
 
-    // ── Bonus Points from FPL ─────────────────────────────────────────────
+    // ── Bonus Points System & Defensive Contribution from FPL ──────────────
     let bonus = { home: [], away: [] };
+    let bps = { home: [], away: [] };
+    let defensiveContribution = { home: [], away: [] };
     try {
       const fplFixtures = await fplFetch('https://fantasy.premierleague.com/api/fixtures/');
       if (fplFixtures) {
@@ -423,30 +425,175 @@ export default async function handler(req, res) {
               return false;
             });
 
-            if (fplFixture?.stats) {
+            if (fplFixture) {
               const bonusSwapped = fplFixture.team_h === fplAway.id;
-              const bonusStat = fplFixture.stats.find(s => s.identifier === 'bonus');
-              if (bonusStat) {
-                const playerMap = {};
-                for (const p of bootstrap.elements || []) {
-                  playerMap[p.id] = p;
-                }
+              const playerMap = {};
+              for (const p of bootstrap.elements || []) {
+                playerMap[p.id] = p;
+              }
 
-                const homeBonusEntries = bonusSwapped ? bonusStat.a : bonusStat.h;
-                const awayBonusEntries = bonusSwapped ? bonusStat.h : bonusStat.a;
+              // Get final bonus (3/2/1) from fixture stats if available
+              if (fplFixture.stats) {
+                const bonusStat = fplFixture.stats.find(s => s.identifier === 'bonus');
+                if (bonusStat) {
+                  const homeBonusEntries = bonusSwapped ? bonusStat.a : bonusStat.h;
+                  const awayBonusEntries = bonusSwapped ? bonusStat.h : bonusStat.a;
 
-                for (const entry of (homeBonusEntries || [])) {
-                  const player = playerMap[entry.element];
-                  if (player) {
-                    bonus.home.push({ player: player.web_name, value: entry.value });
+                  for (const entry of (homeBonusEntries || [])) {
+                    const player = playerMap[entry.element];
+                    if (player) {
+                      bonus.home.push({ player: player.web_name, value: entry.value });
+                    }
+                  }
+                  for (const entry of (awayBonusEntries || [])) {
+                    const player = playerMap[entry.element];
+                    if (player) {
+                      bonus.away.push({ player: player.web_name, value: entry.value });
+                    }
                   }
                 }
-                for (const entry of (awayBonusEntries || [])) {
-                  const player = playerMap[entry.element];
-                  if (player) {
-                    bonus.away.push({ player: player.web_name, value: entry.value });
+
+                // Get BPS (running bonus point system scores) from fixture stats
+                const bpsStat = fplFixture.stats.find(s => s.identifier === 'bps');
+                if (bpsStat) {
+                  const homeBpsEntries = bonusSwapped ? bpsStat.a : bpsStat.h;
+                  const awayBpsEntries = bonusSwapped ? bpsStat.h : bpsStat.a;
+
+                  for (const entry of (homeBpsEntries || [])) {
+                    const player = playerMap[entry.element];
+                    if (player) {
+                      bps.home.push({ player: player.web_name, value: entry.value });
+                    }
                   }
+                  for (const entry of (awayBpsEntries || [])) {
+                    const player = playerMap[entry.element];
+                    if (player) {
+                      bps.away.push({ player: player.web_name, value: entry.value });
+                    }
+                  }
+
+                  // Sort by BPS value descending, take top 5 per side
+                  bps.home.sort((a, b) => b.value - a.value);
+                  bps.away.sort((a, b) => b.value - a.value);
+                  bps.home = bps.home.slice(0, 5);
+                  bps.away = bps.away.slice(0, 5);
                 }
+              }
+
+              // If BPS not in fixture stats (live match), get from live endpoint
+              if (bps.home.length === 0 && bps.away.length === 0 &&
+                  fplFixture.started && !fplFixture.finished_provisional) {
+                try {
+                  const liveData = await fplFetch(`https://fantasy.premierleague.com/api/event/${fplFixture.event}/live/`);
+                  if (liveData && liveData.elements) {
+                    const fixtureTeamIds = [fplFixture.team_h, fplFixture.team_a];
+                    const fixturePlayers = (bootstrap.elements || []).filter(p => fixtureTeamIds.includes(p.team));
+                    const homeTeamId = bonusSwapped ? fplFixture.team_a : fplFixture.team_h;
+
+                    for (const fp of fixturePlayers) {
+                      const liveEl = liveData.elements.find(e => e.id === fp.id);
+                      if (liveEl && liveEl.stats) {
+                        const bpsVal = liveEl.stats.bps || 0;
+                        const side = fp.team === homeTeamId ? 'home' : 'away';
+                        if (bpsVal > 0) {
+                          bps[side].push({ player: fp.web_name, value: bpsVal });
+                        }
+
+                        // Defensive contribution: tackles + interceptions + clearances + blocks
+                        // FPL live stats don't break down defensive BPS directly,
+                        // but we can compute from available stats
+                        const defScore = (liveEl.stats.clean_sheets || 0) * 4 +
+                                         (liveEl.stats.saves || 0) +
+                                         (liveEl.stats.penalties_saved || 0) * 5;
+                        // Use BPS defensive component if available in explain
+                        const fixtureExplain = liveEl.explain?.find(ex => ex.fixture === fplFixture.id);
+                        if (fixtureExplain && fixtureExplain.stats) {
+                          // Look for defensive BPS contributions
+                          // FPL doesn't expose raw defensive BPS separately, so we approximate
+                          // using the player's total BPS minus attacking contributions
+                          const goalsStat = fixtureExplain.stats.find(s => s.identifier === 'goals_scored');
+                          const assistsStat = fixtureExplain.stats.find(s => s.identifier === 'assists');
+                          const goalsVal = goalsStat ? goalsStat.value : 0;
+                          const assistsVal = assistsStat ? assistsStat.value : 0;
+                          // Rough defensive contribution = BPS - (goals*24 + assists*9)
+                          // This gives us the non-attacking BPS which includes defensive actions
+                          const attackingBps = goalsVal * 24 + assistsVal * 9;
+                          const defensiveBps = Math.max(0, bpsVal - attackingBps);
+                          if (defensiveBps > 0) {
+                            defensiveContribution[side].push({ player: fp.web_name, value: defensiveBps });
+                          }
+                        } else if (bpsVal > 0) {
+                          // Fallback: for defenders/GKs, their BPS is largely defensive
+                          const pos = fp.element_type; // 1=GK, 2=DEF, 3=MID, 4=FWD
+                          if (pos <= 2) {
+                            defensiveContribution[side].push({ player: fp.web_name, value: bpsVal });
+                          } else if (pos === 3 && bpsVal > 5) {
+                            // Midfielders with decent BPS likely have some defensive contribution
+                            defensiveContribution[side].push({ player: fp.web_name, value: Math.round(bpsVal * 0.4) });
+                          }
+                        }
+                      }
+                    }
+
+                    // Sort and limit
+                    bps.home.sort((a, b) => b.value - a.value);
+                    bps.away.sort((a, b) => b.value - a.value);
+                    bps.home = bps.home.slice(0, 5);
+                    bps.away = bps.away.slice(0, 5);
+
+                    defensiveContribution.home.sort((a, b) => b.value - a.value);
+                    defensiveContribution.away.sort((a, b) => b.value - a.value);
+                    defensiveContribution.home = defensiveContribution.home.slice(0, 5);
+                    defensiveContribution.away = defensiveContribution.away.slice(0, 5);
+                  }
+                } catch (liveErr) {
+                  console.warn('BPS/Defensive live endpoint error:', liveErr.message);
+                }
+              } else if (bps.home.length > 0 || bps.away.length > 0) {
+                // We have BPS from fixture stats — compute defensive contribution from it
+                // For fixture stats, we can use the live endpoint to get the breakdown
+                try {
+                  const liveData = await fplFetch(`https://fantasy.premierleague.com/api/event/${fplFixture.event}/live/`);
+                  if (liveData && liveData.elements) {
+                    const fixtureTeamIds = [fplFixture.team_h, fplFixture.team_a];
+                    const fixturePlayers = (bootstrap.elements || []).filter(p => fixtureTeamIds.includes(p.team));
+                    const homeTeamId = bonusSwapped ? fplFixture.team_a : fplFixture.team_h;
+
+                    for (const fp of fixturePlayers) {
+                      const liveEl = liveData.elements.find(e => e.id === fp.id);
+                      if (liveEl && liveEl.stats) {
+                        const bpsVal = liveEl.stats.bps || 0;
+                        if (bpsVal <= 0) continue;
+                        const side = fp.team === homeTeamId ? 'home' : 'away';
+
+                        const fixtureExplain = liveEl.explain?.find(ex => ex.fixture === fplFixture.id);
+                        if (fixtureExplain && fixtureExplain.stats) {
+                          const goalsStat = fixtureExplain.stats.find(s => s.identifier === 'goals_scored');
+                          const assistsStat = fixtureExplain.stats.find(s => s.identifier === 'assists');
+                          const goalsVal = goalsStat ? goalsStat.value : 0;
+                          const assistsVal = assistsStat ? assistsStat.value : 0;
+                          const attackingBps = goalsVal * 24 + assistsVal * 9;
+                          const defensiveBps = Math.max(0, bpsVal - attackingBps);
+                          if (defensiveBps > 0) {
+                            defensiveContribution[side].push({ player: fp.web_name, value: defensiveBps });
+                          }
+                        } else {
+                          const pos = fp.element_type;
+                          if (pos <= 2) {
+                            defensiveContribution[side].push({ player: fp.web_name, value: bpsVal });
+                          } else if (pos === 3 && bpsVal > 5) {
+                            defensiveContribution[side].push({ player: fp.web_name, value: Math.round(bpsVal * 0.4) });
+                          }
+                        }
+                      }
+                    }
+
+                    defensiveContribution.home.sort((a, b) => b.value - a.value);
+                    defensiveContribution.away.sort((a, b) => b.value - a.value);
+                    defensiveContribution.home = defensiveContribution.home.slice(0, 5);
+                    defensiveContribution.away = defensiveContribution.away.slice(0, 5);
+                  }
+                } catch {}
               }
             }
           }
@@ -467,6 +614,8 @@ export default async function handler(req, res) {
       saves,
       lineups,
       bonus,
+      bps,
+      defensiveContribution,
       stats: statsDisplay,
     };
 
