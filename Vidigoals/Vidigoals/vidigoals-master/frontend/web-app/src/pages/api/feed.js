@@ -468,10 +468,11 @@ async function buildFeed() {
   });
 
   // ── Direct FPL assist fallback (works even without Redis) ─────────────────
-  // For any match with goals missing assists, try to fill from FPL directly
-  // FPL is authoritative for assists — override API-Football when FPL has data
-  // This covers: live matches where API-Football hasn't reported assists,
-  // and finished matches where API-Football never added the assist
+  // FPL is authoritative for assist COUNTS per player.
+  // Logic: keep API-Football assists where they exist (they know the exact goal),
+  // then fill in remaining FPL assists to goals missing an assist.
+  // e.g. FPL says Bruno has 2 assists, API-Football gave Bruno for Mbeumo's goal →
+  // the remaining 1 Bruno assist goes to the first goal without an assist (Shaw's goal)
   try {
     // Group goals by fixture
     const goalsByFixture = {};
@@ -483,7 +484,7 @@ async function buildFeed() {
     }
 
     for (const [fid, goals] of Object.entries(goalsByFixture)) {
-      // Sort by minute ascending to match FPL order
+      // Sort by minute ascending
       goals.sort((a, b) => (a.minute || 0) - (b.minute || 0));
 
       const fplData = await getFplAssistsForFixture(goals[0].homeTeam, goals[0].awayTeam, goals[0].timestamp);
@@ -493,19 +494,55 @@ async function buildFeed() {
       const homeGoals = goals.filter(g => g.isHome);
       const awayGoals = goals.filter(g => !g.isHome);
 
-      // Apply FPL home assists to home goals (FPL is authoritative)
-      for (let i = 0; i < homeGoals.length && i < fplData.homeAssists.length; i++) {
-        if (fplData.homeAssists[i]) {
-          homeGoals[i].assist = fplData.homeAssists[i];
+      // For each side, reconcile FPL assists with API-Football assists
+      function reconcileSide(sideGoals, fplAssistNames) {
+        if (fplAssistNames.length === 0) return;
+
+        // Count how many assists each FPL player should have
+        const fplCounts = {};
+        for (const name of fplAssistNames) {
+          fplCounts[name] = (fplCounts[name] || 0) + 1;
+        }
+
+        // Count how many assists API-Football already assigned per player
+        const apiCounts = {};
+        for (const goal of sideGoals) {
+          if (goal.assist) {
+            // Normalize: FPL uses web_name (e.g. "B.Fernandes"), API uses full name (e.g. "Bruno Fernandes")
+            // Match by checking if any FPL name is contained in or matches the API assist
+            for (const fplName of Object.keys(fplCounts)) {
+              const fplLast = fplName.split('.').pop()?.toLowerCase() || fplName.toLowerCase();
+              const apiLast = goal.assist.split(' ').pop()?.toLowerCase() || goal.assist.toLowerCase();
+              if (fplLast === apiLast || goal.assist.toLowerCase().includes(fplLast)) {
+                apiCounts[fplName] = (apiCounts[fplName] || 0) + 1;
+                break;
+              }
+            }
+          }
+        }
+
+        // Calculate remaining assists to distribute (FPL total - already assigned by API)
+        const remaining = [];
+        for (const [player, fplCount] of Object.entries(fplCounts)) {
+          const alreadyAssigned = apiCounts[player] || 0;
+          const toAdd = fplCount - alreadyAssigned;
+          for (let i = 0; i < toAdd; i++) {
+            remaining.push(player);
+          }
+        }
+
+        // Apply remaining assists to goals that don't have one (chronological order)
+        let remainIdx = 0;
+        for (const goal of sideGoals) {
+          if (!goal.assist && remainIdx < remaining.length) {
+            goal.assist = remaining[remainIdx];
+            remainIdx++;
+          }
         }
       }
 
-      // Apply FPL away assists to away goals (FPL is authoritative)
-      for (let i = 0; i < awayGoals.length && i < fplData.awayAssists.length; i++) {
-        if (fplData.awayAssists[i]) {
-          awayGoals[i].assist = fplData.awayAssists[i];
-        }
-      }
+      reconcileSide(homeGoals, fplData.homeAssists);
+      reconcileSide(awayGoals, fplData.awayAssists);
     }
   } catch (err) {
     console.warn('Direct FPL assist fallback error:', err.message);
