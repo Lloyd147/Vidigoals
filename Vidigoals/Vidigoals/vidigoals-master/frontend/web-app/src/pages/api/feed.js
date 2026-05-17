@@ -681,6 +681,11 @@ async function buildFeed() {
         return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
       }
 
+      // Compact form: strip all dots, spaces, hyphens for fuzzy comparison
+      function compact(str) {
+        return normalize(str).replace(/[\s.\-']/g, '');
+      }
+
       // Build team ID lookup from API-Football name → FPL team ID
       const TEAM_NAME_MAP = {
         'arsenal': 'arsenal', 'aston villa': 'aston villa',
@@ -714,11 +719,15 @@ async function buildFeed() {
         const webName = normalize(p.web_name || '');
         const firstName = normalize(p.first_name || '');
         const fullName = normalize(`${p.first_name || ''} ${p.second_name || ''}`);
+        const compactWeb = compact(p.web_name || '');
+        const compactFull = compact(`${p.first_name || ''} ${p.second_name || ''}`);
         playerIndex.push({
           secondName,
           webName,
           firstName,
           fullName,
+          compactWeb,
+          compactFull,
           teamId: p.team,
           position: p.element_type,
         });
@@ -754,10 +763,28 @@ async function buildFeed() {
           );
         }
 
+        // Try compact match (strips dots, spaces, hyphens — "E. Le Fee" matches "E.Le Fee")
+        if (!match && fplTeamId) {
+          const compactPlayer = compact(apiPlayerName);
+          match = playerIndex.find(p =>
+            (p.compactWeb === compactPlayer || p.compactFull === compactPlayer ||
+             compactPlayer.includes(p.compactWeb) || p.compactWeb.includes(compactPlayer)) &&
+            p.compactWeb.length >= 3 && p.teamId === fplTeamId
+          );
+        }
+
         // Try last name without team (fallback)
         if (!match) {
           match = playerIndex.find(p =>
             p.secondName === playerLast || p.webName === playerLast
+          );
+        }
+
+        // Try compact without team (last resort)
+        if (!match) {
+          const compactPlayer = compact(apiPlayerName);
+          match = playerIndex.find(p =>
+            p.compactWeb === compactPlayer && p.compactWeb.length >= 4
           );
         }
 
