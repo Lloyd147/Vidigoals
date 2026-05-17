@@ -268,18 +268,38 @@ export default function AppShell({ user, page, isLive, onLogout, children }) {
   // Fetch live GW points from FPL
   useEffect(() => {
     if (!user?.id) return;
+    // Try the fpl-entry endpoint first, fall back to picks calculation
     fetch(`/api/fpl-entry?id=${user.id}`)
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (data.summary_event_points !== undefined) {
+        if (data && data.summary_event_points > 0) {
           setLivePoints({ gw: data.summary_event_points, overall: data.summary_overall_points });
-          // Update localStorage so it persists
           try {
             const stored = JSON.parse(localStorage.getItem('vidigoals_user') || '{}');
             stored.gwPoints = data.summary_event_points;
             stored.overallPoints = data.summary_overall_points;
             localStorage.setItem('vidigoals_user', JSON.stringify(stored));
           } catch {}
+        } else {
+          // FPL entry endpoint returned 0 — calculate from picks
+          fetch(`/api/fpl-picks?id=${user.id}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(picksData => {
+              if (picksData?.starting) {
+                const hits = picksData.entry_history?.event_transfers_cost || 0;
+                const total = picksData.starting.reduce((sum, p) =>
+                  sum + (p.event_points || 0) * (p.multiplier || 1), 0) - hits;
+                if (total > 0) {
+                  setLivePoints(prev => ({ ...prev, gw: total }));
+                  try {
+                    const stored = JSON.parse(localStorage.getItem('vidigoals_user') || '{}');
+                    stored.gwPoints = total;
+                    localStorage.setItem('vidigoals_user', JSON.stringify(stored));
+                  } catch {}
+                }
+              }
+            })
+            .catch(() => {});
         }
       })
       .catch(() => {});
