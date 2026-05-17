@@ -107,36 +107,152 @@ export default async function handler(req, res) {
     // ── Apply reconciled assists from Redis during live matches ──────────────
     const liveStatuses2 = ['1H', '2H', 'HT', 'ET', 'P', 'BT'];
     const isCurrentlyLive = liveStatuses2.includes(fixture.fixture?.status?.short);
-    if (isCurrentlyLive && assistTracker) {
-      try {
-        const assistMap = await assistTracker.getFixtureAssists(fixtureId);
-        if (assistMap && Object.keys(assistMap).length > 0) {
-          // Rebuild assists from reconciled data
-          // Get all goals in order (home and away interleaved by minute)
-          const allGoals = [];
-          for (const event of events) {
-            if (event.type === 'Goal' && event.detail !== 'Missed Penalty') {
-              const isHome = event.team?.id === homeTeam?.id;
-              const minute = event.time?.elapsed;
-              const extra = event.time?.extra;
-              const timeStr = extra ? `${minute}+${extra}'` : `${minute}'`;
-              allGoals.push({ isHome, minute, timeStr });
-            }
-          }
+    if (isCurrentlyLive) {
+      let foundReconciled = false;
 
-          // Clear existing assists and rebuild from reconciled data
-          assists.home = [];
-          assists.away = [];
-          for (let i = 0; i < allGoals.length; i++) {
-            const info = assistMap[i];
-            if (info && info.assist) {
-              const side = allGoals[i].isHome ? 'home' : 'away';
-              assists[side].push({ player: info.assist, minute: allGoals[i].timeStr });
+      // Try Redis first
+      if (assistTracker) {
+        try {
+          const assistMap = await assistTracker.getFixtureAssists(fixtureId);
+          if (assistMap && Object.keys(assistMap).length > 0) {
+            foundReconciled = true;
+            const allGoals = [];
+            for (const event of events) {
+              if (event.type === 'Goal' && event.detail !== 'Missed Penalty') {
+                const isHome = event.team?.id === homeTeam?.id;
+                const minute = event.time?.elapsed;
+                const extra = event.time?.extra;
+                const timeStr = extra ? `${minute}+${extra}'` : `${minute}'`;
+                allGoals.push({ isHome, minute, timeStr });
+              }
+            }
+
+            assists.home = [];
+            assists.away = [];
+            for (let i = 0; i < allGoals.length; i++) {
+              const info = assistMap[i];
+              if (info && info.assist) {
+                const side = allGoals[i].isHome ? 'home' : 'away';
+                assists[side].push({ player: info.assist, minute: allGoals[i].timeStr });
+              }
             }
           }
+        } catch (err) {
+          console.warn('Match details Redis assist error:', err.message);
         }
-      } catch (err) {
-        console.warn('Match details assist reconciliation error:', err.message);
+      }
+
+      // Direct FPL fallback if Redis had nothing and we have goals without assists
+      if (!foundReconciled && (goals.home.length > 0 || goals.away.length > 0)) {
+        try {
+          const bootstrap = await fplFetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+          if (bootstrap) {
+            const fplTeams = bootstrap.teams || [];
+            const playerMap = {};
+            for (const p of bootstrap.elements || []) {
+              playerMap[p.id] = p;
+            }
+
+            function matchTeamForAssist(apiName, fplTeam) {
+              const name = (apiName || '').toLowerCase();
+              const fplName = (fplTeam.name || '').toLowerCase();
+              const fplShort = (fplTeam.short_name || '').toLowerCase();
+              if (name.includes(fplShort)) return true;
+              if (fplName.includes(name.split(' ')[0])) return true;
+              const apiWords = name.split(/\s+/);
+              const fplWords = fplName.split(/\s+/);
+              if (apiWords.length > 0 && fplWords.length > 0) {
+                const apiFirst3 = apiWords[0].substring(0, 3);
+                const fplFirst3 = fplWords[0].substring(0, 3);
+                if (apiFirst3 === fplFirst3 && apiWords.length > 1 && fplWords.length > 1) {
+                  const apiSecond3 = apiWords[1].substring(0, 3);
+                  const fplSecond3 = fplWords[1].substring(0, 3);
+                  if (apiSecond3 === fplSecond3) return true;
+                }
+                if (apiFirst3 === fplFirst3 && apiWords.length === 1 && fplWords.length === 1) return true;
+              }
+              if (name.substring(0, 3) === fplShort.substring(0, 3)) return true;
+              return false;
+            }
+
+            const fplHome = fplTeams.find(t => matchTeamForAssist(homeTeam?.name, t));
+            const fplAway = fplTeams.find(t => matchTeamForAssist(awayTeam?.name, t));
+
+            if (fplHome && fplAway) {
+              const fplFixtures = await fplFetch('https://fantasy.premierleague.com/api/fixtures/');
+              if (fplFixtures) {
+                let fplFixture = fplFixtures
+                  .filter(f => f.team_h === fplHome.id && f.team_a === fplAway.id)
+                  .sort((a, b) => b.event - a.event)[0];
+
+                let swapped = false;
+                if (!fplFixture) {
+                  fplFixture = fplFixtures
+                    .filter(f => f.team_h === fplAway.id && f.team_a === fplHome.id)
+                    .sort((a, b) => b.event - a.event)[0];
+                  swapped = true;
+                }
+
+                if (fplFixture?.stats) {
+                  const assistStat = fplFixture.stats.find(s => s.identifier === 'assists');
+                  if (assistStat) {
+                    const homeAssistEntries = swapped ? assistStat.a : assistStat.h;
+                    const awayAssistEntries = swapped ? assistStat.h : assistStat.a;
+
+                    // Rebuild assists from FPL data
+                    const fplHomeAssists = [];
+                    for (const entry of (homeAssistEntries || [])) {
+                      const player = playerMap[entry.element];
+                      if (player) {
+                        for (let i = 0; i < entry.value; i++) {
+                          fplHomeAssists.push(player.web_name);
+                        }
+                      }
+                    }
+                    const fplAwayAssists = [];
+                    for (const entry of (awayAssistEntries || [])) {
+                      const player = playerMap[entry.element];
+                      if (player) {
+                        for (let i = 0; i < entry.value; i++) {
+                          fplAwayAssists.push(player.web_name);
+                        }
+                      }
+                    }
+
+                    // Apply FPL assists to goals that are missing them
+                    let homeIdx = 0, awayIdx = 0;
+                    for (let i = 0; i < assists.home.length; i++) {
+                      if (!assists.home[i].player && fplHomeAssists[homeIdx]) {
+                        assists.home[i].player = fplHomeAssists[homeIdx];
+                      }
+                      homeIdx++;
+                    }
+                    // If we have more FPL assists than current assists, add them
+                    if (fplHomeAssists.length > assists.home.length) {
+                      // Match with home goals that don't have assists
+                      const goalsWithoutAssist = goals.home.filter(g =>
+                        !assists.home.some(a => a.minute === g.minute)
+                      );
+                      for (let i = assists.home.length; i < fplHomeAssists.length && i - assists.home.length < goalsWithoutAssist.length; i++) {
+                        assists.home.push({ player: fplHomeAssists[i], minute: goalsWithoutAssist[i - assists.home.length]?.minute || '' });
+                      }
+                    }
+                    if (fplAwayAssists.length > assists.away.length) {
+                      const goalsWithoutAssist = goals.away.filter(g =>
+                        !assists.away.some(a => a.minute === g.minute)
+                      );
+                      for (let i = assists.away.length; i < fplAwayAssists.length && i - assists.away.length < goalsWithoutAssist.length; i++) {
+                        assists.away.push({ player: fplAwayAssists[i], minute: goalsWithoutAssist[i - assists.away.length]?.minute || '' });
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('Match details FPL assist fallback error:', err.message);
+        }
       }
     }
 
@@ -259,10 +375,18 @@ export default async function handler(req, res) {
           const fplAway = fplTeams.find(t => matchTeamForBonus(awayTeam?.name, t));
 
           if (fplHome && fplAway) {
-            // Find the FPL fixture
-            const fplFixture = fplFixtures.find(f =>
-              f.team_h === fplHome.id && f.team_a === fplAway.id && f.finished
-            );
+            // Find the FPL fixture — check both directions, prefer current GW, must have started
+            let fplFixture = fplFixtures
+              .filter(f => (f.team_h === fplHome.id && f.team_a === fplAway.id) && f.started)
+              .sort((a, b) => b.event - a.event)[0];
+
+            let bonusSwapped = false;
+            if (!fplFixture) {
+              fplFixture = fplFixtures
+                .filter(f => (f.team_h === fplAway.id && f.team_a === fplHome.id) && f.started)
+                .sort((a, b) => b.event - a.event)[0];
+              bonusSwapped = true;
+            }
 
             if (fplFixture?.stats) {
               const bonusStat = fplFixture.stats.find(s => s.identifier === 'bonus');
@@ -272,13 +396,16 @@ export default async function handler(req, res) {
                   playerMap[p.id] = p;
                 }
 
-                for (const entry of (bonusStat.h || [])) {
+                const homeBonusEntries = bonusSwapped ? bonusStat.a : bonusStat.h;
+                const awayBonusEntries = bonusSwapped ? bonusStat.h : bonusStat.a;
+
+                for (const entry of (homeBonusEntries || [])) {
                   const player = playerMap[entry.element];
                   if (player) {
                     bonus.home.push({ player: player.web_name, value: entry.value });
                   }
                 }
-                for (const entry of (bonusStat.a || [])) {
+                for (const entry of (awayBonusEntries || [])) {
                   const player = playerMap[entry.element];
                   if (player) {
                     bonus.away.push({ player: player.web_name, value: entry.value });

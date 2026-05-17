@@ -70,19 +70,31 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName) {
   const fplFixtures = await fplFetch('https://fantasy.premierleague.com/api/fixtures/');
   if (!fplFixtures) return { assists: [], count: 0 };
 
-  // Find matching fixture (most recent between these teams)
-  const fplFixture = fplFixtures
-    .filter(f => f.team_h === fplHome.id && f.team_a === fplAway.id)
+  // Find matching fixture (most recent between these teams) — check both directions
+  let fplFixture = fplFixtures
+    .filter(f => (f.team_h === fplHome.id && f.team_a === fplAway.id) && f.started)
     .sort((a, b) => b.event - a.event)[0];
+
+  let teamsSwapped = false;
+  if (!fplFixture) {
+    fplFixture = fplFixtures
+      .filter(f => (f.team_h === fplAway.id && f.team_a === fplHome.id) && f.started)
+      .sort((a, b) => b.event - a.event)[0];
+    teamsSwapped = true;
+  }
 
   if (!fplFixture?.stats) return { assists: [], count: 0 };
 
   const assistStat = fplFixture.stats.find(s => s.identifier === 'assists');
   if (!assistStat) return { assists: [], count: 0 };
 
+  // When teams are swapped, adjust which side is home/away
+  const homeAssists = teamsSwapped ? assistStat.a : assistStat.h;
+  const awayAssists = teamsSwapped ? assistStat.h : assistStat.a;
+
   // Combine home and away assists in order
   const allAssists = [];
-  for (const entry of (assistStat.h || [])) {
+  for (const entry of (homeAssists || [])) {
     const player = playerMap[entry.element];
     if (player) {
       for (let i = 0; i < entry.value; i++) {
@@ -90,7 +102,7 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName) {
       }
     }
   }
-  for (const entry of (assistStat.a || [])) {
+  for (const entry of (awayAssists || [])) {
     const player = playerMap[entry.element];
     if (player) {
       for (let i = 0; i < entry.value; i++) {

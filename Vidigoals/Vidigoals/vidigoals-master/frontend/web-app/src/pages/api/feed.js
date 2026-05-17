@@ -89,17 +89,32 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName) {
   const fplFixtures = await fplFetchForAssists('https://fantasy.premierleague.com/api/fixtures/');
   if (!fplFixtures) return { assists: [], count: 0 };
 
-  const fplFixture = fplFixtures
-    .filter(f => f.team_h === fplHome.id && f.team_a === fplAway.id)
+  // Check both home/away directions — API-Football and FPL may have different home/away
+  // Also filter to only current/recent fixtures that have started (have stats)
+  let fplFixture = fplFixtures
+    .filter(f => (f.team_h === fplHome.id && f.team_a === fplAway.id) && f.started)
     .sort((a, b) => b.event - a.event)[0];
+
+  let teamsSwapped = false;
+  if (!fplFixture) {
+    // Try reversed — maybe FPL has the teams in opposite positions
+    fplFixture = fplFixtures
+      .filter(f => (f.team_h === fplAway.id && f.team_a === fplHome.id) && f.started)
+      .sort((a, b) => b.event - a.event)[0];
+    teamsSwapped = true;
+  }
 
   if (!fplFixture?.stats) return { assists: [], count: 0 };
 
   const assistStat = fplFixture.stats.find(s => s.identifier === 'assists');
   if (!assistStat) return { assists: [], count: 0 };
 
+  // When teams are swapped, home assists in FPL = away team in our context
+  const homeAssists = teamsSwapped ? assistStat.a : assistStat.h;
+  const awayAssists = teamsSwapped ? assistStat.h : assistStat.a;
+
   const allAssists = [];
-  for (const entry of (assistStat.h || [])) {
+  for (const entry of (homeAssists || [])) {
     const player = playerMap[entry.element];
     if (player) {
       for (let i = 0; i < entry.value; i++) {
@@ -107,7 +122,7 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName) {
       }
     }
   }
-  for (const entry of (assistStat.a || [])) {
+  for (const entry of (awayAssists || [])) {
     const player = playerMap[entry.element];
     if (player) {
       for (let i = 0; i < entry.value; i++) {
