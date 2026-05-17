@@ -94,12 +94,99 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName, kickoffTime) 
     return f.started === true;
   });
 
-  if (!fplFixture?.stats) return { assists: [], count: 0 };
+  if (!fplFixture?.stats) {
+    // No stats — try live endpoint for live matches
+    if (fplFixture && fplFixture.started && !fplFixture.finished_provisional) {
+      try {
+        const liveData = await fplFetch(`https://fantasy.premierleague.com/api/event/${fplFixture.event}/live/`);
+        if (liveData && liveData.elements) {
+          const fixtureTeamIds = [fplFixture.team_h, fplFixture.team_a];
+          const fixturePlayers = (bootstrap.elements || []).filter(p => fixtureTeamIds.includes(p.team));
+          const teamsSwapped = fplFixture.team_h === fplAway.id;
+          const homeTeamId = teamsSwapped ? fplFixture.team_a : fplFixture.team_h;
+
+          const allAssists = [];
+          const homeAssistPlayers = [];
+          const awayAssistPlayers = [];
+
+          for (const fp of fixturePlayers) {
+            const liveEl = liveData.elements.find(e => e.id === fp.id);
+            if (liveEl && liveEl.stats && liveEl.stats.assists > 0) {
+              const fixtureExplain = liveEl.explain?.find(ex => ex.fixture === fplFixture.id);
+              let assistsInFixture = 0;
+              if (fixtureExplain) {
+                const aStat = fixtureExplain.stats?.find(s => s.identifier === 'assists');
+                assistsInFixture = aStat ? aStat.value : 0;
+              } else {
+                assistsInFixture = liveEl.stats.assists;
+              }
+              if (assistsInFixture > 0) {
+                for (let i = 0; i < assistsInFixture; i++) {
+                  if (fp.team === homeTeamId) {
+                    homeAssistPlayers.push(fp.web_name);
+                  } else {
+                    awayAssistPlayers.push(fp.web_name);
+                  }
+                }
+              }
+            }
+          }
+
+          allAssists.push(...homeAssistPlayers, ...awayAssistPlayers);
+          return { assists: allAssists, count: allAssists.length };
+        }
+      } catch {}
+    }
+    return { assists: [], count: 0 };
+  }
 
   const teamsSwapped = fplFixture.team_h === fplAway.id;
 
   const assistStat = fplFixture.stats.find(s => s.identifier === 'assists');
-  if (!assistStat) return { assists: [], count: 0 };
+  if (!assistStat) {
+    // No assist stat in fixture stats — try live endpoint
+    if (fplFixture.started && !fplFixture.finished_provisional) {
+      try {
+        const liveData = await fplFetch(`https://fantasy.premierleague.com/api/event/${fplFixture.event}/live/`);
+        if (liveData && liveData.elements) {
+          const fixtureTeamIds = [fplFixture.team_h, fplFixture.team_a];
+          const fixturePlayers = (bootstrap.elements || []).filter(p => fixtureTeamIds.includes(p.team));
+          const homeTeamId = teamsSwapped ? fplFixture.team_a : fplFixture.team_h;
+
+          const allAssists = [];
+          const homeAssistPlayers = [];
+          const awayAssistPlayers = [];
+
+          for (const fp of fixturePlayers) {
+            const liveEl = liveData.elements.find(e => e.id === fp.id);
+            if (liveEl && liveEl.stats && liveEl.stats.assists > 0) {
+              const fixtureExplain = liveEl.explain?.find(ex => ex.fixture === fplFixture.id);
+              let assistsInFixture = 0;
+              if (fixtureExplain) {
+                const aStat = fixtureExplain.stats?.find(s => s.identifier === 'assists');
+                assistsInFixture = aStat ? aStat.value : 0;
+              } else {
+                assistsInFixture = liveEl.stats.assists;
+              }
+              if (assistsInFixture > 0) {
+                for (let i = 0; i < assistsInFixture; i++) {
+                  if (fp.team === homeTeamId) {
+                    homeAssistPlayers.push(fp.web_name);
+                  } else {
+                    awayAssistPlayers.push(fp.web_name);
+                  }
+                }
+              }
+            }
+          }
+
+          allAssists.push(...homeAssistPlayers, ...awayAssistPlayers);
+          return { assists: allAssists, count: allAssists.length };
+        }
+      } catch {}
+    }
+    return { assists: [], count: 0 };
+  }
 
   // When teams are swapped, adjust which side is home/away
   const homeAssists = teamsSwapped ? assistStat.a : assistStat.h;
@@ -122,6 +209,41 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName, kickoffTime) 
         allAssists.push(player.web_name);
       }
     }
+  }
+
+  // If fixture stats had assists identifier but it was empty, try live endpoint
+  if (allAssists.length === 0 && fplFixture.started && !fplFixture.finished_provisional) {
+    try {
+      const liveData = await fplFetch(`https://fantasy.premierleague.com/api/event/${fplFixture.event}/live/`);
+      if (liveData && liveData.elements) {
+        const fixtureTeamIds = [fplFixture.team_h, fplFixture.team_a];
+        const fixturePlayers = (bootstrap.elements || []).filter(p => fixtureTeamIds.includes(p.team));
+        const homeTeamId = teamsSwapped ? fplFixture.team_a : fplFixture.team_h;
+
+        for (const fp of fixturePlayers) {
+          const liveEl = liveData.elements.find(e => e.id === fp.id);
+          if (liveEl && liveEl.stats && liveEl.stats.assists > 0) {
+            const fixtureExplain = liveEl.explain?.find(ex => ex.fixture === fplFixture.id);
+            let assistsInFixture = 0;
+            if (fixtureExplain) {
+              const aStat = fixtureExplain.stats?.find(s => s.identifier === 'assists');
+              assistsInFixture = aStat ? aStat.value : 0;
+            } else {
+              assistsInFixture = liveEl.stats.assists;
+            }
+            if (assistsInFixture > 0) {
+              for (let i = 0; i < assistsInFixture; i++) {
+                if (fp.team === homeTeamId) {
+                  allAssists.push(fp.web_name);
+                } else {
+                  allAssists.push(fp.web_name);
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch {}
   }
 
   return { assists: allAssists, count: allAssists.length };

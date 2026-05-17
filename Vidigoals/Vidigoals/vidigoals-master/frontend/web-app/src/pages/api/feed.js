@@ -142,14 +142,11 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName, kickoffTime) 
   // Determine if teams are swapped relative to our home/away
   const teamsSwapped = fplFixture.team_h === fplAway.id;
 
-  if (!fplFixture.stats) return { assists: [], count: 0 };
-
-  const assistStat = fplFixture.stats.find(s => s.identifier === 'assists');
-  if (!assistStat) return { assists: [], count: 0 };
+  const assistStat = fplFixture.stats ? fplFixture.stats.find(s => s.identifier === 'assists') : null;
 
   // When teams are swapped, home assists in FPL = away team in our context
-  const homeAssists = teamsSwapped ? assistStat.a : assistStat.h;
-  const awayAssists = teamsSwapped ? assistStat.h : assistStat.a;
+  const homeAssists = assistStat ? (teamsSwapped ? assistStat.a : assistStat.h) : [];
+  const awayAssists = assistStat ? (teamsSwapped ? assistStat.h : assistStat.a) : [];
 
   const allAssists = [];
   for (const entry of (homeAssists || [])) {
@@ -166,6 +163,57 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName, kickoffTime) 
       for (let i = 0; i < entry.value; i++) {
         allAssists.push(player.web_name);
       }
+    }
+  }
+
+  // If fixture stats didn't have assists (common during live matches),
+  // fall back to the FPL live endpoint which has per-player stats
+  if (allAssists.length === 0 && fplFixture.started && !fplFixture.finished_provisional) {
+    try {
+      const liveData = await fplFetchForAssists(`https://fantasy.premierleague.com/api/event/${fplFixture.event}/live/`);
+      if (liveData && liveData.elements) {
+        // Get all player IDs for this fixture's teams
+        const fixtureTeamIds = [fplFixture.team_h, fplFixture.team_a];
+        const fixturePlayers = (bootstrap.elements || []).filter(p => fixtureTeamIds.includes(p.team));
+
+        // Find players with assists in this fixture
+        const homeTeamId = teamsSwapped ? fplFixture.team_a : fplFixture.team_h;
+        const awayTeamId = teamsSwapped ? fplFixture.team_h : fplFixture.team_a;
+
+        const homeAssistPlayers = [];
+        const awayAssistPlayers = [];
+
+        for (const fp of fixturePlayers) {
+          const liveEl = liveData.elements.find(e => e.id === fp.id);
+          if (liveEl && liveEl.stats && liveEl.stats.assists > 0) {
+            // Check this player's explain to confirm assists are from THIS fixture
+            const fixtureExplain = liveEl.explain?.find(ex => ex.fixture === fplFixture.id);
+            let assistsInFixture = 0;
+            if (fixtureExplain) {
+              const assistStat2 = fixtureExplain.stats?.find(s => s.identifier === 'assists');
+              assistsInFixture = assistStat2 ? assistStat2.value : 0;
+            } else {
+              // If no explain breakdown, use the total (single fixture in GW scenario)
+              assistsInFixture = liveEl.stats.assists;
+            }
+
+            if (assistsInFixture > 0) {
+              for (let i = 0; i < assistsInFixture; i++) {
+                if (fp.team === homeTeamId) {
+                  homeAssistPlayers.push(fp.web_name);
+                } else {
+                  awayAssistPlayers.push(fp.web_name);
+                }
+              }
+            }
+          }
+        }
+
+        // Combine home then away (same order as fixture stats would give)
+        allAssists.push(...homeAssistPlayers, ...awayAssistPlayers);
+      }
+    } catch (err) {
+      console.warn('FPL live endpoint fallback error:', err.message);
     }
   }
 
@@ -431,39 +479,39 @@ async function buildFeed() {
   });
 
   // ── Direct FPL assist fallback (works even without Redis) ─────────────────
-  // For live matches, if any goals are missing assists, try to fill from FPL directly
-  if (isLive) {
-    try {
-      // Group goals by fixture
-      const goalsByFixture = {};
-      for (const event of feed) {
-        if (event.type === 'Goal' && event.fixtureId) {
-          if (!goalsByFixture[event.fixtureId]) goalsByFixture[event.fixtureId] = [];
-          goalsByFixture[event.fixtureId].push(event);
-        }
+  // For any match with goals missing assists, try to fill from FPL directly
+  // This covers: live matches where API-Football hasn't reported assists,
+  // and finished matches where API-Football never added the assist
+  try {
+    // Group goals by fixture
+    const goalsByFixture = {};
+    for (const event of feed) {
+      if (event.type === 'Goal' && event.fixtureId) {
+        if (!goalsByFixture[event.fixtureId]) goalsByFixture[event.fixtureId] = [];
+        goalsByFixture[event.fixtureId].push(event);
       }
+    }
 
-      for (const [fid, goals] of Object.entries(goalsByFixture)) {
-        // Sort by minute ascending to match FPL order
-        goals.sort((a, b) => (a.minute || 0) - (b.minute || 0));
+    for (const [fid, goals] of Object.entries(goalsByFixture)) {
+      // Sort by minute ascending to match FPL order
+      goals.sort((a, b) => (a.minute || 0) - (b.minute || 0));
 
-        // Only fetch FPL if at least one goal is missing an assist
-        const hasMissing = goals.some(g => !g.assist);
-        if (!hasMissing) continue;
+      // Only fetch FPL if at least one goal is missing an assist
+      const hasMissing = goals.some(g => !g.assist);
+      if (!hasMissing) continue;
 
-        const fplData = await getFplAssistsForFixture(goals[0].homeTeam, goals[0].awayTeam, goals[0].timestamp);
-        if (fplData.count > 0) {
-          // Apply FPL assists to goals that are missing them
-          for (let i = 0; i < goals.length && i < fplData.assists.length; i++) {
-            if (!goals[i].assist && fplData.assists[i]) {
-              goals[i].assist = fplData.assists[i];
-            }
+      const fplData = await getFplAssistsForFixture(goals[0].homeTeam, goals[0].awayTeam, goals[0].timestamp);
+      if (fplData.count > 0) {
+        // Apply FPL assists to goals that are missing them
+        for (let i = 0; i < goals.length && i < fplData.assists.length; i++) {
+          if (!goals[i].assist && fplData.assists[i]) {
+            goals[i].assist = fplData.assists[i];
           }
         }
       }
-    } catch (err) {
-      console.warn('Direct FPL assist fallback error:', err.message);
     }
+  } catch (err) {
+    console.warn('Direct FPL assist fallback error:', err.message);
   }
 
   return { feed: feed.slice(0, 100), isLive, fixtureCount: fixtures.length };
