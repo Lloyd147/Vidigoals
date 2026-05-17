@@ -9,6 +9,14 @@
 const API_KEY = process.env.API_FOOTBALL_KEY;
 const BASE_URL = 'https://v3.football.api-sports.io';
 
+// Import assist tracker for reconciled assists during live matches
+let assistTracker = null;
+try {
+  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+    assistTracker = require('../../lib/assist-tracker');
+  }
+} catch {}
+
 const detailsCache = new Map();
 const CACHE_TTL_IDLE = 10 * 60 * 1000; // 10 minutes for finished matches
 const CACHE_TTL_LIVE = 30 * 1000;      // 30 seconds for live matches
@@ -94,6 +102,42 @@ export default async function handler(req, res) {
         player,
         minute: minutes.join(', '),
       }));
+    }
+
+    // ── Apply reconciled assists from Redis during live matches ──────────────
+    const liveStatuses2 = ['1H', '2H', 'HT', 'ET', 'P', 'BT'];
+    const isCurrentlyLive = liveStatuses2.includes(fixture.fixture?.status?.short);
+    if (isCurrentlyLive && assistTracker) {
+      try {
+        const assistMap = await assistTracker.getFixtureAssists(fixtureId);
+        if (assistMap && Object.keys(assistMap).length > 0) {
+          // Rebuild assists from reconciled data
+          // Get all goals in order (home and away interleaved by minute)
+          const allGoals = [];
+          for (const event of events) {
+            if (event.type === 'Goal' && event.detail !== 'Missed Penalty') {
+              const isHome = event.team?.id === homeTeam?.id;
+              const minute = event.time?.elapsed;
+              const extra = event.time?.extra;
+              const timeStr = extra ? `${minute}+${extra}'` : `${minute}'`;
+              allGoals.push({ isHome, minute, timeStr });
+            }
+          }
+
+          // Clear existing assists and rebuild from reconciled data
+          assists.home = [];
+          assists.away = [];
+          for (let i = 0; i < allGoals.length; i++) {
+            const info = assistMap[i];
+            if (info && info.assist) {
+              const side = allGoals[i].isHome ? 'home' : 'away';
+              assists[side].push({ player: info.assist, minute: allGoals[i].timeStr });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Match details assist reconciliation error:', err.message);
+      }
     }
 
     const groupedGoals = { home: groupPlayers(goals.home), away: groupPlayers(goals.away) };
@@ -189,14 +233,30 @@ export default async function handler(req, res) {
           const homeNameLower = homeTeam?.name?.toLowerCase() || '';
           const awayNameLower = awayTeam?.name?.toLowerCase() || '';
 
-          const fplHome = fplTeams.find(t =>
-            homeNameLower.includes(t.short_name?.toLowerCase()) ||
-            t.name?.toLowerCase().includes(homeNameLower.split(' ')[0])
-          );
-          const fplAway = fplTeams.find(t =>
-            awayNameLower.includes(t.short_name?.toLowerCase()) ||
-            t.name?.toLowerCase().includes(awayNameLower.split(' ')[0])
-          );
+          function matchTeamForBonus(apiName, fplTeam) {
+            const name = (apiName || '').toLowerCase();
+            const fplName = (fplTeam.name || '').toLowerCase();
+            const fplShort = (fplTeam.short_name || '').toLowerCase();
+            if (name.includes(fplShort)) return true;
+            if (fplName.includes(name.split(' ')[0])) return true;
+            const apiWords = name.split(/\s+/);
+            const fplWords = fplName.split(/\s+/);
+            if (apiWords.length > 0 && fplWords.length > 0) {
+              const apiFirst3 = apiWords[0].substring(0, 3);
+              const fplFirst3 = fplWords[0].substring(0, 3);
+              if (apiFirst3 === fplFirst3 && apiWords.length > 1 && fplWords.length > 1) {
+                const apiSecond3 = apiWords[1].substring(0, 3);
+                const fplSecond3 = fplWords[1].substring(0, 3);
+                if (apiSecond3 === fplSecond3) return true;
+              }
+              if (apiFirst3 === fplFirst3 && apiWords.length === 1 && fplWords.length === 1) return true;
+            }
+            if (name.substring(0, 3) === fplShort.substring(0, 3)) return true;
+            return false;
+          }
+
+          const fplHome = fplTeams.find(t => matchTeamForBonus(homeTeam?.name, t));
+          const fplAway = fplTeams.find(t => matchTeamForBonus(awayTeam?.name, t));
 
           if (fplHome && fplAway) {
             // Find the FPL fixture

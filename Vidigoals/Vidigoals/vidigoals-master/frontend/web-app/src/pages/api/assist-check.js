@@ -39,14 +39,30 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName) {
   const homeNameLower = (homeTeamName || '').toLowerCase();
   const awayNameLower = (awayTeamName || '').toLowerCase();
 
-  const fplHome = fplTeams.find(t =>
-    homeNameLower.includes(t.short_name?.toLowerCase()) ||
-    t.name?.toLowerCase().includes(homeNameLower.split(' ')[0])
-  );
-  const fplAway = fplTeams.find(t =>
-    awayNameLower.includes(t.short_name?.toLowerCase()) ||
-    t.name?.toLowerCase().includes(awayNameLower.split(' ')[0])
-  );
+  function matchTeam(apiName, fplTeam) {
+    const name = (apiName || '').toLowerCase();
+    const fplName = (fplTeam.name || '').toLowerCase();
+    const fplShort = (fplTeam.short_name || '').toLowerCase();
+    if (name.includes(fplShort)) return true;
+    if (fplName.includes(name.split(' ')[0])) return true;
+    const apiWords = name.split(/\s+/);
+    const fplWords = fplName.split(/\s+/);
+    if (apiWords.length > 0 && fplWords.length > 0) {
+      const apiFirst3 = apiWords[0].substring(0, 3);
+      const fplFirst3 = fplWords[0].substring(0, 3);
+      if (apiFirst3 === fplFirst3 && apiWords.length > 1 && fplWords.length > 1) {
+        const apiSecond3 = apiWords[1].substring(0, 3);
+        const fplSecond3 = fplWords[1].substring(0, 3);
+        if (apiSecond3 === fplSecond3) return true;
+      }
+      if (apiFirst3 === fplFirst3 && apiWords.length === 1 && fplWords.length === 1) return true;
+    }
+    if (name.substring(0, 3) === fplShort.substring(0, 3)) return true;
+    return false;
+  }
+
+  const fplHome = fplTeams.find(t => matchTeam(homeTeamName, t));
+  const fplAway = fplTeams.find(t => matchTeam(awayTeamName, t));
 
   if (!fplHome || !fplAway) return { assists: [], count: 0 };
 

@@ -53,14 +53,36 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName) {
   const homeNameLower = (homeTeamName || '').toLowerCase();
   const awayNameLower = (awayTeamName || '').toLowerCase();
 
-  const fplHome = fplTeams.find(t =>
-    homeNameLower.includes(t.short_name?.toLowerCase()) ||
-    t.name?.toLowerCase().includes(homeNameLower.split(' ')[0])
-  );
-  const fplAway = fplTeams.find(t =>
-    awayNameLower.includes(t.short_name?.toLowerCase()) ||
-    t.name?.toLowerCase().includes(awayNameLower.split(' ')[0])
-  );
+  function matchTeam(apiName, fplTeam) {
+    const name = apiName.toLowerCase();
+    const fplName = (fplTeam.name || '').toLowerCase();
+    const fplShort = (fplTeam.short_name || '').toLowerCase();
+    // Direct substring checks
+    if (name.includes(fplShort)) return true;
+    if (fplName.includes(name.split(' ')[0])) return true;
+    // Handle common mismatches: "Manchester United" ↔ "Man Utd", "Manchester City" ↔ "Man City"
+    // Check if first 3 chars of each word match
+    const apiWords = name.split(/\s+/);
+    const fplWords = fplName.split(/\s+/);
+    if (apiWords.length > 0 && fplWords.length > 0) {
+      const apiFirst3 = apiWords[0].substring(0, 3);
+      const fplFirst3 = fplWords[0].substring(0, 3);
+      if (apiFirst3 === fplFirst3 && apiWords.length > 1 && fplWords.length > 1) {
+        // Both have multiple words and first word starts the same — check second word
+        const apiSecond3 = apiWords[1].substring(0, 3);
+        const fplSecond3 = fplWords[1].substring(0, 3);
+        if (apiSecond3 === fplSecond3) return true;
+      }
+      // Single word team names (e.g. "Arsenal" ↔ "Arsenal")
+      if (apiFirst3 === fplFirst3 && apiWords.length === 1 && fplWords.length === 1) return true;
+    }
+    // Fallback: check if FPL short_name first 3 chars match API name first 3 chars
+    if (name.substring(0, 3) === fplShort.substring(0, 3)) return true;
+    return false;
+  }
+
+  const fplHome = fplTeams.find(t => matchTeam(homeTeamName, t));
+  const fplAway = fplTeams.find(t => matchTeam(awayTeamName, t));
 
   if (!fplHome || !fplAway) return { assists: [], count: 0 };
 
@@ -189,14 +211,27 @@ async function buildFeed() {
           // Record any new goals we haven't tracked yet
           for (let i = 0; i < goalEvents.length; i++) {
             if (!existingAssists[i]) {
-              await assistTracker.recordGoal({
-                fixtureId: String(fix.id),
-                goalIndex: i,
-                player: goalEvents[i].player,
-                apiAssist: goalEvents[i].assist,
-                fplAssistCountAtGoal: fplData.count,
-                timestamp: Date.now(),
-              });
+              // If FPL already has an assist for this goal index, confirm immediately
+              if (fplData.count > i && fplData.assists[i]) {
+                await assistTracker.recordGoal({
+                  fixtureId: String(fix.id),
+                  goalIndex: i,
+                  player: goalEvents[i].player,
+                  apiAssist: goalEvents[i].assist,
+                  fplAssistCountAtGoal: i, // Set to goal's own index so reconciliation sees count > index
+                  timestamp: Date.now(),
+                });
+              } else {
+                // FPL hasn't confirmed yet — watch for it
+                await assistTracker.recordGoal({
+                  fixtureId: String(fix.id),
+                  goalIndex: i,
+                  player: goalEvents[i].player,
+                  apiAssist: goalEvents[i].assist,
+                  fplAssistCountAtGoal: fplData.count,
+                  timestamp: Date.now(),
+                });
+              }
             }
           }
 
@@ -267,6 +302,7 @@ async function buildFeed() {
       feed.push({
         id: `${fix.id}-${event.time?.elapsed}-${event.player?.id || Math.random()}`,
         type,
+        fixtureId: String(fix.id),
         minute: event.time?.elapsed,
         extraMinute: event.time?.extra || null,
         score: `${homeTeam?.name} ${homeGoals} - ${awayGoals} ${awayTeam?.name}`,
@@ -291,6 +327,42 @@ async function buildFeed() {
     return (b.minute || 0) - (a.minute || 0);
   });
 
+  // ── Direct FPL assist fallback (works even without Redis) ─────────────────
+  // For live matches, if any goals are missing assists, try to fill from FPL directly
+  if (isLive) {
+    try {
+      // Group goals by fixture
+      const goalsByFixture = {};
+      for (const event of feed) {
+        if (event.type === 'Goal' && event.fixtureId) {
+          if (!goalsByFixture[event.fixtureId]) goalsByFixture[event.fixtureId] = [];
+          goalsByFixture[event.fixtureId].push(event);
+        }
+      }
+
+      for (const [fid, goals] of Object.entries(goalsByFixture)) {
+        // Sort by minute ascending to match FPL order
+        goals.sort((a, b) => (a.minute || 0) - (b.minute || 0));
+
+        // Only fetch FPL if at least one goal is missing an assist
+        const hasMissing = goals.some(g => !g.assist);
+        if (!hasMissing) continue;
+
+        const fplData = await getFplAssistsForFixture(goals[0].homeTeam, goals[0].awayTeam);
+        if (fplData.count > 0) {
+          // Apply FPL assists to goals that are missing them
+          for (let i = 0; i < goals.length && i < fplData.assists.length; i++) {
+            if (!goals[i].assist && fplData.assists[i]) {
+              goals[i].assist = fplData.assists[i];
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Direct FPL assist fallback error:', err.message);
+    }
+  }
+
   return { feed: feed.slice(0, 100), isLive, fixtureCount: fixtures.length };
 }
 
@@ -299,27 +371,28 @@ async function reconcileLiveAssists(feed, isLive) {
   if (!isLive || !assistTracker) return feed;
 
   try {
-    // Find goal events in the feed from live matches
+    // Find goal events in the feed
     const liveGoals = feed.filter(e => e.type === 'Goal');
     if (liveGoals.length === 0) return feed;
 
-    // Group goals by fixture
+    // Group goals by fixtureId
     const goalsByFixture = {};
     for (const goal of liveGoals) {
-      const key = `${goal.homeTeam}-${goal.awayTeam}`;
-      if (!goalsByFixture[key]) goalsByFixture[key] = [];
-      goalsByFixture[key].push(goal);
+      const fid = goal.fixtureId;
+      if (!fid) continue;
+      if (!goalsByFixture[fid]) goalsByFixture[fid] = [];
+      goalsByFixture[fid].push(goal);
     }
 
-    // For each fixture with goals, check assist status
-    for (const [fixtureKey, goals] of Object.entries(goalsByFixture)) {
-      const fixtureId = goals[0]?.id?.split('-')[0]; // Extract fixture ID from event ID
-      if (!fixtureId) continue;
-
+    // For each fixture with goals, apply reconciled assists from Redis
+    for (const [fixtureId, goals] of Object.entries(goalsByFixture)) {
       const assistMap = await assistTracker.getFixtureAssists(fixtureId);
       if (!assistMap || Object.keys(assistMap).length === 0) continue;
 
-      // Update assists in the feed based on reconciled data
+      // Sort goals by minute (ascending) to match goalIndex order
+      goals.sort((a, b) => (a.minute || 0) - (b.minute || 0));
+
+      // Apply reconciled assists
       for (let i = 0; i < goals.length; i++) {
         const assistInfo = assistMap[i];
         if (assistInfo) {
@@ -350,6 +423,13 @@ export default async function handler(req, res) {
   }
 
   if (isCacheValid()) {
+    // Even when serving from cache, apply latest reconciled assists for live matches
+    if (feedCache.isLive && assistTracker) {
+      try {
+        const updatedFeed = await reconcileLiveAssists([...feedCache.data.feed], true);
+        return res.status(200).json({ ...feedCache.data, feed: updatedFeed });
+      } catch {}
+    }
     return res.status(200).json(feedCache.data);
   }
 
