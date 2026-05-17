@@ -257,7 +257,7 @@ function MenuAccordion({ title, children }) {
 
 export default function AppShell({ user, page, isLive, onLogout, children }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [livePoints, setLivePoints] = useState({ gw: user?.gwPoints, overall: user?.overallPoints });
+  const [livePoints, setLivePoints] = useState({ gw: null, overall: null });
 
   const now     = new Date();
   const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -286,7 +286,7 @@ export default function AppShell({ user, page, isLive, onLogout, children }) {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [user?.id]);
 
   return (
     <>
@@ -371,8 +371,8 @@ export default function AppShell({ user, page, isLive, onLogout, children }) {
       {/* ── Points bar (logged in only) ── */}
       {user && (
         <PointsBar>
-          <div>GW Points <span>{livePoints.gw ?? user.gwPoints ?? '—'}</span></div>
-          <div>Overall Points <span>{livePoints.overall ?? user.overallPoints ?? '—'}</span></div>
+          <div>GW Points <span>{livePoints.gw !== null ? livePoints.gw : (user.gwPoints || '—')}</span></div>
+          <div>Overall Points <span>{livePoints.overall !== null ? livePoints.overall : (user.overallPoints || '—')}</span></div>
         </PointsBar>
       )}
 
