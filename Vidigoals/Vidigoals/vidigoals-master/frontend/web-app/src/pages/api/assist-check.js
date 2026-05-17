@@ -25,7 +25,7 @@ async function fplFetch(url) {
  * Get FPL assists for a fixture by matching team names.
  * Returns array of assist player names in order they were added.
  */
-async function getFplAssistsForFixture(homeTeamName, awayTeamName) {
+async function getFplAssistsForFixture(homeTeamName, awayTeamName, kickoffTime) {
   const bootstrap = await fplFetch('https://fantasy.premierleague.com/api/bootstrap-static/');
   if (!bootstrap) return { assists: [], count: 0 };
 
@@ -70,20 +70,24 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName) {
   const fplFixtures = await fplFetch('https://fantasy.premierleague.com/api/fixtures/');
   if (!fplFixtures) return { assists: [], count: 0 };
 
-  // Find matching fixture (most recent between these teams) — check both directions
-  let fplFixture = fplFixtures
-    .filter(f => (f.team_h === fplHome.id && f.team_a === fplAway.id) && f.started)
-    .sort((a, b) => b.event - a.event)[0];
+  // Match by kickoff time if provided, otherwise use team IDs + started filter
+  const apiKickoff = kickoffTime ? new Date(kickoffTime).getTime() : null;
 
-  let teamsSwapped = false;
-  if (!fplFixture) {
-    fplFixture = fplFixtures
-      .filter(f => (f.team_h === fplAway.id && f.team_a === fplHome.id) && f.started)
-      .sort((a, b) => b.event - a.event)[0];
-    teamsSwapped = true;
-  }
+  const fplFixture = fplFixtures.find(f => {
+    const hasTeams = (f.team_h === fplHome.id && f.team_a === fplAway.id) ||
+                     (f.team_h === fplAway.id && f.team_a === fplHome.id);
+    if (!hasTeams) return false;
+    if (apiKickoff && f.kickoff_time) {
+      const fplKickoff = new Date(f.kickoff_time).getTime();
+      return Math.abs(apiKickoff - fplKickoff) < 2 * 60 * 60 * 1000;
+    }
+    // Fallback without kickoff time: must be started (current fixture)
+    return f.started === true;
+  });
 
   if (!fplFixture?.stats) return { assists: [], count: 0 };
+
+  const teamsSwapped = fplFixture.team_h === fplAway.id;
 
   const assistStat = fplFixture.stats.find(s => s.identifier === 'assists');
   if (!assistStat) return { assists: [], count: 0 };
@@ -117,13 +121,13 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { fixtureId, homeTeam, awayTeam, goals, isFinished } = req.body || {};
+  const { fixtureId, homeTeam, awayTeam, goals, isFinished, kickoffTime } = req.body || {};
 
   if (!fixtureId) return res.status(400).json({ error: 'fixtureId required' });
 
   try {
-    // Get current FPL assists for this fixture
-    const { assists: fplAssists, count: fplAssistCount } = await getFplAssistsForFixture(homeTeam, awayTeam);
+    // Get current FPL assists for this fixture (use kickoff time for exact match)
+    const { assists: fplAssists, count: fplAssistCount } = await getFplAssistsForFixture(homeTeam, awayTeam, kickoffTime);
 
     // Record any new goals we haven't seen before
     if (goals && goals.length > 0) {

@@ -37,10 +37,10 @@ async function fplFetchForAssists(url) {
 }
 
 /**
- * Get FPL assists for a fixture by matching team names.
- * Used during live match polling to reconcile assists.
+ * Get FPL assists for a fixture by matching teams + kickoff time.
+ * The kickoff time guarantees we match the exact same fixture, not a previous GW.
  */
-async function getFplAssistsForFixture(homeTeamName, awayTeamName) {
+async function getFplAssistsForFixture(homeTeamName, awayTeamName, kickoffTime) {
   const bootstrap = await fplFetchForAssists('https://fantasy.premierleague.com/api/bootstrap-static/');
   if (!bootstrap) return { assists: [], count: 0 };
 
@@ -50,34 +50,23 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName) {
     playerMap[p.id] = p;
   }
 
-  const homeNameLower = (homeTeamName || '').toLowerCase();
-  const awayNameLower = (awayTeamName || '').toLowerCase();
-
+  // Build team ID lookup from FPL
   function matchTeam(apiName, fplTeam) {
-    const name = apiName.toLowerCase();
+    const name = (apiName || '').toLowerCase();
     const fplName = (fplTeam.name || '').toLowerCase();
     const fplShort = (fplTeam.short_name || '').toLowerCase();
-    // Direct substring checks
     if (name.includes(fplShort)) return true;
     if (fplName.includes(name.split(' ')[0])) return true;
-    // Handle common mismatches: "Manchester United" ↔ "Man Utd", "Manchester City" ↔ "Man City"
-    // Check if first 3 chars of each word match
     const apiWords = name.split(/\s+/);
     const fplWords = fplName.split(/\s+/);
     if (apiWords.length > 0 && fplWords.length > 0) {
       const apiFirst3 = apiWords[0].substring(0, 3);
       const fplFirst3 = fplWords[0].substring(0, 3);
       if (apiFirst3 === fplFirst3 && apiWords.length > 1 && fplWords.length > 1) {
-        // Both have multiple words and first word starts the same — check second word
-        const apiSecond3 = apiWords[1].substring(0, 3);
-        const fplSecond3 = fplWords[1].substring(0, 3);
-        if (apiSecond3 === fplSecond3) return true;
+        if (apiWords[1].substring(0, 3) === fplWords[1].substring(0, 3)) return true;
       }
-      // Single word team names (e.g. "Arsenal" ↔ "Arsenal")
       if (apiFirst3 === fplFirst3 && apiWords.length === 1 && fplWords.length === 1) return true;
     }
-    // Fallback: check if FPL short_name first 3 chars match API name first 3 chars
-    if (name.substring(0, 3) === fplShort.substring(0, 3)) return true;
     return false;
   }
 
@@ -89,22 +78,33 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName) {
   const fplFixtures = await fplFetchForAssists('https://fantasy.premierleague.com/api/fixtures/');
   if (!fplFixtures) return { assists: [], count: 0 };
 
-  // Check both home/away directions — API-Football and FPL may have different home/away
-  // Also filter to only current/recent fixtures that have started (have stats)
-  let fplFixture = fplFixtures
-    .filter(f => (f.team_h === fplHome.id && f.team_a === fplAway.id) && f.started)
-    .sort((a, b) => b.event - a.event)[0];
+  // Match by kickoff time (same date within 2 hours tolerance) + team IDs
+  // This guarantees we find the EXACT same fixture, never a previous GW
+  const apiKickoff = kickoffTime ? new Date(kickoffTime).getTime() : null;
 
-  let teamsSwapped = false;
-  if (!fplFixture) {
-    // Try reversed — maybe FPL has the teams in opposite positions
-    fplFixture = fplFixtures
-      .filter(f => (f.team_h === fplAway.id && f.team_a === fplHome.id) && f.started)
-      .sort((a, b) => b.event - a.event)[0];
-    teamsSwapped = true;
+  function isMatchingFixture(f, homeId, awayId) {
+    const hasTeams = (f.team_h === homeId && f.team_a === awayId) ||
+                     (f.team_h === awayId && f.team_a === homeId);
+    if (!hasTeams) return false;
+
+    // If we have a kickoff time, use it to pin to the exact fixture
+    if (apiKickoff && f.kickoff_time) {
+      const fplKickoff = new Date(f.kickoff_time).getTime();
+      const diff = Math.abs(apiKickoff - fplKickoff);
+      return diff < 2 * 60 * 60 * 1000; // Within 2 hours = same fixture
+    }
+
+    // Fallback: must have started (current/recent fixture)
+    return f.started === true;
   }
 
-  if (!fplFixture?.stats) return { assists: [], count: 0 };
+  let fplFixture = fplFixtures.find(f => isMatchingFixture(f, fplHome.id, fplAway.id));
+  if (!fplFixture) return { assists: [], count: 0 };
+
+  // Determine if teams are swapped relative to our home/away
+  const teamsSwapped = fplFixture.team_h === fplAway.id;
+
+  if (!fplFixture.stats) return { assists: [], count: 0 };
 
   const assistStat = fplFixture.stats.find(s => s.identifier === 'assists');
   if (!assistStat) return { assists: [], count: 0 };
@@ -219,8 +219,8 @@ async function buildFeed() {
           }));
 
         if (goalEvents.length > 0) {
-          // Get current FPL assist data for this fixture
-          const fplData = await getFplAssistsForFixture(homeTeam?.name, awayTeam?.name);
+          // Get current FPL assist data for this fixture (pass kickoff time for exact match)
+          const fplData = await getFplAssistsForFixture(homeTeam?.name, awayTeam?.name, fix.date);
           const existingAssists = await assistTracker.getFixtureAssists(String(fix.id));
 
           // Record any new goals we haven't tracked yet
@@ -363,7 +363,7 @@ async function buildFeed() {
         const hasMissing = goals.some(g => !g.assist);
         if (!hasMissing) continue;
 
-        const fplData = await getFplAssistsForFixture(goals[0].homeTeam, goals[0].awayTeam);
+        const fplData = await getFplAssistsForFixture(goals[0].homeTeam, goals[0].awayTeam, goals[0].timestamp);
         if (fplData.count > 0) {
           // Apply FPL assists to goals that are missing them
           for (let i = 0; i < goals.length && i < fplData.assists.length; i++) {

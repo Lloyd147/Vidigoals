@@ -165,13 +165,10 @@ export default async function handler(req, res) {
                 const apiFirst3 = apiWords[0].substring(0, 3);
                 const fplFirst3 = fplWords[0].substring(0, 3);
                 if (apiFirst3 === fplFirst3 && apiWords.length > 1 && fplWords.length > 1) {
-                  const apiSecond3 = apiWords[1].substring(0, 3);
-                  const fplSecond3 = fplWords[1].substring(0, 3);
-                  if (apiSecond3 === fplSecond3) return true;
+                  if (apiWords[1].substring(0, 3) === fplWords[1].substring(0, 3)) return true;
                 }
                 if (apiFirst3 === fplFirst3 && apiWords.length === 1 && fplWords.length === 1) return true;
               }
-              if (name.substring(0, 3) === fplShort.substring(0, 3)) return true;
               return false;
             }
 
@@ -181,25 +178,27 @@ export default async function handler(req, res) {
             if (fplHome && fplAway) {
               const fplFixtures = await fplFetch('https://fantasy.premierleague.com/api/fixtures/');
               if (fplFixtures) {
-                let fplFixture = fplFixtures
-                  .filter(f => f.team_h === fplHome.id && f.team_a === fplAway.id)
-                  .sort((a, b) => b.event - a.event)[0];
+                // Match by kickoff time — guarantees exact same fixture
+                const apiKickoff = fixture.fixture?.date ? new Date(fixture.fixture.date).getTime() : null;
 
-                let swapped = false;
-                if (!fplFixture) {
-                  fplFixture = fplFixtures
-                    .filter(f => f.team_h === fplAway.id && f.team_a === fplHome.id)
-                    .sort((a, b) => b.event - a.event)[0];
-                  swapped = true;
-                }
+                const fplFixture = fplFixtures.find(f => {
+                  const hasTeams = (f.team_h === fplHome.id && f.team_a === fplAway.id) ||
+                                   (f.team_h === fplAway.id && f.team_a === fplHome.id);
+                  if (!hasTeams) return false;
+                  if (apiKickoff && f.kickoff_time) {
+                    const fplKickoff = new Date(f.kickoff_time).getTime();
+                    return Math.abs(apiKickoff - fplKickoff) < 2 * 60 * 60 * 1000;
+                  }
+                  return false;
+                });
 
                 if (fplFixture?.stats) {
+                  const swapped = fplFixture.team_h === fplAway.id;
                   const assistStat = fplFixture.stats.find(s => s.identifier === 'assists');
                   if (assistStat) {
                     const homeAssistEntries = swapped ? assistStat.a : assistStat.h;
                     const awayAssistEntries = swapped ? assistStat.h : assistStat.a;
 
-                    // Rebuild assists from FPL data
                     const fplHomeAssists = [];
                     for (const entry of (homeAssistEntries || [])) {
                       const player = playerMap[entry.element];
@@ -219,30 +218,21 @@ export default async function handler(req, res) {
                       }
                     }
 
-                    // Apply FPL assists to goals that are missing them
-                    let homeIdx = 0, awayIdx = 0;
-                    for (let i = 0; i < assists.home.length; i++) {
-                      if (!assists.home[i].player && fplHomeAssists[homeIdx]) {
-                        assists.home[i].player = fplHomeAssists[homeIdx];
-                      }
-                      homeIdx++;
-                    }
-                    // If we have more FPL assists than current assists, add them
+                    // Add FPL assists for goals that don't have one
                     if (fplHomeAssists.length > assists.home.length) {
-                      // Match with home goals that don't have assists
                       const goalsWithoutAssist = goals.home.filter(g =>
                         !assists.home.some(a => a.minute === g.minute)
                       );
-                      for (let i = assists.home.length; i < fplHomeAssists.length && i - assists.home.length < goalsWithoutAssist.length; i++) {
-                        assists.home.push({ player: fplHomeAssists[i], minute: goalsWithoutAssist[i - assists.home.length]?.minute || '' });
+                      for (let i = 0; i < fplHomeAssists.length - assists.home.length && i < goalsWithoutAssist.length; i++) {
+                        assists.home.push({ player: fplHomeAssists[assists.home.length + i], minute: goalsWithoutAssist[i]?.minute || '' });
                       }
                     }
                     if (fplAwayAssists.length > assists.away.length) {
                       const goalsWithoutAssist = goals.away.filter(g =>
                         !assists.away.some(a => a.minute === g.minute)
                       );
-                      for (let i = assists.away.length; i < fplAwayAssists.length && i - assists.away.length < goalsWithoutAssist.length; i++) {
-                        assists.away.push({ player: fplAwayAssists[i], minute: goalsWithoutAssist[i - assists.away.length]?.minute || '' });
+                      for (let i = 0; i < fplAwayAssists.length - assists.away.length && i < goalsWithoutAssist.length; i++) {
+                        assists.away.push({ player: fplAwayAssists[assists.away.length + i], minute: goalsWithoutAssist[i]?.minute || '' });
                       }
                     }
                   }
@@ -338,16 +328,11 @@ export default async function handler(req, res) {
     // ── Bonus Points from FPL ─────────────────────────────────────────────
     let bonus = { home: [], away: [] };
     try {
-      // FPL fixtures endpoint — find matching fixture by team IDs
       const fplFixtures = await fplFetch('https://fantasy.premierleague.com/api/fixtures/');
       if (fplFixtures) {
-        // Get FPL bootstrap for team mapping
         const bootstrap = await fplFetch('https://fantasy.premierleague.com/api/bootstrap-static/');
         if (bootstrap) {
-          // Map API-Football team names to FPL team IDs
           const fplTeams = bootstrap.teams || [];
-          const homeNameLower = homeTeam?.name?.toLowerCase() || '';
-          const awayNameLower = awayTeam?.name?.toLowerCase() || '';
 
           function matchTeamForBonus(apiName, fplTeam) {
             const name = (apiName || '').toLowerCase();
@@ -361,13 +346,10 @@ export default async function handler(req, res) {
               const apiFirst3 = apiWords[0].substring(0, 3);
               const fplFirst3 = fplWords[0].substring(0, 3);
               if (apiFirst3 === fplFirst3 && apiWords.length > 1 && fplWords.length > 1) {
-                const apiSecond3 = apiWords[1].substring(0, 3);
-                const fplSecond3 = fplWords[1].substring(0, 3);
-                if (apiSecond3 === fplSecond3) return true;
+                if (apiWords[1].substring(0, 3) === fplWords[1].substring(0, 3)) return true;
               }
               if (apiFirst3 === fplFirst3 && apiWords.length === 1 && fplWords.length === 1) return true;
             }
-            if (name.substring(0, 3) === fplShort.substring(0, 3)) return true;
             return false;
           }
 
@@ -375,20 +357,22 @@ export default async function handler(req, res) {
           const fplAway = fplTeams.find(t => matchTeamForBonus(awayTeam?.name, t));
 
           if (fplHome && fplAway) {
-            // Find the FPL fixture — check both directions, prefer current GW, must have started
-            let fplFixture = fplFixtures
-              .filter(f => (f.team_h === fplHome.id && f.team_a === fplAway.id) && f.started)
-              .sort((a, b) => b.event - a.event)[0];
+            // Match by kickoff time to guarantee exact same fixture
+            const apiKickoff = fixture.fixture?.date ? new Date(fixture.fixture.date).getTime() : null;
 
-            let bonusSwapped = false;
-            if (!fplFixture) {
-              fplFixture = fplFixtures
-                .filter(f => (f.team_h === fplAway.id && f.team_a === fplHome.id) && f.started)
-                .sort((a, b) => b.event - a.event)[0];
-              bonusSwapped = true;
-            }
+            const fplFixture = fplFixtures.find(f => {
+              const hasTeams = (f.team_h === fplHome.id && f.team_a === fplAway.id) ||
+                               (f.team_h === fplAway.id && f.team_a === fplHome.id);
+              if (!hasTeams) return false;
+              if (apiKickoff && f.kickoff_time) {
+                const fplKickoff = new Date(f.kickoff_time).getTime();
+                return Math.abs(apiKickoff - fplKickoff) < 2 * 60 * 60 * 1000;
+              }
+              return false;
+            });
 
             if (fplFixture?.stats) {
+              const bonusSwapped = fplFixture.team_h === fplAway.id;
               const bonusStat = fplFixture.stats.find(s => s.identifier === 'bonus');
               if (bonusStat) {
                 const playerMap = {};
