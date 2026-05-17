@@ -91,19 +91,9 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName, kickoffTime) 
     // Direct match
     if (name === fplName) return true;
 
-    // Check via mapping
+    // Check via mapping (covers all 20 PL teams)
     const mapped = TEAM_NAME_MAP[name];
     if (mapped && mapped === fplName) return true;
-
-    // Fallback: check if API name contains FPL short_name
-    const fplShort = (fplTeam.short_name || '').toLowerCase();
-    if (fplShort.length >= 3 && name.includes(fplShort)) return true;
-
-    // Fallback: first word of API name matches first word of FPL name (3+ chars)
-    const apiFirst = name.split(/\s+/)[0];
-    const fplFirst = fplName.split(/\s+/)[0];
-    if (apiFirst.length >= 3 && fplFirst.length >= 3 &&
-        (apiFirst.startsWith(fplFirst) || fplFirst.startsWith(apiFirst))) return true;
 
     return false;
   }

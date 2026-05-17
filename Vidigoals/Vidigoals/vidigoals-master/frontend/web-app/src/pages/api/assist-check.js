@@ -61,12 +61,6 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName, kickoffTime) 
     if (name === fplName) return true;
     const mapped = TEAM_NAME_MAP[name];
     if (mapped && mapped === fplName) return true;
-    const fplShort = (fplTeam.short_name || '').toLowerCase();
-    if (fplShort.length >= 3 && name.includes(fplShort)) return true;
-    const apiFirst = name.split(/\s+/)[0];
-    const fplFirst = fplName.split(/\s+/)[0];
-    if (apiFirst.length >= 3 && fplFirst.length >= 3 &&
-        (apiFirst.startsWith(fplFirst) || fplFirst.startsWith(apiFirst))) return true;
     return false;
   }
 
