@@ -654,6 +654,37 @@ async function buildFeed() {
     console.warn('FPL assist reconciliation error:', err.message);
   }
 
+  // ── Add FPL points for goals based on player position ─────────────────────
+  // GK/DEF goal = +6, MID goal = +5, FWD goal = +4, Assist = +3 (all positions)
+  try {
+    const bootstrap = await fplFetchForAssists('https://fantasy.premierleague.com/api/bootstrap-static/');
+    if (bootstrap && bootstrap.elements) {
+      // Build lookup: last name → element_type (position)
+      // element_type: 1=GK, 2=DEF, 3=MID, 4=FWD
+      const positionByLastName = {};
+      for (const p of bootstrap.elements) {
+        const lastName = (p.second_name || '').toLowerCase();
+        const webName = (p.web_name || '').toLowerCase();
+        if (lastName) positionByLastName[lastName] = p.element_type;
+        if (webName) positionByLastName[webName] = p.element_type;
+      }
+
+      for (const event of feed) {
+        if (event.type === 'Goal' && event.player) {
+          const playerLast = event.player.split(' ').pop()?.toLowerCase() || '';
+          const pos = positionByLastName[playerLast];
+          if (pos === 1 || pos === 2) {
+            event.goalPoints = 6;
+          } else if (pos === 3) {
+            event.goalPoints = 5;
+          } else {
+            event.goalPoints = 4; // FWD or unknown
+          }
+        }
+      }
+    }
+  } catch {}
+
   return { feed: feed.slice(0, 100), isLive, fixtureCount: fixtures.length };
 }
 

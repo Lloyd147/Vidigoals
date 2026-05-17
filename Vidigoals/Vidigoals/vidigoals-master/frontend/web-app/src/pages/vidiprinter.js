@@ -210,7 +210,7 @@ function EventItem({ event }) {
           <>
             <EventDetailLine>
               {cfg.label} <PlayerName color={cfg.color}>{event.player}</PlayerName>
-              <PointsBadge positive>+4</PointsBadge>
+              <PointsBadge positive>+{event.goalPoints || 4}</PointsBadge>
             </EventDetailLine>
             {event.assist && (
               <AssistLine>
