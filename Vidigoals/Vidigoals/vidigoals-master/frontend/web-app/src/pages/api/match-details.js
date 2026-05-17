@@ -118,10 +118,8 @@ export default async function handler(req, res) {
     }
 
     const groupedGoals = { home: groupPlayers(goals.home), away: groupPlayers(goals.away) };
-    // If assists have 'value' field (from FPL), use count format; otherwise group by minute
-    const groupedAssists = (assists.home.length > 0 && assists.home[0].value !== undefined)
-      ? { home: groupAssistsByCount(assists.home), away: groupAssistsByCount(assists.away) }
-      : { home: groupPlayers(assists.home), away: groupPlayers(assists.away) };
+    // groupedAssists will be computed after FPL data is fetched (FPL is authoritative)
+    let groupedAssists = { home: groupPlayers(assists.home), away: groupPlayers(assists.away) };
     const groupedYellowCards = { home: groupPlayers(yellowCards.home), away: groupPlayers(yellowCards.away) };
     const groupedRedCards = { home: groupPlayers(redCards.home), away: groupPlayers(redCards.away) };
 
@@ -351,6 +349,8 @@ export default async function handler(req, res) {
                 // Override assists with FPL data (player name + count format)
                 assists.home = fplAssistData.home.map(a => ({ player: a.player, value: a.value }));
                 assists.away = fplAssistData.away.map(a => ({ player: a.player, value: a.value }));
+                // Recompute groupedAssists with FPL count format
+                groupedAssists = { home: groupAssistsByCount(assists.home), away: groupAssistsByCount(assists.away) };
               }
             }
           }
