@@ -104,10 +104,11 @@ export default async function handler(req, res) {
       }));
     }
 
-    // ── Apply reconciled assists from Redis during live matches ──────────────
+    // ── Apply FPL assists (authoritative source) for live and finished matches ──
     const liveStatuses2 = ['1H', '2H', 'HT', 'ET', 'P', 'BT'];
     const isCurrentlyLive = liveStatuses2.includes(fixture.fixture?.status?.short);
-    if (isCurrentlyLive) {
+    const isStartedOrFinished = isCurrentlyLive || ['FT', 'AET', 'PEN'].includes(fixture.fixture?.status?.short);
+    if (isStartedOrFinished) {
       let foundReconciled = false;
 
       // Try Redis first
