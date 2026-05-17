@@ -597,12 +597,14 @@ async function buildFeed() {
         // No remaining assists to add — done
         if (Object.keys(remainingPerPlayer).length === 0) return;
 
-        // Get goals without an assist, sorted by minute descending (most recent first)
-        // For live: use timing-based mapping (most recent unassisted goal)
-        // For finished without live store: same logic (most recent first)
+        // Get goals without an assist
+        // During live: most recent first (assist was just awarded for the latest goal)
+        // After FT: chronological/earliest first (FPL awards in order, first assist = first goal)
         const unassistedGoals = sideGoals
           .filter(g => !g.assist)
-          .sort((a, b) => (b.minute || 0) - (a.minute || 0));
+          .sort((a, b) => fixtureLive
+            ? (b.minute || 0) - (a.minute || 0)   // most recent first for live
+            : (a.minute || 0) - (b.minute || 0)); // earliest first for finished
 
         // If live, update the live assist store for future reference
         if (fixtureLive) {
