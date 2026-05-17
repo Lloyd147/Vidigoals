@@ -530,8 +530,14 @@ async function buildFeed() {
   });
 
   // ── FPL Assist Reconciliation ─────────────────────────────────────────────
-  // During live matches: track when FPL adds assists and map to most recent goal
-  // After FT: use stored mappings, fall back to chronological for any unmapped
+  // Rules:
+  // 1. Keep API-Football assists (they know the exact goal)
+  // 2. FPL total per player is the cap — cannot exceed it
+  // 3. Only add FPL assists to goals that API-Football left unassisted
+  // 4. Each goal can only have 1 assist
+  // 5. Assign remaining FPL assists to most recent unassisted goal (timing-based)
+  // e.g. FPL says Bruno:2, API gave Bruno for Mbeumo → 1 remaining → assign to Shaw (most recent unassisted)
+  // Cunha gets nothing because all 2 Bruno assists are now accounted for
   try {
     const goalsByFixture = {};
     for (const event of feed) {
@@ -550,78 +556,74 @@ async function buildFeed() {
       const homeGoals = goals.filter(g => g.isHome);
       const awayGoals = goals.filter(g => !g.isHome);
 
-      // Check if this fixture is currently live
-      const fixtureLive = goals.some(g => {
-        const ev = feed.find(e => e.fixtureId === fid && (e.type === 'HT' || e.type === 'FT'));
-        return !feed.some(e => e.fixtureId === fid && e.type === 'FT');
-      });
+      // Check if fixture is live (no FT marker)
+      const fixtureLive = !feed.some(e => e.fixtureId === fid && e.type === 'FT');
 
       function reconcileSide(sideGoals, fplAssistNames, side) {
         if (fplAssistNames.length === 0) return;
 
-        if (fixtureLive) {
-          // LIVE: use timing-based mapping
-          const mappings = reconcileLiveAssistMapping(fid, sideGoals, fplAssistNames, side);
+        // Count FPL assists per player — this is the maximum allowed
+        const fplCounts = {};
+        for (const name of fplAssistNames) {
+          fplCounts[name] = (fplCounts[name] || 0) + 1;
+        }
 
-          // Apply stored mappings
-          for (const mapping of mappings) {
-            const goal = sideGoals.find(g => g.minute === mapping.goalMinute && !g.assist);
-            if (goal) {
-              goal.assist = mapping.player;
-            }
-          }
-        } else {
-          // FINISHED: use stored mappings first, then fill remaining chronologically
-          const storeKey = `${fid}-${side}`;
-          const store = liveAssistStore.get(storeKey);
-          const mappings = store ? store.mappings : [];
-
-          // Apply stored mappings from live tracking
-          for (const mapping of mappings) {
-            const goal = sideGoals.find(g => g.minute === mapping.goalMinute && !g.assist);
-            if (goal) {
-              goal.assist = mapping.player;
-            }
-          }
-
-          // For any remaining FPL assists not yet mapped, use chronological fallback
-          const fplCounts = {};
-          for (const name of fplAssistNames) {
-            fplCounts[name] = (fplCounts[name] || 0) + 1;
-          }
-
-          // Count already-assigned assists per player (from API-Football + mappings)
-          const assignedCounts = {};
-          for (const goal of sideGoals) {
-            if (goal.assist) {
-              // Match FPL name to assigned assist
-              for (const fplName of Object.keys(fplCounts)) {
-                const fplLast = fplName.split('.').pop()?.toLowerCase() || fplName.toLowerCase();
-                const goalLast = goal.assist.split(' ').pop()?.toLowerCase() || goal.assist.toLowerCase();
-                if (fplLast === goalLast || goal.assist.toLowerCase().includes(fplLast)) {
-                  assignedCounts[fplName] = (assignedCounts[fplName] || 0) + 1;
-                  break;
-                }
+        // Count how many assists API-Football already assigned per FPL player
+        const apiAssignedCounts = {};
+        for (const goal of sideGoals) {
+          if (goal.assist) {
+            for (const fplName of Object.keys(fplCounts)) {
+              const fplLast = fplName.split('.').pop()?.toLowerCase() || fplName.toLowerCase();
+              const goalLast = goal.assist.split(' ').pop()?.toLowerCase() || goal.assist.toLowerCase();
+              if (fplLast === goalLast) {
+                apiAssignedCounts[fplName] = (apiAssignedCounts[fplName] || 0) + 1;
+                break;
               }
             }
           }
+        }
 
-          // Fill remaining
-          const remaining = [];
-          for (const [player, fplCount] of Object.entries(fplCounts)) {
-            const assigned = assignedCounts[player] || 0;
-            for (let i = 0; i < fplCount - assigned; i++) {
-              remaining.push(player);
-            }
+        // Calculate remaining assists to distribute per player
+        // remaining = FPL total - already assigned by API-Football
+        const remainingPerPlayer = {};
+        for (const [player, fplCount] of Object.entries(fplCounts)) {
+          const alreadyAssigned = apiAssignedCounts[player] || 0;
+          const toAdd = fplCount - alreadyAssigned;
+          if (toAdd > 0) {
+            remainingPerPlayer[player] = toAdd;
           }
+        }
 
-          let remainIdx = 0;
-          for (const goal of sideGoals) {
-            if (!goal.assist && remainIdx < remaining.length) {
-              goal.assist = remaining[remainIdx];
-              remainIdx++;
-            }
+        // No remaining assists to add — done
+        if (Object.keys(remainingPerPlayer).length === 0) return;
+
+        // Get goals without an assist, sorted by minute descending (most recent first)
+        // For live: use timing-based mapping (most recent unassisted goal)
+        // For finished without live store: same logic (most recent first)
+        const unassistedGoals = sideGoals
+          .filter(g => !g.assist)
+          .sort((a, b) => (b.minute || 0) - (a.minute || 0));
+
+        // If live, update the live assist store for future reference
+        if (fixtureLive) {
+          reconcileLiveAssistMapping(fid, sideGoals, fplAssistNames, side);
+        }
+
+        // Assign remaining assists to unassisted goals (most recent first)
+        // Build a flat list of remaining assists to assign
+        const toAssign = [];
+        for (const [player, count] of Object.entries(remainingPerPlayer)) {
+          for (let i = 0; i < count; i++) {
+            toAssign.push(player);
           }
+        }
+
+        // Assign each remaining assist to the next most-recent unassisted goal
+        let assignIdx = 0;
+        for (const goal of unassistedGoals) {
+          if (assignIdx >= toAssign.length) break;
+          goal.assist = toAssign[assignIdx];
+          assignIdx++;
         }
       }
 
