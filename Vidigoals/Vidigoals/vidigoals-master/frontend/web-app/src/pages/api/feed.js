@@ -23,6 +23,80 @@ try {
   }
 } catch {}
 
+// FPL fetch helper for assist reconciliation
+async function fplFetchForAssists(url) {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; VidiGoals/1.0)' },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get FPL assists for a fixture by matching team names.
+ * Used during live match polling to reconcile assists.
+ */
+async function getFplAssistsForFixture(homeTeamName, awayTeamName) {
+  const bootstrap = await fplFetchForAssists('https://fantasy.premierleague.com/api/bootstrap-static/');
+  if (!bootstrap) return { assists: [], count: 0 };
+
+  const fplTeams = bootstrap.teams || [];
+  const playerMap = {};
+  for (const p of bootstrap.elements || []) {
+    playerMap[p.id] = p;
+  }
+
+  const homeNameLower = (homeTeamName || '').toLowerCase();
+  const awayNameLower = (awayTeamName || '').toLowerCase();
+
+  const fplHome = fplTeams.find(t =>
+    homeNameLower.includes(t.short_name?.toLowerCase()) ||
+    t.name?.toLowerCase().includes(homeNameLower.split(' ')[0])
+  );
+  const fplAway = fplTeams.find(t =>
+    awayNameLower.includes(t.short_name?.toLowerCase()) ||
+    t.name?.toLowerCase().includes(awayNameLower.split(' ')[0])
+  );
+
+  if (!fplHome || !fplAway) return { assists: [], count: 0 };
+
+  const fplFixtures = await fplFetchForAssists('https://fantasy.premierleague.com/api/fixtures/');
+  if (!fplFixtures) return { assists: [], count: 0 };
+
+  const fplFixture = fplFixtures
+    .filter(f => f.team_h === fplHome.id && f.team_a === fplAway.id)
+    .sort((a, b) => b.event - a.event)[0];
+
+  if (!fplFixture?.stats) return { assists: [], count: 0 };
+
+  const assistStat = fplFixture.stats.find(s => s.identifier === 'assists');
+  if (!assistStat) return { assists: [], count: 0 };
+
+  const allAssists = [];
+  for (const entry of (assistStat.h || [])) {
+    const player = playerMap[entry.element];
+    if (player) {
+      for (let i = 0; i < entry.value; i++) {
+        allAssists.push(player.web_name);
+      }
+    }
+  }
+  for (const entry of (assistStat.a || [])) {
+    const player = playerMap[entry.element];
+    if (player) {
+      for (let i = 0; i < entry.value; i++) {
+        allAssists.push(player.web_name);
+      }
+    }
+  }
+
+  return { assists: allAssists, count: allAssists.length };
+}
+
 // ── Cache ─────────────────────────────────────────────────────────────────────
 let feedCache = { data: null, fetchedAt: 0, isLive: false };
 const CACHE_TTL_LIVE = 30 * 1000;
@@ -95,6 +169,44 @@ async function buildFeed() {
     const awayTeam = teams.away;
     const homeGoals = fixture.goals?.home ?? 0;
     const awayGoals = fixture.goals?.away ?? 0;
+
+    // ── Assist reconciliation: record goals & reconcile during live matches ──
+    if (isInProgress && assistTracker) {
+      try {
+        // Collect goal events for this fixture
+        const goalEvents = events
+          .filter(e => e.type === 'Goal' && e.detail !== 'Missed Penalty')
+          .map(e => ({
+            player: e.player?.name || 'Unknown',
+            assist: e.assist?.name || null,
+          }));
+
+        if (goalEvents.length > 0) {
+          // Get current FPL assist data for this fixture
+          const fplData = await getFplAssistsForFixture(homeTeam?.name, awayTeam?.name);
+          const existingAssists = await assistTracker.getFixtureAssists(String(fix.id));
+
+          // Record any new goals we haven't tracked yet
+          for (let i = 0; i < goalEvents.length; i++) {
+            if (!existingAssists[i]) {
+              await assistTracker.recordGoal({
+                fixtureId: String(fix.id),
+                goalIndex: i,
+                player: goalEvents[i].player,
+                apiAssist: goalEvents[i].assist,
+                fplAssistCountAtGoal: fplData.count,
+                timestamp: Date.now(),
+              });
+            }
+          }
+
+          // Reconcile assists with FPL data
+          await assistTracker.reconcileAssists(String(fix.id), fplData.assists, fplData.count);
+        }
+      } catch (err) {
+        console.warn(`Assist reconciliation failed for fixture ${fix.id}:`, err.message);
+      }
+    }
 
     // HT marker
     if (fix.score?.halftime?.home != null) {

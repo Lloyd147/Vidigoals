@@ -267,6 +267,81 @@ const StatusMsg = styled.div`
   line-height: 1.6;
 `;
 
+// ── Pitch View Styles ─────────────────────────────────────────────────────────
+const PitchContainer = styled.div`
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2/3;
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 0.5rem 0;
+  background: #1a5e1a;
+`;
+
+const PitchSVG = styled.svg`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+`;
+
+const PitchHalf = styled.div`
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  ${({ position }) => position === 'top' ? 'top: 0;' : 'bottom: 0;'}
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+`;
+
+const PitchRow = styled.div`
+  position: absolute;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  transform: translateY(-50%);
+`;
+
+const PitchPlayer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 48px;
+`;
+
+const PlayerDot = styled.div`
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: ${({ home, away }) => home ? '#4a90d9' : '#d94a4a'};
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255,255,255,0.8);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+`;
+
+const PlayerName = styled.span`
+  font-size: 0.55rem;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 48px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+`;
+
 // ── Bottom Nav ────────────────────────────────────────────────────────────────
 const BottomNav = styled.nav`
   position: fixed;
@@ -296,6 +371,32 @@ const NavItem = styled.a`
 `;
 
 const NavIcon = styled.span`font-size: 1.2rem;`;
+
+// ── Formation Parser ──────────────────────────────────────────────────────────
+function parseFormation(formation, players) {
+  // Parse formation string like "4-4-2" or "4-3-3" into rows of players
+  const parts = formation.split('-').map(Number);
+  const rows = [];
+  let playerIdx = 0;
+
+  // GK is always first (row of 1)
+  if (players.length > 0) {
+    rows.push([players[playerIdx]]);
+    playerIdx++;
+  }
+
+  // Distribute remaining players according to formation
+  for (const count of parts) {
+    const row = [];
+    for (let i = 0; i < count && playerIdx < players.length; i++) {
+      row.push(players[playerIdx]);
+      playerIdx++;
+    }
+    if (row.length > 0) rows.push(row);
+  }
+
+  return rows;
+}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Matches() {
@@ -465,70 +566,80 @@ export default function Matches() {
 
                               {activeTab === 'details' && (
                                 <>
-                                  {/* Goals */}
-                                  {(matchDetails.goals.home.length > 0 || matchDetails.goals.away.length > 0) && (
-                                    <DetailSection>
-                                      <DetailTitle>⚽ Goals Scored</DetailTitle>
-                                      {Array.from({ length: Math.max(matchDetails.goals.home.length, matchDetails.goals.away.length) }).map((_, i) => (
+                                  {/* Goals - always show header for live/finished */}
+                                  <DetailSection>
+                                    <DetailTitle>⚽ Goals Scored</DetailTitle>
+                                    {matchDetails.goals.home.length > 0 || matchDetails.goals.away.length > 0 ? (
+                                      Array.from({ length: Math.max(matchDetails.goals.home.length, matchDetails.goals.away.length) }).map((_, i) => (
                                         <DetailRow key={`goal-${i}`}>
                                           <DetailHome>{matchDetails.goals.home[i] ? `⚽ ${matchDetails.goals.home[i].player} (${matchDetails.goals.home[i].minute})` : ''}</DetailHome>
                                           <DetailAway>{matchDetails.goals.away[i] ? `${matchDetails.goals.away[i].player} (${matchDetails.goals.away[i].minute}) ⚽` : ''}</DetailAway>
                                         </DetailRow>
-                                      ))}
-                                    </DetailSection>
-                                  )}
+                                      ))
+                                    ) : (
+                                      <DetailRow><DetailHome style={{ color: '#6b7280', textAlign: 'center', width: '100%' }}>—</DetailHome></DetailRow>
+                                    )}
+                                  </DetailSection>
 
-                                  {/* Assists */}
-                                  {(matchDetails.assists.home.length > 0 || matchDetails.assists.away.length > 0) && (
-                                    <DetailSection>
-                                      <DetailTitle>Assists</DetailTitle>
-                                      {Array.from({ length: Math.max(matchDetails.assists.home.length, matchDetails.assists.away.length) }).map((_, i) => (
+                                  {/* Assists - always show header for live/finished */}
+                                  <DetailSection>
+                                    <DetailTitle>🅰️ Assists</DetailTitle>
+                                    {matchDetails.assists.home.length > 0 || matchDetails.assists.away.length > 0 ? (
+                                      Array.from({ length: Math.max(matchDetails.assists.home.length, matchDetails.assists.away.length) }).map((_, i) => (
                                         <DetailRow key={`assist-${i}`}>
                                           <DetailHome>{matchDetails.assists.home[i]?.player || ''}</DetailHome>
                                           <DetailAway>{matchDetails.assists.away[i]?.player || ''}</DetailAway>
                                         </DetailRow>
-                                      ))}
-                                    </DetailSection>
-                                  )}
+                                      ))
+                                    ) : (
+                                      <DetailRow><DetailHome style={{ color: '#6b7280', textAlign: 'center', width: '100%' }}>—</DetailHome></DetailRow>
+                                    )}
+                                  </DetailSection>
 
-                                  {/* Yellow Cards */}
-                                  {(matchDetails.yellowCards.home.length > 0 || matchDetails.yellowCards.away.length > 0) && (
-                                    <DetailSection>
-                                      <DetailTitle>🟨 Yellow Cards</DetailTitle>
-                                      {Array.from({ length: Math.max(matchDetails.yellowCards.home.length, matchDetails.yellowCards.away.length) }).map((_, i) => (
+                                  {/* Yellow Cards - always show header for live/finished */}
+                                  <DetailSection>
+                                    <DetailTitle>🟨 Yellow Cards</DetailTitle>
+                                    {matchDetails.yellowCards.home.length > 0 || matchDetails.yellowCards.away.length > 0 ? (
+                                      Array.from({ length: Math.max(matchDetails.yellowCards.home.length, matchDetails.yellowCards.away.length) }).map((_, i) => (
                                         <DetailRow key={`yc-${i}`}>
                                           <DetailHome>{matchDetails.yellowCards.home[i] ? `${matchDetails.yellowCards.home[i].player} (${matchDetails.yellowCards.home[i].minute || ''})` : ''}</DetailHome>
                                           <DetailAway>{matchDetails.yellowCards.away[i] ? `${matchDetails.yellowCards.away[i].player} (${matchDetails.yellowCards.away[i].minute || ''})` : ''}</DetailAway>
                                         </DetailRow>
-                                      ))}
-                                    </DetailSection>
-                                  )}
+                                      ))
+                                    ) : (
+                                      <DetailRow><DetailHome style={{ color: '#6b7280', textAlign: 'center', width: '100%' }}>—</DetailHome></DetailRow>
+                                    )}
+                                  </DetailSection>
 
-                                  {/* Red Cards */}
-                                  {(matchDetails.redCards.home.length > 0 || matchDetails.redCards.away.length > 0) && (
-                                    <DetailSection>
-                                      <DetailTitle>🟥 Red Cards</DetailTitle>
-                                      {Array.from({ length: Math.max(matchDetails.redCards.home.length, matchDetails.redCards.away.length) }).map((_, i) => (
+                                  {/* Red Cards - always show header for live/finished */}
+                                  <DetailSection>
+                                    <DetailTitle>🟥 Red Cards</DetailTitle>
+                                    {matchDetails.redCards.home.length > 0 || matchDetails.redCards.away.length > 0 ? (
+                                      Array.from({ length: Math.max(matchDetails.redCards.home.length, matchDetails.redCards.away.length) }).map((_, i) => (
                                         <DetailRow key={`rc-${i}`}>
                                           <DetailHome>{matchDetails.redCards.home[i] ? `${matchDetails.redCards.home[i].player} (${matchDetails.redCards.home[i].minute || ''})` : ''}</DetailHome>
                                           <DetailAway>{matchDetails.redCards.away[i] ? `${matchDetails.redCards.away[i].player} (${matchDetails.redCards.away[i].minute || ''})` : ''}</DetailAway>
                                         </DetailRow>
-                                      ))}
-                                    </DetailSection>
-                                  )}
+                                      ))
+                                    ) : (
+                                      <DetailRow><DetailHome style={{ color: '#6b7280', textAlign: 'center', width: '100%' }}>—</DetailHome></DetailRow>
+                                    )}
+                                  </DetailSection>
 
-                                  {/* Saves */}
-                                  {(matchDetails.saves.home || matchDetails.saves.away) && (
-                                    <DetailSection>
-                                      <DetailTitle>🧤 Saves</DetailTitle>
+                                  {/* Saves - always show header for live/finished */}
+                                  <DetailSection>
+                                    <DetailTitle>🧤 Saves</DetailTitle>
+                                    {matchDetails.saves.home || matchDetails.saves.away ? (
                                       <DetailRow>
                                         <DetailHome>{matchDetails.saves.home ? `${matchDetails.saves.home.player} (${matchDetails.saves.home.count})` : ''}</DetailHome>
                                         <DetailAway>{matchDetails.saves.away ? `${matchDetails.saves.away.player} (${matchDetails.saves.away.count})` : ''}</DetailAway>
                                       </DetailRow>
-                                    </DetailSection>
-                                  )}
+                                    ) : (
+                                      <DetailRow><DetailHome style={{ color: '#6b7280', textAlign: 'center', width: '100%' }}>—</DetailHome></DetailRow>
+                                    )}
+                                  </DetailSection>
 
-                                  {/* Bonus Points */}
+                                  {/* Bonus Points - only show when available */}
                                   {(matchDetails.bonus.home.length > 0 || matchDetails.bonus.away.length > 0) && (
                                     <DetailSection>
                                       <DetailTitle>Bonus Points</DetailTitle>
@@ -561,6 +672,7 @@ export default function Matches() {
 
                               {activeTab === 'lineups' && matchDetails.lineups && (
                                 <DetailSection>
+                                  {/* Formation display */}
                                   <DetailRow>
                                     <DetailHome style={{ fontWeight: 700, color: '#f5a623' }}>
                                       {matchDetails.lineups.home?.formation || ''}
@@ -569,36 +681,78 @@ export default function Matches() {
                                       {matchDetails.lineups.away?.formation || ''}
                                     </DetailAway>
                                   </DetailRow>
-                                  <DetailTitle>Starting XI</DetailTitle>
-                                  {Array.from({ length: Math.max(
-                                    matchDetails.lineups.home?.startXI?.length || 0,
-                                    matchDetails.lineups.away?.startXI?.length || 0
-                                  ) }).map((_, i) => (
-                                    <DetailRow key={`xi-${i}`}>
-                                      <DetailHome>
-                                        {matchDetails.lineups.home?.startXI?.[i]
-                                          ? `${matchDetails.lineups.home.startXI[i].number || ''} ${matchDetails.lineups.home.startXI[i].name}`
-                                          : ''}
-                                      </DetailHome>
-                                      <DetailAway>
-                                        {matchDetails.lineups.away?.startXI?.[i]
-                                          ? `${matchDetails.lineups.away.startXI[i].name} ${matchDetails.lineups.away.startXI[i].number || ''}`
-                                          : ''}
-                                      </DetailAway>
-                                    </DetailRow>
-                                  ))}
+
+                                  {/* Pitch View */}
+                                  <PitchContainer>
+                                    <PitchSVG viewBox="0 0 320 480" preserveAspectRatio="xMidYMid meet">
+                                      {/* Pitch background */}
+                                      <rect x="0" y="0" width="320" height="480" fill="#1a5e1a" rx="4" />
+                                      {/* Centre line */}
+                                      <line x1="0" y1="240" x2="320" y2="240" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                                      {/* Centre circle */}
+                                      <circle cx="160" cy="240" r="40" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                                      {/* Penalty areas */}
+                                      <rect x="80" y="0" width="160" height="60" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                                      <rect x="80" y="420" width="160" height="60" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                                      {/* Goal areas */}
+                                      <rect x="120" y="0" width="80" height="24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                                      <rect x="120" y="456" width="80" height="24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                                    </PitchSVG>
+
+                                    {/* Home team (top half) */}
+                                    <PitchHalf position="top">
+                                      {(() => {
+                                        const formation = matchDetails.lineups.home?.formation || '4-4-2';
+                                        const players = matchDetails.lineups.home?.startXI || [];
+                                        const rows = parseFormation(formation, players);
+                                        const totalRows = rows.length;
+                                        return rows.map((row, rowIdx) => (
+                                          <PitchRow key={`home-row-${rowIdx}`} style={{ top: `${((rowIdx + 0.5) / totalRows) * 100}%` }}>
+                                            {row.map((player, pIdx) => (
+                                              <PitchPlayer key={`home-${rowIdx}-${pIdx}`}>
+                                                <PlayerDot home>{player.number || ''}</PlayerDot>
+                                                <PlayerName>{player.name?.split(' ').pop() || ''}</PlayerName>
+                                              </PitchPlayer>
+                                            ))}
+                                          </PitchRow>
+                                        ));
+                                      })()}
+                                    </PitchHalf>
+
+                                    {/* Away team (bottom half) */}
+                                    <PitchHalf position="bottom">
+                                      {(() => {
+                                        const formation = matchDetails.lineups.away?.formation || '4-4-2';
+                                        const players = matchDetails.lineups.away?.startXI || [];
+                                        const rows = parseFormation(formation, players);
+                                        const totalRows = rows.length;
+                                        return rows.slice().reverse().map((row, rowIdx) => (
+                                          <PitchRow key={`away-row-${rowIdx}`} style={{ top: `${((rowIdx + 0.5) / totalRows) * 100}%` }}>
+                                            {row.map((player, pIdx) => (
+                                              <PitchPlayer key={`away-${rowIdx}-${pIdx}`}>
+                                                <PlayerDot away>{player.number || ''}</PlayerDot>
+                                                <PlayerName>{player.name?.split(' ').pop() || ''}</PlayerName>
+                                              </PitchPlayer>
+                                            ))}
+                                          </PitchRow>
+                                        ));
+                                      })()}
+                                    </PitchHalf>
+                                  </PitchContainer>
+
+                                  {/* Substitutes */}
                                   <DetailTitle style={{ marginTop: '0.75rem' }}>Substitutes</DetailTitle>
                                   {Array.from({ length: Math.max(
                                     matchDetails.lineups.home?.subs?.length || 0,
                                     matchDetails.lineups.away?.subs?.length || 0
                                   ) }).map((_, i) => (
                                     <DetailRow key={`sub-${i}`}>
-                                      <DetailHome style={{ color: '#6b7280' }}>
+                                      <DetailHome style={{ color: '#6b7280', fontSize: '0.75rem' }}>
                                         {matchDetails.lineups.home?.subs?.[i]
                                           ? `${matchDetails.lineups.home.subs[i].number || ''} ${matchDetails.lineups.home.subs[i].name}`
                                           : ''}
                                       </DetailHome>
-                                      <DetailAway style={{ color: '#6b7280' }}>
+                                      <DetailAway style={{ color: '#6b7280', fontSize: '0.75rem' }}>
                                         {matchDetails.lineups.away?.subs?.[i]
                                           ? `${matchDetails.lineups.away.subs[i].name} ${matchDetails.lineups.away.subs[i].number || ''}`
                                           : ''}
