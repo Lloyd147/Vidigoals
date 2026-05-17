@@ -505,7 +505,7 @@ async function buildFeed() {
       const scoreAtEvent = eventScores.get(key) || { home: runningHome, away: runningAway };
 
       feed.push({
-        id: `${fix.id}-${event.time?.elapsed}-${event.player?.id || Math.random()}`,
+        id: `${fix.id}-${event.time?.elapsed}-${event.time?.extra || 0}-${evType}-${event.player?.id || event.player?.name || 'unknown'}`,
         type,
         fixtureId: String(fix.id),
         minute: event.time?.elapsed,
@@ -527,8 +527,18 @@ async function buildFeed() {
     }
   }
 
+  // Deduplicate events by ID (API-Football can return same event multiple times)
+  const seenIds = new Set();
+  const dedupedFeed = [];
+  for (const event of feed) {
+    if (!seenIds.has(event.id)) {
+      seenIds.add(event.id);
+      dedupedFeed.push(event);
+    }
+  }
+
   // Sort: newest date first, then highest minute first
-  feed.sort((a, b) => {
+  dedupedFeed.sort((a, b) => {
     const d = new Date(b.timestamp || 0) - new Date(a.timestamp || 0);
     if (d !== 0) return d;
     return (b.minute || 0) - (a.minute || 0);
@@ -545,7 +555,7 @@ async function buildFeed() {
   // Cunha gets nothing because all 2 Bruno assists are now accounted for
   try {
     const goalsByFixture = {};
-    for (const event of feed) {
+    for (const event of dedupedFeed) {
       if (event.type === 'Goal' && event.fixtureId) {
         if (!goalsByFixture[event.fixtureId]) goalsByFixture[event.fixtureId] = [];
         goalsByFixture[event.fixtureId].push(event);
@@ -562,7 +572,7 @@ async function buildFeed() {
       const awayGoals = goals.filter(g => !g.isHome);
 
       // Check if fixture is live (no FT marker)
-      const fixtureLive = !feed.some(e => e.fixtureId === fid && e.type === 'FT');
+      const fixtureLive = !dedupedFeed.some(e => e.fixtureId === fid && e.type === 'FT');
 
       function reconcileSide(sideGoals, fplAssistNames, side) {
         if (fplAssistNames.length === 0) return;
@@ -757,7 +767,7 @@ async function buildFeed() {
         return pos;
       }
 
-      for (const event of feed) {
+      for (const event of dedupedFeed) {
         if (event.type === 'Goal' && event.player) {
           // Determine which team scored based on isHome + homeTeam/awayTeam
           const scoringTeam = event.isHome ? event.homeTeam : event.awayTeam;
@@ -775,7 +785,7 @@ async function buildFeed() {
     }
   } catch {}
 
-  return { feed: feed.slice(0, 100), isLive, fixtureCount: fixtures.length };
+  return { feed: dedupedFeed.slice(0, 100), isLive, fixtureCount: fixtures.length };
 }
 
 // ── Assist reconciliation for live matches ────────────────────────────────────
