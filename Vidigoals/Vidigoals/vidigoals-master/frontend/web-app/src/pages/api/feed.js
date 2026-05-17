@@ -597,22 +597,7 @@ async function buildFeed() {
         // No remaining assists to add — done
         if (Object.keys(remainingPerPlayer).length === 0) return;
 
-        // Get goals without an assist
-        // During live: most recent first (assist was just awarded for the latest goal)
-        // After FT: chronological/earliest first (FPL awards in order, first assist = first goal)
-        const unassistedGoals = sideGoals
-          .filter(g => !g.assist)
-          .sort((a, b) => fixtureLive
-            ? (b.minute || 0) - (a.minute || 0)   // most recent first for live
-            : (a.minute || 0) - (b.minute || 0)); // earliest first for finished
-
-        // If live, update the live assist store for future reference
-        if (fixtureLive) {
-          reconcileLiveAssistMapping(fid, sideGoals, fplAssistNames, side);
-        }
-
-        // Assign remaining assists to unassisted goals (most recent first)
-        // Build a flat list of remaining assists to assign
+        // Build flat list of remaining assists to assign
         const toAssign = [];
         for (const [player, count] of Object.entries(remainingPerPlayer)) {
           for (let i = 0; i < count; i++) {
@@ -620,12 +605,45 @@ async function buildFeed() {
           }
         }
 
-        // Assign each remaining assist to the next most-recent unassisted goal
-        let assignIdx = 0;
-        for (const goal of unassistedGoals) {
-          if (assignIdx >= toAssign.length) break;
-          goal.assist = toAssign[assignIdx];
-          assignIdx++;
+        const storeKey = `${fid}-${side}`;
+        const store = liveAssistStore.get(storeKey);
+
+        // LIVE: update the tracking store
+        if (fixtureLive) {
+          reconcileLiveAssistMapping(fid, sideGoals, fplAssistNames, side);
+        }
+
+        // Apply stored live mappings if available (works for both live and after FT)
+        // This preserves the correct goal-to-assist mapping determined during live
+        if (store && store.mappings.length > 0) {
+          const usedCount = {};
+          for (const mapping of store.mappings) {
+            const maxForPlayer = fplCounts[mapping.player] || 0;
+            const alreadyUsed = (usedCount[mapping.player] || 0) + (apiAssignedCounts[mapping.player] || 0);
+            if (alreadyUsed >= maxForPlayer) continue; // cap: never exceed FPL total
+
+            const goal = sideGoals.find(g => g.minute === mapping.goalMinute && !g.assist);
+            if (goal) {
+              goal.assist = mapping.player;
+              usedCount[mapping.player] = (usedCount[mapping.player] || 0) + 1;
+            }
+          }
+        } else {
+          // No live store data — use fallback assignment
+          // Live: most recent unassisted goal first
+          // Finished: earliest unassisted goal first (best effort)
+          const unassistedGoals = sideGoals
+            .filter(g => !g.assist)
+            .sort((a, b) => fixtureLive
+              ? (b.minute || 0) - (a.minute || 0)
+              : (a.minute || 0) - (b.minute || 0));
+
+          let assignIdx = 0;
+          for (const goal of unassistedGoals) {
+            if (assignIdx >= toAssign.length) break;
+            goal.assist = toAssign[assignIdx];
+            assignIdx++;
+          }
         }
       }
 
