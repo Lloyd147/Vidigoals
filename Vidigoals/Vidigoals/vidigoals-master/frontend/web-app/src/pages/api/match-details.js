@@ -18,8 +18,39 @@ try {
 } catch {}
 
 const detailsCache = new Map();
-const CACHE_TTL_IDLE = 10 * 60 * 1000; // 10 minutes for finished matches
-const CACHE_TTL_LIVE = 30 * 1000;      // 30 seconds for live matches
+const CACHE_TTL_FINISHED = 24 * 60 * 60 * 1000; // 24 hours for finished matches (data won't change)
+const CACHE_TTL_LIVE = 30 * 1000;               // 30 seconds for live matches
+const CACHE_TTL_UPCOMING = 30 * 60 * 1000;      // 30 minutes for upcoming matches
+
+// Global FPL bootstrap cache (shared across requests, refreshes every 30 mins)
+let fplBootstrapCache = { data: null, fetchedAt: 0 };
+const FPL_BOOTSTRAP_TTL = 30 * 60 * 1000;
+
+async function getCachedBootstrap() {
+  if (fplBootstrapCache.data && Date.now() - fplBootstrapCache.fetchedAt < FPL_BOOTSTRAP_TTL) {
+    return fplBootstrapCache.data;
+  }
+  const data = await fplFetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+  if (data) {
+    fplBootstrapCache = { data, fetchedAt: Date.now() };
+  }
+  return data;
+}
+
+// Global FPL fixtures cache (refreshes every 2 mins during live, 30 mins otherwise)
+let fplFixturesCache = { data: null, fetchedAt: 0, isLive: false };
+
+async function getCachedFplFixtures(isLive) {
+  const ttl = isLive ? 2 * 60 * 1000 : 30 * 60 * 1000;
+  if (fplFixturesCache.data && Date.now() - fplFixturesCache.fetchedAt < ttl) {
+    return fplFixturesCache.data;
+  }
+  const data = await fplFetch('https://fantasy.premierleague.com/api/fixtures/');
+  if (data) {
+    fplFixturesCache = { data, fetchedAt: Date.now(), isLive };
+  }
+  return data;
+}
 
 async function apiFetch(path) {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -47,7 +78,8 @@ export default async function handler(req, res) {
   // Check cache
   const cached = detailsCache.get(fixtureId);
   if (cached) {
-    const ttl = cached.isLive ? CACHE_TTL_LIVE : CACHE_TTL_IDLE;
+    const ttl = cached.isLive ? CACHE_TTL_LIVE :
+                cached.isFinished ? CACHE_TTL_FINISHED : CACHE_TTL_UPCOMING;
     if (Date.now() - cached.fetchedAt < ttl) {
       return res.status(200).json(cached.data);
     }
@@ -252,9 +284,9 @@ export default async function handler(req, res) {
     let bps = { home: [], away: [] };
     let defensiveContribution = { home: [], away: [] };
     try {
-      const fplFixtures = await fplFetch('https://fantasy.premierleague.com/api/fixtures/');
+      const fplFixtures = await getCachedFplFixtures(isCurrentlyLive);
       if (fplFixtures) {
-        const bootstrap = await fplFetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+        const bootstrap = await getCachedBootstrap();
         if (bootstrap) {
           const fplTeams = bootstrap.teams || [];
 
@@ -379,8 +411,9 @@ export default async function handler(req, res) {
     // Determine if match is live
     const liveStatuses = ['1H', '2H', 'HT', 'ET', 'P', 'BT'];
     const isLive = liveStatuses.includes(fixture.fixture?.status?.short);
+    const isFinished = ['FT', 'AET', 'PEN'].includes(fixture.fixture?.status?.short);
 
-    detailsCache.set(fixtureId, { data: result, fetchedAt: Date.now(), isLive });
+    detailsCache.set(fixtureId, { data: result, fetchedAt: Date.now(), isLive, isFinished });
     return res.status(200).json(result);
   } catch (err) {
     console.error('Match details error:', err.message);

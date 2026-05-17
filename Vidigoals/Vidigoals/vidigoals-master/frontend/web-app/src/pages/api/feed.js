@@ -41,8 +41,8 @@ async function fplFetchForAssists(url) {
  * The kickoff time guarantees we match the exact same fixture, not a previous GW.
  */
 async function getFplAssistsForFixture(homeTeamName, awayTeamName, kickoffTime) {
-  const bootstrap = await fplFetchForAssists('https://fantasy.premierleague.com/api/bootstrap-static/');
-  if (!bootstrap) return { assists: [], count: 0 };
+  const bootstrap = await getCachedBootstrap();
+  if (!bootstrap) return { assists: [], homeAssists: [], awayAssists: [], count: 0 };
 
   const fplTeams = bootstrap.teams || [];
   const playerMap = {};
@@ -101,10 +101,10 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName, kickoffTime) 
   const fplHome = fplTeams.find(t => matchTeam(homeTeamName, t));
   const fplAway = fplTeams.find(t => matchTeam(awayTeamName, t));
 
-  if (!fplHome || !fplAway) return { assists: [], count: 0 };
+  if (!fplHome || !fplAway) return { assists: [], homeAssists: [], awayAssists: [], count: 0 };
 
-  const fplFixtures = await fplFetchForAssists('https://fantasy.premierleague.com/api/fixtures/');
-  if (!fplFixtures) return { assists: [], count: 0 };
+  const fplFixtures = await getCachedFplFixtures();
+  if (!fplFixtures) return { assists: [], homeAssists: [], awayAssists: [], count: 0 };
 
   // Match by kickoff time (same date within 2 hours tolerance) + team IDs
   // This guarantees we find the EXACT same fixture, never a previous GW
@@ -213,6 +213,35 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName, kickoffTime) 
 let feedCache = { data: null, fetchedAt: 0, isLive: false };
 const CACHE_TTL_LIVE = 30 * 1000;
 const CACHE_TTL_IDLE = 5 * 60 * 1000;
+
+// ── Global FPL Cache (shared across requests) ─────────────────────────────────
+let fplBootstrapCache = { data: null, fetchedAt: 0 };
+const FPL_BOOTSTRAP_TTL = 30 * 60 * 1000; // 30 minutes
+
+async function getCachedBootstrap() {
+  if (fplBootstrapCache.data && Date.now() - fplBootstrapCache.fetchedAt < FPL_BOOTSTRAP_TTL) {
+    return fplBootstrapCache.data;
+  }
+  const data = await fplFetchForAssists('https://fantasy.premierleague.com/api/bootstrap-static/');
+  if (data) {
+    fplBootstrapCache = { data, fetchedAt: Date.now() };
+  }
+  return data;
+}
+
+let fplFixturesCache = { data: null, fetchedAt: 0 };
+const FPL_FIXTURES_TTL = 2 * 60 * 1000; // 2 minutes (assists update during live)
+
+async function getCachedFplFixtures() {
+  if (fplFixturesCache.data && Date.now() - fplFixturesCache.fetchedAt < FPL_FIXTURES_TTL) {
+    return fplFixturesCache.data;
+  }
+  const data = await fplFetchForAssists('https://fantasy.premierleague.com/api/fixtures/');
+  if (data) {
+    fplFixturesCache = { data, fetchedAt: Date.now() };
+  }
+  return data;
+}
 
 // ── Player Position Cache ─────────────────────────────────────────────────────
 // Stores successful player name → FPL position matches across requests
@@ -672,7 +701,7 @@ async function buildFeed() {
   // ── Add FPL points for goals based on player position ─────────────────────
   // GK/DEF goal = +6, MID goal = +5, FWD goal = +4, Assist = +3 (all positions)
   try {
-    const bootstrap = await fplFetchForAssists('https://fantasy.premierleague.com/api/bootstrap-static/');
+    const bootstrap = await getCachedBootstrap();
     if (bootstrap && bootstrap.elements) {
       const fplTeams = bootstrap.teams || [];
 
