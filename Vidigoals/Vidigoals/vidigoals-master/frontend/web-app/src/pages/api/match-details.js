@@ -309,7 +309,7 @@ export default async function handler(req, res) {
     } catch {}
 
     // Get goalkeeper names from lineups + full lineup data
-    let lineups = { home: { startXI: [], subs: [], formation: '' }, away: { startXI: [], subs: [], formation: '' } };
+    let lineups = { home: { startXI: [], subs: [], formation: '', predicted: false }, away: { startXI: [], subs: [], formation: '', predicted: false } };
     try {
       const lineupsData = await apiFetch(`/fixtures/lineups?fixture=${fixtureId}`);
       const lineupsResponse = lineupsData.response || [];
@@ -336,11 +336,61 @@ export default async function handler(req, res) {
             number: p.player?.number,
             pos: p.player?.pos,
           })),
+          predicted: false,
         };
       }
     } catch {
       saves.home = { player: 'Goalkeeper', count: matchStats.home['Goalkeeper Saves'] || 0 };
       saves.away = { player: 'Goalkeeper', count: matchStats.away['Goalkeeper Saves'] || 0 };
+    }
+
+    // ── Predicted lineups fallback: use most recent match lineup ───────────
+    // If lineups are empty (upcoming match or not yet announced), try to get
+    // the team's most recent lineup from their last match as a prediction
+    const needsPredicted = lineups.home.startXI.length === 0 || lineups.away.startXI.length === 0;
+    if (needsPredicted) {
+      try {
+        // Fetch last fixture for each team that needs a predicted lineup
+        const teamsToFetch = [];
+        if (lineups.home.startXI.length === 0 && homeTeam?.id) {
+          teamsToFetch.push({ teamId: homeTeam.id, side: 'home' });
+        }
+        if (lineups.away.startXI.length === 0 && awayTeam?.id) {
+          teamsToFetch.push({ teamId: awayTeam.id, side: 'away' });
+        }
+
+        for (const { teamId, side } of teamsToFetch) {
+          // Get the team's last played fixture
+          const lastFixData = await apiFetch(`/fixtures?league=39&season=2025&team=${teamId}&last=1`);
+          const lastFix = lastFixData.response?.[0];
+          if (lastFix && lastFix.fixture?.id) {
+            // Don't use the same fixture we're already looking at
+            if (String(lastFix.fixture.id) !== String(fixtureId)) {
+              const lastLineupsData = await apiFetch(`/fixtures/lineups?fixture=${lastFix.fixture.id}`);
+              const lastLineups = lastLineupsData.response || [];
+              const teamLineup = lastLineups.find(l => l.team?.id === teamId);
+              if (teamLineup && teamLineup.startXI?.length > 0) {
+                lineups[side] = {
+                  formation: teamLineup.formation || '',
+                  startXI: (teamLineup.startXI || []).map(p => ({
+                    name: p.player?.name,
+                    number: p.player?.number,
+                    pos: p.player?.pos,
+                  })),
+                  subs: (teamLineup.substitutes || []).map(p => ({
+                    name: p.player?.name,
+                    number: p.player?.number,
+                    pos: p.player?.pos,
+                  })),
+                  predicted: true,
+                };
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Predicted lineup fetch error:', err.message);
+      }
     }
 
     // Format stats for display — use '—' only if stat is truly unavailable (null/undefined)

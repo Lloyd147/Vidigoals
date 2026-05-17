@@ -706,6 +706,18 @@ export default function Matches() {
 
                               {activeTab === 'lineups' && matchDetails.lineups && (
                                 <DetailSection>
+                                  {/* Predicted label */}
+                                  {(matchDetails.lineups.home?.predicted || matchDetails.lineups.away?.predicted) && (
+                                    <div style={{ textAlign: 'center', fontSize: '0.72rem', color: '#f5a623', fontStyle: 'italic', marginBottom: '0.5rem', padding: '0.3rem', background: 'rgba(245,166,35,0.1)', borderRadius: '4px' }}>
+                                      {matchDetails.lineups.home?.predicted && matchDetails.lineups.away?.predicted
+                                        ? '⚠️ Predicted lineups (based on last match)'
+                                        : matchDetails.lineups.home?.predicted
+                                          ? `⚠️ Home lineup predicted (based on last match)`
+                                          : `⚠️ Away lineup predicted (based on last match)`
+                                      }
+                                    </div>
+                                  )}
+
                                   {/* Formation display */}
                                   <DetailRow>
                                     <DetailHome style={{ fontWeight: 700, color: '#f5a623' }}>
@@ -716,83 +728,95 @@ export default function Matches() {
                                     </DetailAway>
                                   </DetailRow>
 
-                                  {/* Pitch View */}
-                                  <PitchContainer>
-                                    <PitchSVG viewBox="0 0 320 480" preserveAspectRatio="xMidYMid meet">
-                                      {/* Pitch background */}
-                                      <rect x="0" y="0" width="320" height="480" fill="#1a5e1a" rx="4" />
-                                      {/* Centre line */}
-                                      <line x1="0" y1="240" x2="320" y2="240" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                                      {/* Centre circle */}
-                                      <circle cx="160" cy="240" r="40" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                                      {/* Penalty areas */}
-                                      <rect x="80" y="0" width="160" height="60" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                                      <rect x="80" y="420" width="160" height="60" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                                      {/* Goal areas */}
-                                      <rect x="120" y="0" width="80" height="24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                                      <rect x="120" y="456" width="80" height="24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-                                    </PitchSVG>
+                                  {/* Pitch View — only show if at least one team has players */}
+                                  {(matchDetails.lineups.home?.startXI?.length > 0 || matchDetails.lineups.away?.startXI?.length > 0) ? (
+                                    <>
+                                    <PitchContainer>
+                                      <PitchSVG viewBox="0 0 320 480" preserveAspectRatio="xMidYMid meet">
+                                        {/* Pitch background */}
+                                        <rect x="0" y="0" width="320" height="480" fill="#1a5e1a" rx="4" />
+                                        {/* Centre line */}
+                                        <line x1="0" y1="240" x2="320" y2="240" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                                        {/* Centre circle */}
+                                        <circle cx="160" cy="240" r="40" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                                        {/* Penalty areas */}
+                                        <rect x="80" y="0" width="160" height="60" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                                        <rect x="80" y="420" width="160" height="60" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                                        {/* Goal areas */}
+                                        <rect x="120" y="0" width="80" height="24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                                        <rect x="120" y="456" width="80" height="24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                                      </PitchSVG>
 
-                                    {/* Home team (top half) */}
-                                    <PitchHalf position="top">
-                                      {(() => {
-                                        const formation = matchDetails.lineups.home?.formation || '4-4-2';
-                                        const players = matchDetails.lineups.home?.startXI || [];
-                                        const rows = parseFormation(formation, players);
-                                        const totalRows = rows.length;
-                                        return rows.map((row, rowIdx) => (
-                                          <PitchRow key={`home-row-${rowIdx}`} style={{ top: `${((rowIdx + 0.5) / totalRows) * 100}%` }}>
-                                            {row.map((player, pIdx) => (
-                                              <PitchPlayer key={`home-${rowIdx}-${pIdx}`}>
-                                                <PlayerDot home>{player.number || ''}</PlayerDot>
-                                                <PlayerName>{player.name?.split(' ').pop() || ''}</PlayerName>
-                                              </PitchPlayer>
-                                            ))}
-                                          </PitchRow>
-                                        ));
-                                      })()}
-                                    </PitchHalf>
+                                      {/* Home team (top half) */}
+                                      <PitchHalf position="top">
+                                        {(() => {
+                                          const formation = matchDetails.lineups.home?.formation || '4-4-2';
+                                          const players = matchDetails.lineups.home?.startXI || [];
+                                          const rows = parseFormation(formation, players);
+                                          const totalRows = rows.length;
+                                          return rows.map((row, rowIdx) => (
+                                            <PitchRow key={`home-row-${rowIdx}`} style={{ top: `${((rowIdx + 0.5) / totalRows) * 100}%` }}>
+                                              {row.map((player, pIdx) => (
+                                                <PitchPlayer key={`home-${rowIdx}-${pIdx}`}>
+                                                  <PlayerDot home>{player.number || ''}</PlayerDot>
+                                                  <PlayerName>{player.name?.split(' ').pop() || ''}</PlayerName>
+                                                </PitchPlayer>
+                                              ))}
+                                            </PitchRow>
+                                          ));
+                                        })()}
+                                      </PitchHalf>
 
-                                    {/* Away team (bottom half) */}
-                                    <PitchHalf position="bottom">
-                                      {(() => {
-                                        const formation = matchDetails.lineups.away?.formation || '4-4-2';
-                                        const players = matchDetails.lineups.away?.startXI || [];
-                                        const rows = parseFormation(formation, players);
-                                        const totalRows = rows.length;
-                                        return rows.slice().reverse().map((row, rowIdx) => (
-                                          <PitchRow key={`away-row-${rowIdx}`} style={{ top: `${((rowIdx + 0.5) / totalRows) * 100}%` }}>
-                                            {row.map((player, pIdx) => (
-                                              <PitchPlayer key={`away-${rowIdx}-${pIdx}`}>
-                                                <PlayerDot away>{player.number || ''}</PlayerDot>
-                                                <PlayerName>{player.name?.split(' ').pop() || ''}</PlayerName>
-                                              </PitchPlayer>
-                                            ))}
-                                          </PitchRow>
-                                        ));
-                                      })()}
-                                    </PitchHalf>
-                                  </PitchContainer>
+                                      {/* Away team (bottom half) */}
+                                      <PitchHalf position="bottom">
+                                        {(() => {
+                                          const formation = matchDetails.lineups.away?.formation || '4-4-2';
+                                          const players = matchDetails.lineups.away?.startXI || [];
+                                          const rows = parseFormation(formation, players);
+                                          const totalRows = rows.length;
+                                          return rows.slice().reverse().map((row, rowIdx) => (
+                                            <PitchRow key={`away-row-${rowIdx}`} style={{ top: `${((rowIdx + 0.5) / totalRows) * 100}%` }}>
+                                              {row.map((player, pIdx) => (
+                                                <PitchPlayer key={`away-${rowIdx}-${pIdx}`}>
+                                                  <PlayerDot away>{player.number || ''}</PlayerDot>
+                                                  <PlayerName>{player.name?.split(' ').pop() || ''}</PlayerName>
+                                                </PitchPlayer>
+                                              ))}
+                                            </PitchRow>
+                                          ));
+                                        })()}
+                                      </PitchHalf>
+                                    </PitchContainer>
 
-                                  {/* Substitutes */}
-                                  <DetailTitle style={{ marginTop: '0.75rem' }}>Substitutes</DetailTitle>
-                                  {Array.from({ length: Math.max(
-                                    matchDetails.lineups.home?.subs?.length || 0,
-                                    matchDetails.lineups.away?.subs?.length || 0
-                                  ) }).map((_, i) => (
-                                    <DetailRow key={`sub-${i}`}>
-                                      <DetailHome style={{ color: '#6b7280', fontSize: '0.75rem' }}>
-                                        {matchDetails.lineups.home?.subs?.[i]
-                                          ? `${matchDetails.lineups.home.subs[i].number || ''} ${matchDetails.lineups.home.subs[i].name}`
-                                          : ''}
-                                      </DetailHome>
-                                      <DetailAway style={{ color: '#6b7280', fontSize: '0.75rem' }}>
-                                        {matchDetails.lineups.away?.subs?.[i]
-                                          ? `${matchDetails.lineups.away.subs[i].name} ${matchDetails.lineups.away.subs[i].number || ''}`
-                                          : ''}
-                                      </DetailAway>
-                                    </DetailRow>
-                                  ))}
+                                    {/* Substitutes */}
+                                    {(matchDetails.lineups.home?.subs?.length > 0 || matchDetails.lineups.away?.subs?.length > 0) && (
+                                      <>
+                                      <DetailTitle style={{ marginTop: '0.75rem' }}>Substitutes</DetailTitle>
+                                      {Array.from({ length: Math.max(
+                                        matchDetails.lineups.home?.subs?.length || 0,
+                                        matchDetails.lineups.away?.subs?.length || 0
+                                      ) }).map((_, i) => (
+                                        <DetailRow key={`sub-${i}`}>
+                                          <DetailHome style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                                            {matchDetails.lineups.home?.subs?.[i]
+                                              ? `${matchDetails.lineups.home.subs[i].number || ''} ${matchDetails.lineups.home.subs[i].name}`
+                                              : ''}
+                                          </DetailHome>
+                                          <DetailAway style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                                            {matchDetails.lineups.away?.subs?.[i]
+                                              ? `${matchDetails.lineups.away.subs[i].name} ${matchDetails.lineups.away.subs[i].number || ''}`
+                                              : ''}
+                                          </DetailAway>
+                                        </DetailRow>
+                                      ))}
+                                      </>
+                                    )}
+                                    </>
+                                  ) : (
+                                    <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#8892b0', fontSize: '0.82rem' }}>
+                                      Lineups not yet available
+                                    </div>
+                                  )}
                                 </DetailSection>
                               )}
                             </>
