@@ -530,9 +530,8 @@ export default async function handler(req, res) {
                 }
               }
 
-              // If BPS not in fixture stats (live match), get from live endpoint
-              if (bps.home.length === 0 && bps.away.length === 0 &&
-                  fplFixture.started && !fplFixture.finished_provisional) {
+              // If BPS not in fixture stats (live match or recently finished), get from live endpoint
+              if (bps.home.length === 0 && bps.away.length === 0 && fplFixture.started) {
                 try {
                   const liveData = await fplFetch(`https://fantasy.premierleague.com/api/event/${fplFixture.event}/live/`);
                   if (liveData && liveData.elements) {
