@@ -22,26 +22,39 @@ const Wrapper = styled.div`
   background: #1a0a2e;
 `;
 
-const ComingSoon = styled.div`
+const Content = styled.div`
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  text-align: center;
+  padding: 1rem;
+  padding-bottom: 70px;
 `;
 
-const Icon = styled.div`font-size: 3rem; margin-bottom: 1rem;`;
-const Title = styled.h1`font-size: 1.5rem; color: #f5a623; margin-bottom: 0.5rem;`;
-const Desc = styled.p`font-size: 0.9rem; color: #8892b0; line-height: 1.6;`;
+const PageTitle = styled.h1`
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f5a623;
+  text-align: center;
+  margin-bottom: 1rem;
+`;
+
+const StatusMsg = styled.div`
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #8892b0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+`;
 
 const BottomNav = styled.nav`
-  position: sticky; bottom: 0;
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
   background: #2d0a5e;
   display: flex;
   border-top: 1px solid #4a1a8e;
-  z-index: 100;
+  z-index: 9999;
 `;
 
 const NavItem = styled.a`
@@ -56,31 +69,45 @@ const NavItem = styled.a`
 
 const NavIcon = styled.span`font-size: 1.2rem;`;
 
-export default function Leaderboard() {
+export default function PriceChanges() {
   const [user, setUser] = useState(null);
+
   useEffect(() => {
-    try { const s = localStorage.getItem('vidigoals_user'); if (s) setUser(JSON.parse(s)); } catch {}
+    try {
+      const stored = localStorage.getItem('vidigoals_user');
+      if (stored) setUser(JSON.parse(stored));
+    } catch {}
   }, []);
-  const handleLogout = () => { localStorage.removeItem('vidigoals_user'); setUser(null); };
+
+  const handleLogout = () => {
+    localStorage.removeItem('vidigoals_user');
+    setUser(null);
+  };
 
   return (
     <>
-      <Head><title>Leaderboard — VidiGoals</title><meta name="viewport" content="width=device-width, initial-scale=1" /></Head>
+      <Head>
+        <title>Price Changes — VidiGoals</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </Head>
       <GlobalStyle />
       <Wrapper>
-        <AppShell user={user} page="leaderboard" onLogout={handleLogout}>
-          <ComingSoon>
-            <Icon>🏆</Icon>
-            <Title>Leaderboard</Title>
-            <Desc>Coming soon! Compare your FPL performance with friends and other VidiGoals users.</Desc>
-          </ComingSoon>
+        <AppShell user={user} page="price-changes" onLogout={handleLogout}>
+          <Content>
+            <PageTitle>📈 Price Change Predictions</PageTitle>
+            <StatusMsg>
+              Price change predictions coming soon.<br />
+              Track which players are rising and falling in price.
+            </StatusMsg>
+          </Content>
         </AppShell>
+
         <BottomNav>
           <NavItem href="/"><NavIcon>⚽</NavIcon>Goals</NavItem>
           <NavItem href={user ? '/my-team' : '/signin'}><NavIcon>👕</NavIcon>My Team</NavItem>
-          <NavItem href="/leaderboard" active={1}><NavIcon>🏆</NavIcon>Leaderboard</NavItem>
+          <NavItem href="/leaderboard"><NavIcon>🏆</NavIcon>Leaderboard</NavItem>
           <NavItem href="/matches"><NavIcon>📋</NavIcon>Matches</NavItem>
-          <NavItem href="/price-changes"><NavIcon>📈</NavIcon>Prices</NavItem>
+          <NavItem href="/price-changes" active={1}><NavIcon>📈</NavIcon>Prices</NavItem>
         </BottomNav>
       </Wrapper>
     </>

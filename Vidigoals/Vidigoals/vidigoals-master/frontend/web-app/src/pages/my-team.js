@@ -503,7 +503,7 @@ export default function MyTeam() {
           <NavItem href="/my-team" active={1}><NavIcon>👕</NavIcon>My Team</NavItem>
           <NavItem href="/leaderboard"><NavIcon>🏆</NavIcon>Leaderboard</NavItem>
           <NavItem href="/matches"><NavIcon>📋</NavIcon>Matches</NavItem>
-          <NavItem href="/settings"><NavIcon>⚙️</NavIcon>Settings</NavItem>
+          <NavItem href="/price-changes"><NavIcon>📈</NavIcon>Prices</NavItem>
         </BottomNav>
       </Wrapper>
     </>

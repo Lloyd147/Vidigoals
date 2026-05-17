@@ -840,7 +840,7 @@ export default function Matches() {
           <NavItem href={user ? '/my-team' : '/signin'}><NavIcon>👕</NavIcon>My Team</NavItem>
           <NavItem href="/leaderboard"><NavIcon>🏆</NavIcon>Leaderboard</NavItem>
           <NavItem href="/matches" active={1}><NavIcon>📋</NavIcon>Matches</NavItem>
-          <NavItem href="/settings"><NavIcon>⚙️</NavIcon>Settings</NavItem>
+          <NavItem href="/price-changes"><NavIcon>📈</NavIcon>Prices</NavItem>
         </BottomNav>
       </Wrapper>
     </>

@@ -279,6 +279,15 @@ export default function Vidiprinter() {
     showGoals: true, showCards: true, showSubs: false,
     showHtFt: true, showPenMiss: true, showPenSave: true,
   });
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  function togglePref(key) {
+    setPrefs(prev => {
+      const updated = { ...prev, [key]: !prev[key] };
+      localStorage.setItem('vidigoals_prefs', JSON.stringify(updated));
+      return updated;
+    });
+  }
 
   useEffect(() => {
     try {
@@ -324,6 +333,34 @@ export default function Vidiprinter() {
       <GlobalStyle />
       <Wrapper>
         <AppShell user={user} page="feed" isLive={isLive} onLogout={handleLogout}>
+          {/* Filter bar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 1rem', borderBottom: '1px solid #2d1a4e' }}>
+            <button onClick={() => setFilterOpen(!filterOpen)} style={{ background: 'transparent', border: '1px solid #4a1a8e', color: filterOpen ? '#f5a623' : '#8892b0', fontSize: '0.78rem', fontWeight: 700, padding: '0.35rem 0.75rem', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {filterOpen ? '✕' : '☰'} Filter
+            </button>
+          </div>
+
+          {/* Filter panel */}
+          {filterOpen && (
+            <div style={{ padding: '0.75rem 1rem', background: 'rgba(45,10,94,0.4)', borderBottom: '1px solid #4a1a8e' }}>
+              {[
+                { key: 'showGoals', icon: '⚽', label: 'Show Goals' },
+                { key: 'showCards', icon: '🟨', label: 'Show Cards' },
+                { key: 'showSubs', icon: '🔄', label: 'Show Substitutions' },
+                { key: 'showHtFt', icon: '⏱️', label: 'Show HT & FT Scores' },
+                { key: 'showPenMiss', icon: '❌', label: 'Show Penalty Misses' },
+                { key: 'showPenSave', icon: '🧤', label: 'Show Penalty Saves' },
+              ].map(({ key, icon, label }) => (
+                <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.45rem 0', borderBottom: '1px solid rgba(74,26,142,0.3)' }}>
+                  <span style={{ fontSize: '0.82rem', color: '#ccc' }}>{icon} {label}</span>
+                  <button onClick={() => togglePref(key)} style={{ width: '44px', height: '24px', borderRadius: '12px', border: 'none', background: prefs[key] ? '#f5a623' : '#4a1a8e', position: 'relative', cursor: 'pointer' }}>
+                    <span style={{ position: 'absolute', width: '18px', height: '18px', borderRadius: '50%', background: '#fff', top: '3px', left: prefs[key] ? '23px' : '3px', transition: 'left 0.2s' }} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           <LeagueBanner>🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</LeagueBanner>
 
           <Feed>
@@ -364,7 +401,7 @@ export default function Vidiprinter() {
           <NavItem href={user ? '/my-team' : '/signin'}><NavIcon>👕</NavIcon>My Team</NavItem>
           <NavItem href="/leaderboard"><NavIcon>🏆</NavIcon>Leaderboard</NavItem>
           <NavItem href="/matches"><NavIcon>📋</NavIcon>Matches</NavItem>
-          <NavItem href="/settings"><NavIcon>⚙️</NavIcon>Settings</NavItem>
+          <NavItem href="/price-changes"><NavIcon>📈</NavIcon>Prices</NavItem>
         </BottomNav>
       </Wrapper>
     </>

@@ -1,12 +1,15 @@
 /**
- * AppShell — shared top header used on every page.
+ * AppShell — shared top header + slide-out menu used on every page.
  *
  * Shows:
- *  - Logo (top left)
+ *  - Hamburger menu (top left)
+ *  - Logo (centered)
  *  - Logout button (top right, when logged in)
  *  - User bar: "Hello [name]" | time/date | View Team OR View Goals button
  *  - Points bar: GW Points | Overall Points (when logged in)
+ *  - Slide-out menu with: Notifications toggle, Pages, Settings links
  */
+import { useState } from 'react';
 import styled from 'styled-components';
 
 const TopBar = styled.div`
@@ -14,11 +17,24 @@ const TopBar = styled.div`
   padding: 0.75rem 1rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   position: sticky;
   top: 0;
   z-index: 100;
   box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+`;
+
+const MenuBtn = styled.button`
+  position: absolute;
+  left: 1rem;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  &:hover { color: #f5a623; }
 `;
 
 const Logo = styled.a`
@@ -33,6 +49,8 @@ const Logo = styled.a`
 `;
 
 const LogoutBtn = styled.button`
+  position: absolute;
+  right: 1rem;
   background: transparent;
   border: 1px solid rgba(255,255,255,0.3);
   color: #ccc;
@@ -93,7 +111,108 @@ const PointsBar = styled.div`
   span { color: #f5a623; font-weight: 700; }
 `;
 
+// ── Menu Overlay & Panel ──────────────────────────────────────────────────────
+const MenuOverlay = styled.div`
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 200;
+  opacity: ${({ open }) => open ? 1 : 0};
+  pointer-events: ${({ open }) => open ? 'auto' : 'none'};
+  transition: opacity 0.2s;
+`;
+
+const MenuPanel = styled.div`
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: 280px;
+  background: #1a0a2e;
+  z-index: 201;
+  transform: ${({ open }) => open ? 'translateX(0)' : 'translateX(-100%)'};
+  transition: transform 0.25s ease;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #4a1a8e;
+`;
+
+const MenuHeader = styled.div`
+  padding: 1.2rem 1.2rem 1rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+  border-bottom: 1px solid #2d1a4e;
+`;
+
+const MenuSection = styled.div`
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid #2d1a4e;
+`;
+
+const MenuSectionTitle = styled.div`
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #8892b0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.6rem;
+`;
+
+const MenuToggleRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+`;
+
+const MenuToggleLabel = styled.span`
+  font-size: 0.88rem;
+  color: #ccc;
+`;
+
+const Toggle = styled.button`
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  border: none;
+  background: ${({ on }) => (on ? '#f5a623' : '#4a1a8e')};
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  &::after {
+    content: '';
+    position: absolute;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    top: 3px;
+    left: ${({ on }) => (on ? '23px' : '3px')};
+    transition: left 0.2s;
+  }
+`;
+
+const MenuLink = styled.a`
+  display: block;
+  padding: 0.6rem 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: ${({ active }) => active ? '#f5a623' : '#eaeaea'};
+  text-decoration: none;
+  &:hover { color: #f5a623; }
+`;
+
+const MenuSmallLink = styled.a`
+  display: block;
+  padding: 0.4rem 0;
+  font-size: 0.82rem;
+  color: #8892b0;
+  text-decoration: none;
+  &:hover { color: #f5a623; }
+`;
+
 export default function AppShell({ user, page, isLive, onLogout, children }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   const now     = new Date();
   const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -102,8 +221,40 @@ export default function AppShell({ user, page, isLive, onLogout, children }) {
 
   return (
     <>
+      {/* ── Slide-out Menu ── */}
+      <MenuOverlay open={menuOpen} onClick={() => setMenuOpen(false)} />
+      <MenuPanel open={menuOpen}>
+        <MenuHeader>MENU</MenuHeader>
+
+        <MenuSection>
+          <MenuSectionTitle>Notifications</MenuSectionTitle>
+          <MenuToggleRow>
+            <MenuToggleLabel>Push Notifications</MenuToggleLabel>
+            <Toggle on={false} onClick={() => {}} />
+          </MenuToggleRow>
+        </MenuSection>
+
+        <MenuSection>
+          <MenuSectionTitle>Pages</MenuSectionTitle>
+          <MenuLink href="/" active={page === 'feed' ? 1 : 0}>Goals</MenuLink>
+          <MenuLink href={user ? '/my-team' : '/signin'} active={page === 'my-team' ? 1 : 0}>My Team</MenuLink>
+          <MenuLink href="/leaderboard" active={page === 'leaderboard' ? 1 : 0}>Leaderboard</MenuLink>
+          <MenuLink href="/matches" active={page === 'matches' ? 1 : 0}>Matches</MenuLink>
+          <MenuLink href="/price-changes" active={page === 'price-changes' ? 1 : 0}>Price Changes</MenuLink>
+        </MenuSection>
+
+        <MenuSection>
+          <MenuSectionTitle>Settings</MenuSectionTitle>
+          <MenuSmallLink href="/about">About VidiGoals</MenuSmallLink>
+          <MenuSmallLink href="/faq">FAQ</MenuSmallLink>
+          <MenuSmallLink href="/contact">Contact Us</MenuSmallLink>
+          <MenuSmallLink href="/terms">Terms & Conditions</MenuSmallLink>
+        </MenuSection>
+      </MenuPanel>
+
       {/* ── Top bar ── */}
       <TopBar>
+        <MenuBtn onClick={() => setMenuOpen(true)}>☰</MenuBtn>
         <Logo href="/">⚽ Vidi<span>Goals</span></Logo>
         {user && <LogoutBtn onClick={onLogout}>Logout</LogoutBtn>}
       </TopBar>

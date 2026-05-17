@@ -236,7 +236,7 @@ export default function Settings() {
           <NavItem href={user ? '/my-team' : '/signin'}><NavIcon>👕</NavIcon>My Team</NavItem>
           <NavItem href="/leaderboard"><NavIcon>🏆</NavIcon>Leaderboard</NavItem>
           <NavItem href="/matches"><NavIcon>📋</NavIcon>Matches</NavItem>
-          <NavItem href="/settings" active={1}><NavIcon>⚙️</NavIcon>Settings</NavItem>
+          <NavItem href="/price-changes"><NavIcon>📈</NavIcon>Prices</NavItem>
         </BottomNav>
       </Wrapper>
     </>
