@@ -23,6 +23,23 @@ async function apiFetch(path) {
   return res.json();
 }
 
+// Shorten long team names for display
+function shortName(name) {
+  const map = {
+    'Manchester City': 'Man City',
+    'Manchester United': 'Man Utd',
+    'Nottingham Forest': "Nott'm Forest",
+    'Crystal Palace': 'C. Palace',
+    'Wolverhampton Wanderers': 'Wolves',
+    'Tottenham Hotspur': 'Spurs',
+    'West Ham United': 'West Ham',
+    'Newcastle United': 'Newcastle',
+    'Leicester City': 'Leicester',
+    'AFC Bournemouth': 'Bournemouth',
+  };
+  return map[name] || name;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
   if (!API_KEY) return res.status(500).json({ error: 'API key not configured' });
@@ -98,12 +115,12 @@ export default async function handler(req, res) {
         statusLong: f.fixture?.status?.long,
         elapsed: f.fixture?.status?.elapsed || null,
         home: {
-          name: f.teams?.home?.name,
+          name: shortName(f.teams?.home?.name),
           logo: f.teams?.home?.logo,
           score: f.goals?.home,
         },
         away: {
-          name: f.teams?.away?.name,
+          name: shortName(f.teams?.away?.name),
           logo: f.teams?.away?.logo,
           score: f.goals?.away,
         },
