@@ -50,23 +50,61 @@ async function getFplAssistsForFixture(homeTeamName, awayTeamName, kickoffTime) 
     playerMap[p.id] = p;
   }
 
-  // Build team ID lookup from FPL
+  // Build team ID lookup from FPL — use explicit name mapping for reliability
+  // API-Football names → FPL team names (there are only 20 PL teams)
+  const TEAM_NAME_MAP = {
+    'arsenal': 'arsenal',
+    'aston villa': 'aston villa',
+    'bournemouth': 'bournemouth',
+    'afc bournemouth': 'bournemouth',
+    'brentford': 'brentford',
+    'brighton': 'brighton',
+    'brighton and hove albion': 'brighton',
+    'chelsea': 'chelsea',
+    'crystal palace': 'crystal palace',
+    'everton': 'everton',
+    'fulham': 'fulham',
+    'ipswich': 'ipswich',
+    'ipswich town': 'ipswich',
+    'leicester': 'leicester',
+    'leicester city': 'leicester',
+    'liverpool': 'liverpool',
+    'manchester city': 'man city',
+    'manchester united': 'man utd',
+    'newcastle': 'newcastle',
+    'newcastle united': 'newcastle',
+    'nottingham forest': "nott'm forest",
+    'southampton': 'southampton',
+    'tottenham': 'spurs',
+    'tottenham hotspur': 'spurs',
+    'west ham': 'west ham',
+    'west ham united': 'west ham',
+    'wolverhampton': 'wolves',
+    'wolverhampton wanderers': 'wolves',
+    'wolves': 'wolves',
+  };
+
   function matchTeam(apiName, fplTeam) {
-    const name = (apiName || '').toLowerCase();
-    const fplName = (fplTeam.name || '').toLowerCase();
+    const name = (apiName || '').toLowerCase().trim();
+    const fplName = (fplTeam.name || '').toLowerCase().trim();
+
+    // Direct match
+    if (name === fplName) return true;
+
+    // Check via mapping
+    const mapped = TEAM_NAME_MAP[name];
+    if (mapped && mapped === fplName) return true;
+
+    // Fallback: check if API name contains FPL short_name
     const fplShort = (fplTeam.short_name || '').toLowerCase();
-    if (name.includes(fplShort)) return true;
-    if (fplName.includes(name.split(' ')[0])) return true;
-    const apiWords = name.split(/\s+/);
-    const fplWords = fplName.split(/\s+/);
-    if (apiWords.length > 0 && fplWords.length > 0) {
-      const apiFirst3 = apiWords[0].substring(0, 3);
-      const fplFirst3 = fplWords[0].substring(0, 3);
-      if (apiFirst3 === fplFirst3 && apiWords.length > 1 && fplWords.length > 1) {
-        if (apiWords[1].substring(0, 3) === fplWords[1].substring(0, 3)) return true;
-      }
-      if (apiFirst3 === fplFirst3 && apiWords.length === 1 && fplWords.length === 1) return true;
-    }
+    if (fplShort.length >= 3 && name.includes(fplShort)) return true;
+
+    // Fallback: first word of API name matches first word of FPL name (3+ chars)
+    const apiFirst = name.split(/\s+/)[0];
+    const fplFirst = fplName.split(/\s+/)[0];
+    if (apiFirst.length >= 3 && fplFirst.length >= 3 &&
+        (apiFirst.startsWith(fplFirst) || fplFirst.startsWith(apiFirst))) return true;
+
     return false;
   }
 
