@@ -587,8 +587,8 @@ export default function Matches() {
                                     {matchDetails.assists.home.length > 0 || matchDetails.assists.away.length > 0 ? (
                                       Array.from({ length: Math.max(matchDetails.assists.home.length, matchDetails.assists.away.length) }).map((_, i) => (
                                         <DetailRow key={`assist-${i}`}>
-                                          <DetailHome>{matchDetails.assists.home[i]?.player || ''}</DetailHome>
-                                          <DetailAway>{matchDetails.assists.away[i]?.player || ''}</DetailAway>
+                                          <DetailHome>{matchDetails.assists.home[i]?.player ? `${matchDetails.assists.home[i].player}${matchDetails.assists.home[i].minute ? ` (${matchDetails.assists.home[i].minute})` : ''}` : ''}</DetailHome>
+                                          <DetailAway>{matchDetails.assists.away[i]?.player ? `${matchDetails.assists.away[i].player}${matchDetails.assists.away[i].minute ? ` (${matchDetails.assists.away[i].minute})` : ''}` : ''}</DetailAway>
                                         </DetailRow>
                                       ))
                                     ) : (
