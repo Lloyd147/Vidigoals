@@ -214,6 +214,11 @@ let feedCache = { data: null, fetchedAt: 0, isLive: false };
 const CACHE_TTL_LIVE = 30 * 1000;
 const CACHE_TTL_IDLE = 5 * 60 * 1000;
 
+// ── Player Position Cache ─────────────────────────────────────────────────────
+// Stores successful player name → FPL position matches across requests
+// Persists as long as the serverless instance is alive
+const playerPositionCache = new Map();
+
 // ── Live Assist Mapping Store ─────────────────────────────────────────────────
 // Tracks FPL assists as they're awarded during live matches.
 // Key: fixtureId → { lastKnownAssists: {playerName: count}, mappings: [{player, goalMinute}] }
@@ -659,20 +664,105 @@ async function buildFeed() {
   try {
     const bootstrap = await fplFetchForAssists('https://fantasy.premierleague.com/api/bootstrap-static/');
     if (bootstrap && bootstrap.elements) {
-      // Build lookup: last name → element_type (position)
-      // element_type: 1=GK, 2=DEF, 3=MID, 4=FWD
-      const positionByLastName = {};
+      const fplTeams = bootstrap.teams || [];
+
+      // Strip accents/diacritics for matching
+      function normalize(str) {
+        return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+      }
+
+      // Build team ID lookup from API-Football name → FPL team ID
+      const TEAM_NAME_MAP = {
+        'arsenal': 'arsenal', 'aston villa': 'aston villa',
+        'bournemouth': 'bournemouth', 'afc bournemouth': 'bournemouth',
+        'brentford': 'brentford', 'brighton': 'brighton',
+        'brighton and hove albion': 'brighton', 'chelsea': 'chelsea',
+        'crystal palace': 'crystal palace', 'everton': 'everton',
+        'fulham': 'fulham', 'ipswich': 'ipswich', 'ipswich town': 'ipswich',
+        'leicester': 'leicester', 'leicester city': 'leicester',
+        'liverpool': 'liverpool', 'manchester city': 'man city',
+        'manchester united': 'man utd', 'newcastle': 'newcastle',
+        'newcastle united': 'newcastle', 'nottingham forest': "nott'm forest",
+        'southampton': 'southampton', 'tottenham': 'spurs',
+        'tottenham hotspur': 'spurs', 'west ham': 'west ham',
+        'west ham united': 'west ham', 'wolverhampton': 'wolves',
+        'wolverhampton wanderers': 'wolves', 'wolves': 'wolves',
+      };
+
+      function getFplTeamId(apiTeamName) {
+        const name = (apiTeamName || '').toLowerCase().trim();
+        const mapped = TEAM_NAME_MAP[name] || name;
+        const fplTeam = fplTeams.find(t => t.name.toLowerCase() === mapped);
+        return fplTeam ? fplTeam.id : null;
+      }
+
+      // Build lookup: normalized name + team → position
+      // Index by multiple keys for robust matching
+      const playerIndex = []; // [{normalized names, teamId, position}]
       for (const p of bootstrap.elements) {
-        const lastName = (p.second_name || '').toLowerCase();
-        const webName = (p.web_name || '').toLowerCase();
-        if (lastName) positionByLastName[lastName] = p.element_type;
-        if (webName) positionByLastName[webName] = p.element_type;
+        const secondName = normalize(p.second_name || '');
+        const webName = normalize(p.web_name || '');
+        const firstName = normalize(p.first_name || '');
+        const fullName = normalize(`${p.first_name || ''} ${p.second_name || ''}`);
+        playerIndex.push({
+          secondName,
+          webName,
+          firstName,
+          fullName,
+          teamId: p.team,
+          position: p.element_type,
+        });
+      }
+
+      function findPlayerPosition(apiPlayerName, apiTeamName) {
+        // Check stored cache first
+        const cacheKey = normalize(apiPlayerName);
+        if (playerPositionCache.has(cacheKey)) {
+          return playerPositionCache.get(cacheKey);
+        }
+
+        const normalizedPlayer = normalize(apiPlayerName);
+        const playerLast = normalizedPlayer.split(' ').pop() || '';
+        const fplTeamId = getFplTeamId(apiTeamName);
+
+        // Try exact full name match with team
+        let match = playerIndex.find(p =>
+          p.fullName === normalizedPlayer && (!fplTeamId || p.teamId === fplTeamId)
+        );
+
+        // Try last name + team match
+        if (!match && fplTeamId) {
+          match = playerIndex.find(p =>
+            (p.secondName === playerLast || p.webName === playerLast) && p.teamId === fplTeamId
+          );
+        }
+
+        // Try web_name match with team (handles "Le Fee" style names)
+        if (!match && fplTeamId) {
+          match = playerIndex.find(p =>
+            normalizedPlayer.includes(p.webName) && p.webName.length >= 3 && p.teamId === fplTeamId
+          );
+        }
+
+        // Try last name without team (fallback)
+        if (!match) {
+          match = playerIndex.find(p =>
+            p.secondName === playerLast || p.webName === playerLast
+          );
+        }
+
+        const pos = match ? match.position : null;
+        // Store in cache for future lookups
+        playerPositionCache.set(cacheKey, pos);
+        return pos;
       }
 
       for (const event of feed) {
         if (event.type === 'Goal' && event.player) {
-          const playerLast = event.player.split(' ').pop()?.toLowerCase() || '';
-          const pos = positionByLastName[playerLast];
+          // Determine which team scored based on isHome + homeTeam/awayTeam
+          const scoringTeam = event.isHome ? event.homeTeam : event.awayTeam;
+          const pos = findPlayerPosition(event.player, scoringTeam);
+
           if (pos === 1 || pos === 2) {
             event.goalPoints = 6;
           } else if (pos === 3) {
