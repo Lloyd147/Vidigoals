@@ -339,10 +339,7 @@ export default function Matches() {
   }
 
   async function toggleExpand(match) {
-    const isFinished = ['FT', 'AET', 'PEN'].includes(match.status);
-    const isLive = ['1H', '2H', 'HT', 'ET', 'P', 'BT'].includes(match.status);
-    if (!isFinished && !isLive) return; // Only expand finished or live matches
-
+    // Allow expanding any match (finished, live, or upcoming)
     if (expanded === match.id) {
       setExpanded(null);
       return;
@@ -350,6 +347,9 @@ export default function Matches() {
 
     setExpanded(match.id);
     setActiveTab('details');
+
+    const isFinished = ['FT', 'AET', 'PEN'].includes(match.status);
+    const isLive = ['1H', '2H', 'HT', 'ET', 'P', 'BT'].includes(match.status);
 
     // Fetch details if not cached (or if live, always refresh)
     if (!details[match.id] || isLive) {
@@ -446,7 +446,7 @@ export default function Matches() {
                           <TeamName>{match.away.name}</TeamName>
                         </TeamSection>
 
-                        {(isFinished || isLive) && <ExpandIcon expanded={isExpanded}>▼</ExpandIcon>}
+                        <ExpandIcon expanded={isExpanded}>▼</ExpandIcon>
                       </FixtureRow>
 
                       {isExpanded && (
