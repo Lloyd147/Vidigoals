@@ -67,6 +67,7 @@ const ScoreLine = styled.div`
   font-size: 0.95rem; font-weight: 400; color: #ccc;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   margin-bottom: 3px;
+  span.scorer { font-weight: 700; color: #fff; }
 `;
 
 const EventDetailLine = styled.div`
@@ -185,7 +186,25 @@ function EventItem({ event }) {
       <IconBox>{cfg.icon}</IconBox>
       <MinuteBox>{formatMinute(event.minute, event.extraMinute)}</MinuteBox>
       <EventContent>
-        <ScoreLine>{event.score}</ScoreLine>
+        <ScoreLine>
+          {(event.type === 'Goal' || event.type === 'PenMiss' || event.type === 'PenSave') && event.isHome !== undefined ? (
+            (() => {
+              // Split score into parts: "Man Utd 1 - 0 Nott'm Forest"
+              const parts = event.score.split(' - ');
+              if (parts.length === 2) {
+                // Home part: "Man Utd 1", Away part: "0 Nott'm Forest"
+                const homePart = parts[0]; // e.g. "Man Utd 1"
+                const awayPart = parts[1]; // e.g. "0 Nott'm Forest"
+                if (event.isHome) {
+                  return <><span className="scorer">{homePart}</span> - {awayPart}</>;
+                } else {
+                  return <>{homePart} - <span className="scorer">{awayPart}</span></>;
+                }
+              }
+              return event.score;
+            })()
+          ) : event.score}
+        </ScoreLine>
 
         {event.type === 'Goal' && (
           <>

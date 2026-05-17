@@ -158,6 +158,23 @@ function formatDate(daysAgo = 0) {
   return new Date(Date.now() - daysAgo * 86400000).toISOString().split('T')[0];
 }
 
+// Shorten long team names for display
+function shortName(name) {
+  const map = {
+    'Manchester City': 'Man City',
+    'Manchester United': 'Man Utd',
+    'Nottingham Forest': "Nott'm Forest",
+    'Crystal Palace': 'C. Palace',
+    'Wolverhampton Wanderers': 'Wolves',
+    'Tottenham Hotspur': 'Spurs',
+    'West Ham United': 'West Ham',
+    'Newcastle United': 'Newcastle',
+    'Leicester City': 'Leicester',
+    'AFC Bournemouth': 'Bournemouth',
+  };
+  return map[name] || name;
+}
+
 // ── Build feed ────────────────────────────────────────────────────────────────
 async function buildFeed() {
   const today = formatDate(0);
@@ -264,7 +281,7 @@ async function buildFeed() {
         id: `${fix.id}-HT`,
         type: 'HT',
         minute: 45,
-        score: `${homeTeam?.name} ${fix.score.halftime.home} - ${fix.score.halftime.away} ${awayTeam?.name}`,
+        score: `${shortName(homeTeam?.name)} ${fix.score.halftime.home} - ${fix.score.halftime.away} ${shortName(awayTeam?.name)}`,
         homeLogo: homeTeam?.logo,
         awayLogo: awayTeam?.logo,
         homeTeam: homeTeam?.name,
@@ -281,7 +298,7 @@ async function buildFeed() {
         id: `${fix.id}-FT`,
         type: 'FT',
         minute: 90,
-        score: `${homeTeam?.name} ${homeGoals} - ${awayGoals} ${awayTeam?.name}`,
+        score: `${shortName(homeTeam?.name)} ${homeGoals} - ${awayGoals} ${shortName(awayTeam?.name)}`,
         homeLogo: homeTeam?.logo,
         awayLogo: awayTeam?.logo,
         homeTeam: homeTeam?.name,
@@ -294,6 +311,33 @@ async function buildFeed() {
 
     // Individual events (goals, cards, subs)
     if (events.length === 0) continue;
+
+    // Sort events by minute to calculate running score at each event
+    const sortedEvents = [...events].sort((a, b) =>
+      (a.time?.elapsed || 0) - (b.time?.elapsed || 0) ||
+      (a.time?.extra || 0) - (b.time?.extra || 0)
+    );
+
+    // Track running score
+    let runningHome = 0;
+    let runningAway = 0;
+    const eventScores = new Map(); // event index → { home, away } at time of event
+
+    for (const event of sortedEvents) {
+      const evType = event.type || '';
+      const detail = event.detail || '';
+      const isGoal = evType === 'Goal' && detail !== 'Missed Penalty';
+      const isHomeEvent = event.team?.id === homeTeam?.id;
+
+      if (isGoal) {
+        if (isHomeEvent) runningHome++;
+        else runningAway++;
+      }
+
+      // Store the score AT this event (after the goal is counted)
+      const key = `${event.time?.elapsed}-${event.player?.id || ''}-${evType}`;
+      eventScores.set(key, { home: runningHome, away: runningAway });
+    }
 
     for (const event of events) {
       const isHome = event.team?.id === homeTeam?.id;
@@ -314,15 +358,21 @@ async function buildFeed() {
 
       if (!type) continue;
 
+      // Get score at the time of this event
+      const key = `${event.time?.elapsed}-${event.player?.id || ''}-${evType}`;
+      const scoreAtEvent = eventScores.get(key) || { home: runningHome, away: runningAway };
+
       feed.push({
         id: `${fix.id}-${event.time?.elapsed}-${event.player?.id || Math.random()}`,
         type,
         fixtureId: String(fix.id),
         minute: event.time?.elapsed,
         extraMinute: event.time?.extra || null,
-        score: `${homeTeam?.name} ${homeGoals} - ${awayGoals} ${awayTeam?.name}`,
+        score: `${shortName(homeTeam?.name)} ${scoreAtEvent.home} - ${scoreAtEvent.away} ${shortName(awayTeam?.name)}`,
         homeTeam: homeTeam?.name,
         awayTeam: awayTeam?.name,
+        homeScore: scoreAtEvent.home,
+        awayScore: scoreAtEvent.away,
         homeLogo: homeTeam?.logo,
         awayLogo: awayTeam?.logo,
         teamLogo,
