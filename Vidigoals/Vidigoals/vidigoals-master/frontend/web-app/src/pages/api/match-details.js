@@ -153,19 +153,26 @@ export default async function handler(req, res) {
       saves.away = { player: 'Goalkeeper', count: matchStats.away['Goalkeeper Saves'] || 0 };
     }
 
-    // Format stats for display
+    // Format stats for display — use '—' only if stat is truly unavailable (null/undefined)
+    // For live matches, 0 is a valid value and should show as 0
+    const isLiveOrFinished = ['1H','2H','HT','ET','FT','AET','PEN'].includes(fixture.fixture?.status?.short);
+    function statVal(val) {
+      if (val === null || val === undefined) return isLiveOrFinished ? '0' : '—';
+      return val;
+    }
+
     const statsDisplay = [
-      { label: 'Possession', home: matchStats.home['Ball Possession'] || '—', away: matchStats.away['Ball Possession'] || '—' },
-      { label: 'Expected Goals (xG)', home: matchStats.home['expected_goals'] || matchStats.home['Expected Goals'] || '—', away: matchStats.away['expected_goals'] || matchStats.away['Expected Goals'] || '—' },
-      { label: 'Total Shots', home: matchStats.home['Total Shots'] || '—', away: matchStats.away['Total Shots'] || '—' },
-      { label: 'Shots on Target', home: matchStats.home['Shots on Goal'] || '—', away: matchStats.away['Shots on Goal'] || '—' },
-      { label: 'Shots off Target', home: matchStats.home['Shots off Goal'] || '—', away: matchStats.away['Shots off Goal'] || '—' },
-      { label: 'Corners', home: matchStats.home['Corner Kicks'] || '—', away: matchStats.away['Corner Kicks'] || '—' },
-      { label: 'Fouls', home: matchStats.home['Fouls'] || '—', away: matchStats.away['Fouls'] || '—' },
-      { label: 'Offsides', home: matchStats.home['Offsides'] || '—', away: matchStats.away['Offsides'] || '—' },
-      { label: 'Goalkeeper Saves', home: matchStats.home['Goalkeeper Saves'] || '—', away: matchStats.away['Goalkeeper Saves'] || '—' },
-      { label: 'Passes', home: matchStats.home['Total passes'] || '—', away: matchStats.away['Total passes'] || '—' },
-      { label: 'Pass Accuracy', home: matchStats.home['Passes %'] || '—', away: matchStats.away['Passes %'] || '—' },
+      { label: 'Possession', home: statVal(matchStats.home['Ball Possession']), away: statVal(matchStats.away['Ball Possession']) },
+      { label: 'Expected Goals (xG)', home: statVal(matchStats.home['expected_goals'] ?? matchStats.home['Expected Goals']), away: statVal(matchStats.away['expected_goals'] ?? matchStats.away['Expected Goals']) },
+      { label: 'Total Shots', home: statVal(matchStats.home['Total Shots']), away: statVal(matchStats.away['Total Shots']) },
+      { label: 'Shots on Target', home: statVal(matchStats.home['Shots on Goal']), away: statVal(matchStats.away['Shots on Goal']) },
+      { label: 'Shots off Target', home: statVal(matchStats.home['Shots off Goal']), away: statVal(matchStats.away['Shots off Goal']) },
+      { label: 'Corners', home: statVal(matchStats.home['Corner Kicks']), away: statVal(matchStats.away['Corner Kicks']) },
+      { label: 'Fouls', home: statVal(matchStats.home['Fouls']), away: statVal(matchStats.away['Fouls']) },
+      { label: 'Offsides', home: statVal(matchStats.home['Offsides']), away: statVal(matchStats.away['Offsides']) },
+      { label: 'Goalkeeper Saves', home: statVal(matchStats.home['Goalkeeper Saves']), away: statVal(matchStats.away['Goalkeeper Saves']) },
+      { label: 'Passes', home: statVal(matchStats.home['Total passes']), away: statVal(matchStats.away['Total passes']) },
+      { label: 'Pass Accuracy', home: statVal(matchStats.home['Passes %']), away: statVal(matchStats.away['Passes %']) },
     ];
 
     // ── Bonus Points from FPL ─────────────────────────────────────────────
