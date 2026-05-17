@@ -283,6 +283,8 @@ export default async function handler(req, res) {
     let bonus = { home: [], away: [] };
     let bps = { home: [], away: [] };
     let defensiveContribution = { home: [], away: [] };
+    const liveStatuses2 = ['1H', '2H', 'HT', 'ET', 'P', 'BT'];
+    const isCurrentlyLive = liveStatuses2.includes(fixture.fixture?.status?.short);
     try {
       const fplFixtures = await getCachedFplFixtures(isCurrentlyLive);
       if (fplFixtures) {
