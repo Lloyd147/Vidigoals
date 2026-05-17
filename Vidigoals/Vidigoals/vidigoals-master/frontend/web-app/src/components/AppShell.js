@@ -9,7 +9,7 @@
  *  - Points bar: GW Points | Overall Points (when logged in)
  *  - Slide-out menu with: Notifications toggle, Pages, Settings links
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 
 const TopBar = styled.div`
@@ -210,14 +210,80 @@ const MenuSmallLink = styled.a`
   &:hover { color: #f5a623; }
 `;
 
+const AccordionWrapper = styled.div`
+  border-bottom: 1px solid rgba(74, 26, 142, 0.3);
+`;
+
+const AccordionHeader = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #8892b0;
+  font-size: 0.85rem;
+  padding: 0.6rem 0;
+  cursor: pointer;
+  text-align: left;
+  &:hover { color: #f5a623; }
+`;
+
+const AccordionArrow = styled.span`
+  font-size: 0.7rem;
+  transition: transform 0.2s;
+  transform: ${({ open }) => open ? 'rotate(90deg)' : 'rotate(0deg)'};
+`;
+
+const AccordionContent = styled.div`
+  padding: 0 0 0.75rem;
+  font-size: 0.75rem;
+  color: #8892b0;
+  line-height: 1.7;
+`;
+
+function MenuAccordion({ title, children }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <AccordionWrapper>
+      <AccordionHeader onClick={() => setOpen(!open)}>
+        {title}
+        <AccordionArrow open={open}>▶</AccordionArrow>
+      </AccordionHeader>
+      {open && <AccordionContent>{children}</AccordionContent>}
+    </AccordionWrapper>
+  );
+}
+
 export default function AppShell({ user, page, isLive, onLogout, children }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [livePoints, setLivePoints] = useState({ gw: user?.gwPoints, overall: user?.overallPoints });
 
   const now     = new Date();
   const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
   const teamName = user?.name || user?.managerName || null;
+
+  // Fetch live GW points from FPL
+  useEffect(() => {
+    if (!user?.id) return;
+    fetch(`/api/fpl-entry?id=${user.id}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.summary_event_points !== undefined) {
+          setLivePoints({ gw: data.summary_event_points, overall: data.summary_overall_points });
+          // Update localStorage so it persists
+          try {
+            const stored = JSON.parse(localStorage.getItem('vidigoals_user') || '{}');
+            stored.gwPoints = data.summary_event_points;
+            stored.overallPoints = data.summary_overall_points;
+            localStorage.setItem('vidigoals_user', JSON.stringify(stored));
+          } catch {}
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <>
@@ -245,10 +311,32 @@ export default function AppShell({ user, page, isLive, onLogout, children }) {
 
         <MenuSection>
           <MenuSectionTitle>Settings</MenuSectionTitle>
-          <MenuSmallLink href="/about">About VidiGoals</MenuSmallLink>
-          <MenuSmallLink href="/faq">FAQ</MenuSmallLink>
-          <MenuSmallLink href="/contact">Contact Us</MenuSmallLink>
-          <MenuSmallLink href="/terms">Terms & Conditions</MenuSmallLink>
+          <MenuAccordion title="About VidiGoals">
+            VidiGoals is a live FPL companion app that brings you real-time Premier League goal alerts, 
+            FPL points tracking, bonus point system scores, and match statistics — all in one place. 
+            Built for FPL managers who want instant updates on how their players are performing during live matches.
+          </MenuAccordion>
+          <MenuAccordion title="FAQ">
+            <strong>How are assists determined?</strong><br />
+            We use FPL's official assist data which may differ from what broadcasters show. FPL awards assists based on their own criteria.<br /><br />
+            <strong>Why do points differ from the FPL app?</strong><br />
+            Points update in real-time during matches. Final points are confirmed after bonus points are awarded (usually within an hour of full-time).<br /><br />
+            <strong>How often does the feed update?</strong><br />
+            Every 30 seconds during live matches, every 5 minutes otherwise.<br /><br />
+            <strong>What is the Bonus Points System?</strong><br />
+            BPS is FPL's scoring system that awards 3, 2, and 1 bonus points to the top performers in each match based on actions like goals, assists, tackles, and more.
+          </MenuAccordion>
+          <MenuAccordion title="Contact Us">
+            Coming soon.
+          </MenuAccordion>
+          <MenuAccordion title="Terms & Conditions">
+            By using VidiGoals, you agree to the following terms. VidiGoals provides live football scores and FPL data sourced from third-party APIs. 
+            While we strive for accuracy, data may not always be 100% up-to-date. VidiGoals is not responsible for discrepancies between displayed data and official results.<br /><br />
+            Match data is provided by API-Football. FPL data is sourced from the official Fantasy Premier League API. 
+            Team logos are property of their respective clubs and used for informational purposes only.<br /><br />
+            VidiGoals is an independent project and is not affiliated with, endorsed by, or connected to the Premier League or FPL. 
+            The service is provided "as is" without warranty. We reserve the right to update these terms at any time.
+          </MenuAccordion>
         </MenuSection>
       </MenuPanel>
 
@@ -280,8 +368,8 @@ export default function AppShell({ user, page, isLive, onLogout, children }) {
       {/* ── Points bar (logged in only) ── */}
       {user && (
         <PointsBar>
-          <div>GW Points <span>{user.gwPoints ?? '—'}</span></div>
-          <div>Overall Points <span>{user.overallPoints ?? '—'}</span></div>
+          <div>GW Points <span>{livePoints.gw ?? user.gwPoints ?? '—'}</span></div>
+          <div>Overall Points <span>{livePoints.overall ?? user.overallPoints ?? '—'}</span></div>
         </PointsBar>
       )}
 
