@@ -82,15 +82,10 @@ export default async function handler(req, res) {
     // Get fixtures for the REQUESTED GW (not the fallback GW)
     let gwFixtures = [];
     try {
-      const fixturesData = await fplFetch(`https://fantasy.premierleague.com/api/fixtures/?event=${currentGW}`);
-      if (fixturesData && Array.isArray(fixturesData) && fixturesData.length > 0) {
-        gwFixtures = fixturesData;
-      } else {
-        // Fallback: get all fixtures and filter by event
-        const allFixtures = await fplFetch('https://fantasy.premierleague.com/api/fixtures/');
-        if (allFixtures && Array.isArray(allFixtures)) {
-          gwFixtures = allFixtures.filter(f => f.event === Number(currentGW));
-        }
+      // Always fetch all fixtures and filter — most reliable method
+      const allFixtures = await fplFetch('https://fantasy.premierleague.com/api/fixtures/');
+      if (allFixtures && Array.isArray(allFixtures)) {
+        gwFixtures = allFixtures.filter(f => f.event == currentGW);
       }
     } catch {}
 
