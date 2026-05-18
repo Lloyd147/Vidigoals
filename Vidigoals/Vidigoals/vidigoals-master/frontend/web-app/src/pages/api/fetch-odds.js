@@ -13,7 +13,7 @@
  * Region: uk (falls back to us if uk unavailable)
  */
 
-const ODDS_API_KEY = process.env.ODDS_API_KEY;
+const ODDS_API_KEY = process.env.THE_ODDS_API_KEY;
 const ODDS_API_BASE = 'https://api.the-odds-api.com/v4';
 const SPORT = 'soccer_epl';
 
