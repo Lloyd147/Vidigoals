@@ -363,6 +363,37 @@ export default function MyTeam() {
   const [oddsMarketOpen, setOddsMarket] = useState(false);
   const oddsMarketLabel = { score: 'Player to Score', shots: 'Player Shots', shotsTarget: 'Shots on Target', cards: 'Player Cards', assists: 'Player to Assist' }[selectedMarket] || 'Player to Score';
 
+  // Bookie logo mapping
+  function getBookieLogo(bookie) {
+    const name = (bookie || '').toLowerCase();
+    const logos = {
+      'bet365': 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Bet365_logo.svg/200px-Bet365_logo.svg.png',
+      'betfair': 'https://upload.wikimedia.org/wikipedia/en/thumb/0/0e/Betfair_logo.svg/200px-Betfair_logo.svg.png',
+      'betfair sportsbook': 'https://upload.wikimedia.org/wikipedia/en/thumb/0/0e/Betfair_logo.svg/200px-Betfair_logo.svg.png',
+      'unibet': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Unibet_logo.svg/200px-Unibet_logo.svg.png',
+      'paddypower': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Paddy_Power_logo.svg/200px-Paddy_Power_logo.svg.png',
+      'paddy power': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Paddy_Power_logo.svg/200px-Paddy_Power_logo.svg.png',
+      'williamhill': 'https://upload.wikimedia.org/wikipedia/en/thumb/4/49/William_Hill_logo.svg/200px-William_Hill_logo.svg.png',
+      'william hill': 'https://upload.wikimedia.org/wikipedia/en/thumb/4/49/William_Hill_logo.svg/200px-William_Hill_logo.svg.png',
+      'skybet': 'https://upload.wikimedia.org/wikipedia/en/thumb/4/4c/Sky_Bet_logo.svg/200px-Sky_Bet_logo.svg.png',
+      'sky bet': 'https://upload.wikimedia.org/wikipedia/en/thumb/4/4c/Sky_Bet_logo.svg/200px-Sky_Bet_logo.svg.png',
+      'ladbrokes': 'https://upload.wikimedia.org/wikipedia/en/thumb/1/1e/Ladbrokes_logo.svg/200px-Ladbrokes_logo.svg.png',
+      'coral': 'https://upload.wikimedia.org/wikipedia/en/thumb/0/0e/Coral_%28bookmaker%29_logo.svg/200px-Coral_%28bookmaker%29_logo.svg.png',
+      'betway': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Betway_logo.svg/200px-Betway_logo.svg.png',
+      '888sport': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/888sport_logo.svg/200px-888sport_logo.svg.png',
+      'fanduel': 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/FanDuel_logo.svg/200px-FanDuel_logo.svg.png',
+      'draftkings': 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/DraftKings_logo.svg/200px-DraftKings_logo.svg.png',
+      'betmgm': 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/BetMGM_logo.svg/200px-BetMGM_logo.svg.png',
+      'livescorebet': 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/LiveScore_Bet_logo.svg/200px-LiveScore_Bet_logo.svg.png',
+    };
+    // Try exact match first, then partial
+    if (logos[name]) return logos[name];
+    for (const [key, url] of Object.entries(logos)) {
+      if (name.includes(key) || key.includes(name)) return url;
+    }
+    return '';
+  }
+
   // Fetch odds when tab switches to odds
   useEffect(() => {
     if (activeTab === 'odds' && !odds) {
@@ -607,12 +638,20 @@ export default function MyTeam() {
                         <span style={{ width: '55px', textAlign: 'center', color: '#8892b0', fontSize: '0.65rem' }}>{player.fixture || '—'}</span>
                         <span style={{ flex: 1, textAlign: 'center', fontSize: '0.68rem' }}>
                           {playerOdds?.firstGoal ? (
-                            <span style={{ color: '#f5a623', fontWeight: 700 }}>{playerOdds.firstGoal.odds}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
+                              <span style={{ color: '#f5a623', fontWeight: 700 }}>{playerOdds.firstGoal.odds}</span>
+                              <img src={getBookieLogo(playerOdds.firstGoal.bookie)} alt={playerOdds.firstGoal.bookie} style={{ height: '16px', borderRadius: '2px' }} onError={e => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'inline'); }} />
+                              <span style={{ display: 'none', background: '#f5a623', color: '#1a0a2e', fontSize: '0.5rem', fontWeight: 700, padding: '1px 3px', borderRadius: '2px' }}>{playerOdds.firstGoal.bookie}</span>
+                            </span>
                           ) : <span style={{ color: '#8892b0' }}>—</span>}
                         </span>
                         <span style={{ flex: 1, textAlign: 'center', fontSize: '0.68rem' }}>
                           {playerOdds?.anytime ? (
-                            <span style={{ color: '#f5a623', fontWeight: 700 }}>{playerOdds.anytime.odds}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
+                              <span style={{ color: '#f5a623', fontWeight: 700 }}>{playerOdds.anytime.odds}</span>
+                              <img src={getBookieLogo(playerOdds.anytime.bookie)} alt={playerOdds.anytime.bookie} style={{ height: '16px', borderRadius: '2px' }} onError={e => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'inline'); }} />
+                              <span style={{ display: 'none', background: '#f5a623', color: '#1a0a2e', fontSize: '0.5rem', fontWeight: 700, padding: '1px 3px', borderRadius: '2px' }}>{playerOdds.anytime.bookie}</span>
+                            </span>
                           ) : <span style={{ color: '#8892b0' }}>—</span>}
                         </span>
                       </div>
