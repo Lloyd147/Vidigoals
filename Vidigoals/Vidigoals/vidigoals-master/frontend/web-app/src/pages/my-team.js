@@ -48,9 +48,9 @@ function getShirtColours(teamId, isGkp) {
 }
 
 // ── Shirt SVG component ───────────────────────────────────────────────────────
-function ShirtSVG({ teamId, isGkp, isCaptain, isVice, size = 52 }) {
+function ShirtSVG({ teamId, isGkp, isCaptain, isVice, size = 52, playerId }) {
   const { primary, secondary, pattern } = getShirtColours(teamId, isGkp);
-  const id = `stripes-${teamId}`;
+  const id = `stripes-${teamId}-${playerId || '0'}`;
 
   return (
     <svg width={size} height={size * 1.1} viewBox="0 0 52 58" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -307,6 +307,7 @@ function PlayerTile({ player }) {
         isCaptain={player.is_captain}
         isVice={player.is_vice_captain}
         size={48}
+        playerId={player.element}
       />
       <PlayerNameLabel>{player.web_name}</PlayerNameLabel>
       <PointsBadge>{pts}</PointsBadge>
@@ -594,7 +595,7 @@ export default function MyTeam() {
                       <div key={player.element} style={{ display: 'flex', alignItems: 'center', padding: '0.65rem 0.5rem', borderBottom: '1px solid #2d1a4e' }}>
                         <span style={{ width: '28px', textAlign: 'center', color: posColors[player.element_type] || '#ccc', fontWeight: 700, fontSize: '0.72rem' }}>{posLabels[player.element_type]}</span>
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <ShirtSVG teamId={player.team_id} isGkp={player.element_type === 1} size={32} />
+                          <ShirtSVG teamId={player.team_id} isGkp={player.element_type === 1} size={32} playerId={player.element} />
                           <div>
                             <div style={{ fontWeight: 700, color: '#eaeaea', fontSize: '0.82rem' }}>{player.web_name}</div>
                             <div style={{ color: '#8892b0', fontSize: '0.6rem' }}>{player.team_name}</div>
