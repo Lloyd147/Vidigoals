@@ -367,31 +367,34 @@ export default function MyTeam() {
   function getBookieLogo(bookie) {
     const name = (bookie || '').toLowerCase().replace(/\s+/g, '');
     const logoMap = {
-      'bet365': '/logos/bet365.png',
-      '1xbet': '/logos/1xbet.png',
-      'betfair': '/logos/betfair.png',
-      'betfairsportsbook': '/logos/betfair.png',
-      'unibet': '/logos/unibet.png',
-      'unibetuk': '/logos/unibet.png',
-      'paddypower': '/logos/paddypower.png',
-      'williamhill': '/logos/williamhill.png',
-      'skybet': '/logos/skybet.png',
-      'ladbrokes': '/logos/ladbrokes.png',
-      'coral': '/logos/coral.png',
-      'betway': '/logos/betway.png',
-      '888sport': '/logos/888sport.png',
-      'fanduel': '/logos/fanduel.png',
-      'draftkings': '/logos/draftkings.png',
-      'betmgm': '/logos/betmgm.png',
-      'livescorebet': '/logos/livescorebet.png',
-      'boylesports': '/logos/boylesports.png',
-      'betvictor': '/logos/betvictor.png',
+      'bet365': '/logos/bet365',
+      '1xbet': '/logos/1xbet',
+      'betfair': '/logos/betfair',
+      'betfairsportsbook': '/logos/betfair',
+      'unibet': '/logos/unibet',
+      'unibetuk': '/logos/unibet',
+      'paddypower': '/logos/paddypower',
+      'williamhill': '/logos/williamhill',
+      'skybet': '/logos/skybet',
+      'ladbrokes': '/logos/ladbrokes',
+      'coral': '/logos/coral',
+      'betway': '/logos/betway',
+      '888sport': '/logos/888sport',
+      'fanduel': '/logos/fanduel',
+      'draftkings': '/logos/draftkings',
+      'betmgm': '/logos/betmgm',
+      'livescorebet': '/logos/livescorebet',
+      'boylesports': '/logos/boylesports',
+      'betvictor': '/logos/betvictor',
     };
-    if (logoMap[name]) return logoMap[name];
-    for (const [key, url] of Object.entries(logoMap)) {
-      if (name.includes(key) || key.includes(name)) return url;
+    let base = logoMap[name];
+    if (!base) {
+      for (const [key, url] of Object.entries(logoMap)) {
+        if (name.includes(key) || key.includes(name)) { base = url; break; }
+      }
     }
-    return '';
+    // Try .png first, browser will fallback via onerror
+    return base ? `${base}.png` : '';
   }
 
   // Fetch odds when tab switches to odds
