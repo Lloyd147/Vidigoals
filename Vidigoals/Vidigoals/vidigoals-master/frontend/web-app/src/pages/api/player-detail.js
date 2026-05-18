@@ -70,7 +70,8 @@ export default async function handler(req, res) {
     for (const ex of explain) {
       if (ex.fixture === playerFixture?.id) {
         for (const stat of (ex.stats || [])) {
-          if (stat.points !== 0) {
+          // Show all stats that have a value or points
+          if (stat.points !== 0 || stat.value !== 0) {
             breakdown.push({
               identifier: stat.identifier,
               value: stat.value,
@@ -95,7 +96,17 @@ export default async function handler(req, res) {
       'red_cards': 'Red cards',
       'saves': 'Saves',
       'bonus': 'Bonus',
-      'bps': 'BPS',
+      'bps': 'Bonus Points System',
+      'influence': 'Influence',
+      'creativity': 'Creativity',
+      'threat': 'Threat',
+      'ict_index': 'ICT Index',
+      'expected_goals': 'Expected Goals (xG)',
+      'expected_assists': 'Expected Assists (xA)',
+      'expected_goal_involvements': 'Expected Goal Involvements',
+      'expected_goals_conceded': 'Expected Goals Conceded',
+      'starts': 'Started',
+      'defensive_contribution': 'Defensive Contribution',
     };
 
     const totalPoints = stats.total_points || 0;
