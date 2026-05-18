@@ -15,29 +15,31 @@ const GlobalStyle = createGlobalStyle`
 
 // ── Team shirt colour map (by FPL team_id) ────────────────────────────────────
 // Colours only — no logos. Pattern: solid | stripes | hoops | halves
+// IDs from FPL: 1=Arsenal, 2=Villa, 3=Burnley, 4=Bournemouth, 5=Brentford, 6=Brighton,
+// 7=Chelsea, 8=Crystal Palace, 9=Everton, 10=Fulham, 11=Leeds, 12=Liverpool,
+// 13=Man City, 14=Man Utd, 15=Newcastle, 16=Nott'm Forest, 17=Sunderland,
+// 18=Spurs, 19=West Ham, 20=Wolves
 const TEAM_COLOURS = {
   1:  { primary: '#EF0107', secondary: '#ffffff', pattern: 'solid' },     // Arsenal - red with white sleeves
   2:  { primary: '#670E36', secondary: '#95BFE5', pattern: 'solid' },     // Aston Villa - brown with light blue sleeves
-  3:  { primary: '#8B0000', secondary: '#000000', pattern: 'stripes' },   // Bournemouth - dark red and black stripes
-  4:  { primary: '#E30613', secondary: '#ffffff', pattern: 'stripes' },   // Brentford - red and white stripes
-  5:  { primary: '#0057B8', secondary: '#ffffff', pattern: 'stripes' },   // Brighton - dark blue and white stripes
-  6:  { primary: '#034694', secondary: '#034694', pattern: 'solid' },     // Chelsea - dark blue
-  7:  { primary: '#1B458F', secondary: '#C4122E', pattern: 'stripes' },   // Crystal Palace - dark blue and red stripes
-  8:  { primary: '#003399', secondary: '#003399', pattern: 'solid' },     // Everton - blue
-  9:  { primary: '#ffffff', secondary: '#000000', pattern: 'solid' },     // Fulham - white with black sleeves
-  10: { primary: '#0057B8', secondary: '#0057B8', pattern: 'solid' },     // Ipswich - blue
+  3:  { primary: '#670E36', secondary: '#95BFE5', pattern: 'solid' },     // Burnley - brown with light blue sleeves
+  4:  { primary: '#8B0000', secondary: '#000000', pattern: 'stripes' },   // Bournemouth - dark red and black stripes
+  5:  { primary: '#E30613', secondary: '#ffffff', pattern: 'stripes' },   // Brentford - red and white stripes
+  6:  { primary: '#0057B8', secondary: '#ffffff', pattern: 'stripes' },   // Brighton - dark blue and white stripes
+  7:  { primary: '#034694', secondary: '#034694', pattern: 'solid' },     // Chelsea - dark blue
+  8:  { primary: '#1B458F', secondary: '#C4122E', pattern: 'stripes' },   // Crystal Palace - dark blue and red stripes
+  9:  { primary: '#003399', secondary: '#003399', pattern: 'solid' },     // Everton - blue
+  10: { primary: '#ffffff', secondary: '#000000', pattern: 'solid' },     // Fulham - white with black sleeves
   11: { primary: '#ffffff', secondary: '#ffffff', pattern: 'solid' },     // Leeds - white
   12: { primary: '#C8102E', secondary: '#C8102E', pattern: 'solid' },     // Liverpool - dark red
   13: { primary: '#6CABDD', secondary: '#6CABDD', pattern: 'solid' },     // Man City - light blue
   14: { primary: '#DA291C', secondary: '#DA291C', pattern: 'solid' },     // Man Utd - red
   15: { primary: '#241F20', secondary: '#ffffff', pattern: 'stripes' },   // Newcastle - black and white stripes
-  16: { primary: '#E53233', secondary: '#ffffff', pattern: 'stripes' },   // Nottm Forest - red and white stripes
-  17: { primary: '#D71920', secondary: '#ffffff', pattern: 'stripes' },   // Southampton - red and white stripes (using for Sunderland too)
+  16: { primary: '#E53233', secondary: '#ffffff', pattern: 'stripes' },   // Nott'm Forest - red and white stripes
+  17: { primary: '#8B0000', secondary: '#ffffff', pattern: 'stripes' },   // Sunderland - dark red and white stripes
   18: { primary: '#ffffff', secondary: '#132257', pattern: 'solid' },     // Spurs - white with dark blue sleeves
   19: { primary: '#7A263A', secondary: '#1BB1E7', pattern: 'solid' },     // West Ham - dark brown with light blue sleeves
   20: { primary: '#FDB913', secondary: '#FDB913', pattern: 'solid' },     // Wolves - orange
-  21: { primary: '#8B0000', secondary: '#ffffff', pattern: 'stripes' },   // Sunderland - dark red and white stripes
-  22: { primary: '#670E36', secondary: '#95BFE5', pattern: 'solid' },     // Burnley - brown with light blue sleeves
 };
 
 const GKP_COLOURS = null; // GKs now use same colours as outfield
