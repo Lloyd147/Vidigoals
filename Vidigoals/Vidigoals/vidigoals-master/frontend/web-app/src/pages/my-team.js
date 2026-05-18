@@ -564,27 +564,33 @@ export default function MyTeam() {
 
               {activeTab === 'odds' && (
                 <div style={{ padding: '0.5rem 0', paddingBottom: '70px' }}>
-                  {/* GW Navigation + Market dropdown */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.6rem', gap: '1rem', background: '#2d0a5e', borderBottom: '1px solid #4a1a8e' }}>
+                  {/* GW Navigation - centered */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.6rem', gap: '1.5rem', background: '#2d0a5e', borderBottom: '1px solid #4a1a8e' }}>
                     <button onClick={() => gw > 1 && setGw(g => g - 1)} disabled={gw <= 1} style={{ background: 'transparent', border: 'none', color: gw > 1 ? '#f5a623' : '#4a1a8e', fontSize: '1.5rem', cursor: gw > 1 ? 'pointer' : 'not-allowed' }}>‹</button>
                     <span style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>Gameweek {gw}</span>
                     <button onClick={() => gw < 38 && setGw(g => g + 1)} disabled={gw >= 38} style={{ background: 'transparent', border: 'none', color: gw < 38 ? '#f5a623' : '#4a1a8e', fontSize: '1.5rem', cursor: gw < 38 ? 'pointer' : 'not-allowed' }}>›</button>
+                  </div>
 
-                    {/* Market dropdown */}
-                    <div style={{ position: 'relative' }}>
-                      <button onClick={() => setOddsMarket(m => !m)} style={{ background: '#4a1a8e', border: 'none', color: '#fff', fontSize: '0.72rem', fontWeight: 700, padding: '0.4rem 0.7rem', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {/* Header banner with market switcher */}
+                  <div style={{ display: 'flex', alignItems: 'center', padding: '0.6rem 0.5rem', background: '#f5a623', color: '#1a0a2e', fontWeight: 700, fontSize: '0.7rem' }}>
+                    <span style={{ width: '28px', textAlign: 'center' }}>Pos</span>
+                    <span style={{ flex: 1 }}>Player</span>
+                    <span style={{ width: '65px', textAlign: 'center' }}>GW{gw}</span>
+                    {/* Market switcher in header */}
+                    <div style={{ width: '160px', position: 'relative' }}>
+                      <button onClick={() => setOddsMarket(m => !m)} style={{ background: 'transparent', border: 'none', color: '#1a0a2e', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', width: '100%' }}>
                         {oddsMarketLabel} {oddsMarketOpen ? '▲' : '▼'}
                       </button>
                       {oddsMarketOpen && (
                         <div style={{ position: 'absolute', top: '100%', right: 0, background: '#2d0a5e', border: '1px solid #4a1a8e', borderRadius: '4px', zIndex: 50, minWidth: '200px', marginTop: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
                           {[
                             { key: 'anytime', label: 'To Score Anytime' },
-                            { key: 'firstGoal', label: 'To Score First Goal' },
-                            { key: 'twoPlus', label: 'To Score 2 or More' },
-                            { key: 'hatTrick', label: 'To Score Hat-trick' },
-                            { key: 'assists', label: 'To Get an Assist' },
-                            { key: 'yellowCard', label: 'To Get Yellow Card' },
-                            { key: 'redCard', label: 'To Get Red Card' },
+                            { key: 'firstGoal', label: 'First Goalscorer' },
+                            { key: 'twoPlus', label: '2 or More Goals' },
+                            { key: 'hatTrick', label: 'Hat-trick' },
+                            { key: 'assists', label: 'To Get Assist' },
+                            { key: 'yellowCard', label: 'Yellow Card' },
+                            { key: 'redCard', label: 'Red Card' },
                           ].map(m => (
                             <button key={m.key} onClick={() => { setSelectedMarket(m.key); setOddsMarket(false); }} style={{ display: 'block', width: '100%', background: selectedMarket === m.key ? 'rgba(245,166,35,0.15)' : 'transparent', border: 'none', color: selectedMarket === m.key ? '#f5a623' : '#ccc', fontSize: '0.78rem', padding: '0.6rem 0.8rem', textAlign: 'left', cursor: 'pointer', borderBottom: '1px solid #4a1a8e' }}>
                               {m.label}
@@ -593,14 +599,6 @@ export default function MyTeam() {
                         </div>
                       )}
                     </div>
-                  </div>
-
-                  {/* Header banner */}
-                  <div style={{ display: 'flex', alignItems: 'center', padding: '0.6rem 0.5rem', background: '#f5a623', color: '#1a0a2e', fontWeight: 700, fontSize: '0.7rem' }}>
-                    <span style={{ width: '28px', textAlign: 'center' }}>Pos</span>
-                    <span style={{ flex: 1 }}>Player</span>
-                    <span style={{ width: '65px', textAlign: 'center' }}>GW{gw}</span>
-                    <span style={{ width: '160px', textAlign: 'center' }}>{oddsMarketLabel}</span>
                   </div>
 
                   {/* Player rows */}
