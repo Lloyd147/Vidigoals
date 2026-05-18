@@ -735,25 +735,25 @@ export default function MyTeam() {
                     return (
                       <div key={player.element} style={{ display: 'flex', alignItems: 'center', padding: '0.65rem 0.5rem', borderBottom: '1px solid #2d1a4e' }}>
                         <span style={{ width: '28px', textAlign: 'center', color: posColors[player.element_type] || '#ccc', fontWeight: 700, fontSize: '0.72rem' }}>{posLabels[player.element_type]}</span>
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: '120px', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                           <ShirtSVG teamId={player.team_id} isGkp={player.element_type === 1} size={32} playerId={player.element} />
                           <div>
                             <div style={{ fontWeight: 700, color: '#eaeaea', fontSize: '0.82rem' }}>{player.web_name}</div>
                             <div style={{ color: '#8892b0', fontSize: '0.6rem' }}>{player.team_name}</div>
                           </div>
                         </div>
-                        <span style={{ width: '65px', textAlign: 'center', color: '#8892b0', fontSize: '0.68rem', flexShrink: 0 }}>{player.fixture || '—'}</span>
-                        <div style={{ width: '160px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', flexShrink: 0 }}>
+                        <span style={{ width: '60px', textAlign: 'center', color: '#8892b0', fontSize: '0.68rem', flexShrink: 0 }}>{player.fixture || '—'}</span>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
                           {marketOdds ? (
                             <>
-                              <span style={{ color: '#f5a623', fontWeight: 700, fontSize: '0.95rem', minWidth: '45px', textAlign: 'right' }}>{marketOdds.odds}</span>
-                              <div style={{ width: '80px', height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <span style={{ color: '#f5a623', fontWeight: 700, fontSize: '0.95rem' }}>{marketOdds.odds}</span>
+                              <div style={{ width: '80px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                 <img src={getBookieLogo(marketOdds.bookie)} alt={marketOdds.bookie} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', borderRadius: '3px' }} onError={e => { e.target.style.display = 'none'; e.target.parentElement.nextSibling && (e.target.parentElement.nextSibling.style.display = 'inline'); }} />
                               </div>
                               <span style={{ display: 'none', background: '#f5a623', color: '#1a0a2e', fontSize: '0.6rem', fontWeight: 700, padding: '2px 5px', borderRadius: '3px' }}>{marketOdds.bookie}</span>
                             </>
                           ) : (
-                            <span style={{ color: '#8892b0', minWidth: '45px', textAlign: 'right' }}>—</span>
+                            <span style={{ color: '#8892b0' }}>—</span>
                           )}
                         </div>
                       </div>
