@@ -33,8 +33,21 @@ export default async function handler(req, res) {
     const bootstrap = await fplFetch('https://fantasy.premierleague.com/api/bootstrap-static/');
     const currentGW = gw || bootstrap.events?.find(e => e.is_current)?.id || bootstrap.events?.find(e => e.is_next)?.id || 38;
 
-    // Get manager's picks for this GW
-    const picksData = await fplFetch(`https://fantasy.premierleague.com/api/entry/${id}/event/${currentGW}/picks/`);
+    // Get manager's picks for this GW (fall back to previous GW if 404)
+    let picksData = null;
+    let actualGW = currentGW;
+    try {
+      picksData = await fplFetch(`https://fantasy.premierleague.com/api/entry/${id}/event/${currentGW}/picks/`);
+    } catch {
+      // GW not available yet (404) — fall back to previous GW's picks
+      if (Number(currentGW) > 1) {
+        actualGW = Number(currentGW) - 1;
+        picksData = await fplFetch(`https://fantasy.premierleague.com/api/entry/${id}/event/${actualGW}/picks/`);
+      }
+    }
+    if (!picksData) {
+      return res.status(404).json({ error: 'Could not load picks' });
+    }
 
     // Build player lookup map
     const playerMap = {};
@@ -66,10 +79,9 @@ export default async function handler(req, res) {
     } catch {}
 
     // Enrich picks with player data
-    // Get fixtures for this GW to show opponent
+    // Get fixtures for the REQUESTED GW (not the fallback GW)
     let gwFixtures = [];
     try {
-      // Try event-specific first
       const fixturesData = await fplFetch(`https://fantasy.premierleague.com/api/fixtures/?event=${currentGW}`);
       if (fixturesData && Array.isArray(fixturesData) && fixturesData.length > 0) {
         gwFixtures = fixturesData;
