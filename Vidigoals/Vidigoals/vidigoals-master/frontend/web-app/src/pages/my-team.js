@@ -602,7 +602,7 @@ export default function MyTeam() {
                   </div>
 
                   {/* Player rows */}
-                  {picks?.starting?.map(player => {
+                  {[...(picks?.starting || []), ...(picks?.bench || [])].map(player => {
                     const posLabels = { 1: 'GK', 2: 'D', 3: 'M', 4: 'F' };
                     const posColors = { 1: '#f5a623', 2: '#48bb78', 3: '#63b3ed', 4: '#fc8181' };
 
@@ -641,15 +641,17 @@ export default function MyTeam() {
                           </div>
                         </div>
                         <span style={{ width: '65px', textAlign: 'center', color: '#8892b0', fontSize: '0.68rem' }}>{player.fixture || '—'}</span>
-                        <div style={{ width: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        <div style={{ width: '160px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
                           {marketOdds ? (
                             <>
-                              <span style={{ color: '#f5a623', fontWeight: 700, fontSize: '0.95rem' }}>{marketOdds.odds}</span>
-                              <img src={getBookieLogo(marketOdds.bookie)} alt={marketOdds.bookie} style={{ height: '56px', maxWidth: '120px', objectFit: 'contain', borderRadius: '4px' }} onError={e => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'inline'); }} />
+                              <span style={{ color: '#f5a623', fontWeight: 700, fontSize: '0.95rem', minWidth: '45px', textAlign: 'right' }}>{marketOdds.odds}</span>
+                              <div style={{ width: '80px', height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <img src={getBookieLogo(marketOdds.bookie)} alt={marketOdds.bookie} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', borderRadius: '3px' }} onError={e => { e.target.style.display = 'none'; e.target.parentElement.nextSibling && (e.target.parentElement.nextSibling.style.display = 'inline'); }} />
+                              </div>
                               <span style={{ display: 'none', background: '#f5a623', color: '#1a0a2e', fontSize: '0.6rem', fontWeight: 700, padding: '2px 5px', borderRadius: '3px' }}>{marketOdds.bookie}</span>
                             </>
                           ) : (
-                            <span style={{ color: '#8892b0' }}>—</span>
+                            <span style={{ color: '#8892b0', minWidth: '45px', textAlign: 'right' }}>—</span>
                           )}
                         </div>
                       </div>
