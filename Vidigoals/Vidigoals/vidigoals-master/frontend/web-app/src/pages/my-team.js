@@ -481,9 +481,7 @@ export default function MyTeam() {
   // Fetch odds when tab switches to odds
   useEffect(() => {
     if (activeTab === 'odds' && !odds) {
-      // First trigger a fetch (will use cache if fresh), then get the data
-      fetch('/api/fetch-odds')
-        .then(() => fetch('/api/fetch-odds?action=status'))
+      fetch('/api/livescore-odds')
         .then(r => r.ok ? r.json() : null)
         .then(data => { if (data?.odds) setOdds(data.odds); })
         .catch(() => {});
