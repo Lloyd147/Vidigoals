@@ -426,7 +426,7 @@ function PlayerTile({ player }) {
         <PlayerNameLabel>{player.web_name}</PlayerNameLabel>
         {player.fixtureLive ? (
           <PlayerFixtureLabel style={{ color: '#48bb78', fontWeight: 700 }}>
-            LIVE {player.fixtureMinutes ? `${player.fixtureMinutes}'` : ''}
+            LIVE
           </PlayerFixtureLabel>
         ) : player.fixture ? (
           <PlayerFixtureLabel>{player.fixture}</PlayerFixtureLabel>
