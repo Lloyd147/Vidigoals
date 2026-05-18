@@ -647,7 +647,7 @@ export default function MyTeam() {
                           {marketOdds ? (
                             <>
                               <span style={{ color: '#f5a623', fontWeight: 700, fontSize: '0.95rem' }}>{marketOdds.odds}</span>
-                              <img src={getBookieLogo(marketOdds.bookie)} alt={marketOdds.bookie} style={{ height: '28px', maxWidth: '90px', objectFit: 'contain', borderRadius: '3px' }} onError={e => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'inline'); }} />
+                              <img src={getBookieLogo(marketOdds.bookie)} alt={marketOdds.bookie} style={{ height: '56px', maxWidth: '120px', objectFit: 'contain', borderRadius: '4px' }} onError={e => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'inline'); }} />
                               <span style={{ display: 'none', background: '#f5a623', color: '#1a0a2e', fontSize: '0.6rem', fontWeight: 700, padding: '2px 5px', borderRadius: '3px' }}>{marketOdds.bookie}</span>
                             </>
                           ) : (
