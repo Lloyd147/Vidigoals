@@ -731,8 +731,18 @@ export default function MyTeam() {
                       if (match && player.fixture) {
                         const oddsFixture = (match.fixture || '').toLowerCase();
                         const playerTeam = (player.team_name || '').toLowerCase();
+                        const playerShort = (player.team_short || '').toLowerCase();
                         // Check if the odds fixture involves this player's team
-                        if (oddsFixture.includes(playerTeam) || oddsFixture.includes(playerTeam.split(' ')[0])) {
+                        // Handle name variations: Spurs/Tottenham, Wolves/Wolverhampton, etc.
+                        const teamVariants = [playerTeam, playerShort];
+                        if (playerTeam === 'spurs') teamVariants.push('tottenham');
+                        if (playerTeam === 'wolves') teamVariants.push('wolverhampton');
+                        if (playerTeam.includes('man city')) teamVariants.push('manchester city');
+                        if (playerTeam.includes('man utd')) teamVariants.push('manchester united');
+                        if (playerTeam.includes("nott'm forest")) teamVariants.push('nottingham forest');
+                        
+                        const fixtureMatches = teamVariants.some(v => oddsFixture.includes(v));
+                        if (fixtureMatches) {
                           playerOdds = match;
                         }
                       }
