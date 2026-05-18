@@ -66,11 +66,20 @@ export default async function handler(req, res) {
     } catch {}
 
     // Enrich picks with player data
-    // Also get fixtures for this GW to show opponent
+    // Get fixtures for this GW to show opponent
     let gwFixtures = [];
     try {
+      // Try event-specific first
       const fixturesData = await fplFetch(`https://fantasy.premierleague.com/api/fixtures/?event=${currentGW}`);
-      if (fixturesData) gwFixtures = fixturesData;
+      if (fixturesData && Array.isArray(fixturesData) && fixturesData.length > 0) {
+        gwFixtures = fixturesData;
+      } else {
+        // Fallback: get all fixtures and filter by event
+        const allFixtures = await fplFetch('https://fantasy.premierleague.com/api/fixtures/');
+        if (allFixtures && Array.isArray(allFixtures)) {
+          gwFixtures = allFixtures.filter(f => f.event === Number(currentGW));
+        }
+      }
     } catch {}
 
     const picks = (picksData.picks || []).map(pick => {
