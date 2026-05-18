@@ -40,11 +40,10 @@ const TEAM_COLOURS = {
   22: { primary: '#670E36', secondary: '#95BFE5', pattern: 'solid' },     // Burnley - brown with light blue sleeves
 };
 
-const GKP_COLOURS = { primary: '#f5a623', secondary: '#1a0a2e', pattern: 'solid' };
+const GKP_COLOURS = null; // GKs now use same colours as outfield
 const DEFAULT_COLOURS = { primary: '#1a3a6e', secondary: '#ffffff', pattern: 'solid' };
 
 function getShirtColours(teamId, isGkp) {
-  if (isGkp) return GKP_COLOURS;
   return TEAM_COLOURS[teamId] || DEFAULT_COLOURS;
 }
 
@@ -59,7 +58,6 @@ function ShirtSVG({ teamId, isGkp, isCaptain, isVice, size = 52 }) {
     <svg width={size} height={size * 1.1} viewBox="0 0 52 58" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <clipPath id={`shirt-clip-${teamId}-${isGkp}`}>
-          {/* Shirt shape path */}
           <path d="M14 2 L2 14 L10 18 L10 54 L42 54 L42 18 L50 14 L38 2 C36 8 28 10 26 10 C24 10 16 8 14 2Z" />
         </clipPath>
         {pattern === 'stripes' && (
@@ -68,34 +66,25 @@ function ShirtSVG({ teamId, isGkp, isCaptain, isVice, size = 52 }) {
             <rect x={stripeW} width={stripeW} height="58" fill={secondary} />
           </pattern>
         )}
-        {pattern === 'hoops' && (
-          <pattern id={`hoops-${teamId}-${isGkp}`} x="0" y="0" width="52" height="10" patternUnits="userSpaceOnUse">
-            <rect width="52" height="5" fill={primary} />
-            <rect y="5" width="52" height="5" fill={secondary} />
-          </pattern>
-        )}
       </defs>
 
-      {/* Shirt body */}
+      {/* Shirt body (torso area) */}
       <path
-        d="M14 2 L2 14 L10 18 L10 54 L42 54 L42 18 L50 14 L38 2 C36 8 28 10 26 10 C24 10 16 8 14 2Z"
-        fill={
-          pattern === 'stripes' ? `url(#stripes-${teamId}-${isGkp})` :
-          pattern === 'hoops'   ? `url(#hoops-${teamId}-${isGkp})` :
-          pattern === 'halves'  ? primary : primary
-        }
-        stroke="rgba(255,255,255,0.15)"
-        strokeWidth="0.5"
+        d="M10 18 L10 54 L42 54 L42 18 L26 10Z"
+        fill={pattern === 'stripes' ? `url(#stripes-${teamId}-${isGkp})` : primary}
       />
 
-      {/* Right half for halves pattern */}
-      {pattern === 'halves' && (
-        <path
-          d="M26 10 L38 2 C36 8 28 10 26 10Z M26 10 L42 18 L42 54 L26 54Z"
-          fill={secondary}
-          clipPath={`url(#shirt-clip-${teamId}-${isGkp})`}
-        />
-      )}
+      {/* Sleeves */}
+      <path d="M14 2 L2 14 L10 18 L10 10 C16 8 24 10 26 10Z" fill={pattern === 'stripes' ? `url(#stripes-${teamId}-${isGkp})` : secondary} />
+      <path d="M38 2 L50 14 L42 18 L42 10 C36 8 28 10 26 10Z" fill={pattern === 'stripes' ? `url(#stripes-${teamId}-${isGkp})` : secondary} />
+
+      {/* Outline */}
+      <path
+        d="M14 2 L2 14 L10 18 L10 54 L42 54 L42 18 L50 14 L38 2 C36 8 28 10 26 10 C24 10 16 8 14 2Z"
+        fill="none"
+        stroke="rgba(255,255,255,0.2)"
+        strokeWidth="0.5"
+      />
 
       {/* Collar */}
       <path
@@ -104,10 +93,6 @@ function ShirtSVG({ teamId, isGkp, isCaptain, isVice, size = 52 }) {
         stroke="rgba(255,255,255,0.4)"
         strokeWidth="1.5"
       />
-
-      {/* Sleeves shading */}
-      <path d="M2 14 L10 18 L10 28 L2 22Z" fill="rgba(0,0,0,0.15)" />
-      <path d="M50 14 L42 18 L42 28 L50 22Z" fill="rgba(0,0,0,0.15)" />
 
       {/* Captain / Vice badge */}
       {isCaptain && (
