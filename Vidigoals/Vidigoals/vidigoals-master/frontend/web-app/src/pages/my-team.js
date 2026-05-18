@@ -50,15 +50,15 @@ function getShirtColours(teamId, isGkp) {
 // ── Shirt SVG component ───────────────────────────────────────────────────────
 function ShirtSVG({ teamId, isGkp, isCaptain, isVice, size = 52 }) {
   const { primary, secondary, pattern } = getShirtColours(teamId, isGkp);
-  const id = `shirt-${teamId}-${Math.random().toString(36).substr(2, 5)}`;
+  const id = `stripes-${teamId}`;
 
   return (
     <svg width={size} height={size * 1.1} viewBox="0 0 52 58" fill="none" xmlns="http://www.w3.org/2000/svg">
       {pattern === 'stripes' && (
         <defs>
-          <pattern id={id} patternUnits="userSpaceOnUse" width="8" height="58">
-            <rect width="4" height="58" fill={primary} />
-            <rect x="4" width="4" height="58" fill={secondary} />
+          <pattern id={id} patternUnits="userSpaceOnUse" width="6" height="58">
+            <rect width="3" height="58" fill={primary} />
+            <rect x="3" width="3" height="58" fill={secondary} />
           </pattern>
         </defs>
       )}
