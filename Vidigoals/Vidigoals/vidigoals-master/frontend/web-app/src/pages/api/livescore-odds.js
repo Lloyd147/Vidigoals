@@ -49,7 +49,7 @@ async function fetchAllOdds() {
   const allOdds = {};
   const matchesProcessed = [];
 
-  for (const event of events.slice(0, 5)) {
+  for (const event of events) {
     try {
       const eventData = await fetchJson(`${EVENT_URL}?eventid=${event.id}&lang=en-gb`);
       const markets = eventData.event?.markets || eventData.markets || [];
