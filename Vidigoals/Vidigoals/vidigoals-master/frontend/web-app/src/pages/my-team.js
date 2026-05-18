@@ -582,8 +582,22 @@ export default function MyTeam() {
                           </div>
                         </div>
                         <span style={{ width: '60px', textAlign: 'center', color: '#8892b0', fontSize: '0.68rem' }}>{player.fixture || '—'}</span>
-                        <span style={{ flex: 1, textAlign: 'center', color: '#f5a623', fontSize: '0.72rem' }}>{playerOdds?.firstGoal ? playerOdds.firstGoal.odds : '—'}</span>
-                        <span style={{ flex: 1, textAlign: 'center', color: '#f5a623', fontSize: '0.72rem' }}>{playerOdds?.anytime ? playerOdds.anytime.odds : '—'}</span>
+                        <span style={{ flex: 1, textAlign: 'center', fontSize: '0.68rem' }}>
+                          {playerOdds?.firstGoal ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <span style={{ background: '#f5a623', color: '#1a0a2e', fontSize: '0.55rem', fontWeight: 700, padding: '1px 4px', borderRadius: '2px', whiteSpace: 'nowrap' }}>{playerOdds.firstGoal.bookie}</span>
+                              <span style={{ color: '#f5a623', fontWeight: 700 }}>{playerOdds.firstGoal.odds}</span>
+                            </span>
+                          ) : <span style={{ color: '#8892b0' }}>—</span>}
+                        </span>
+                        <span style={{ flex: 1, textAlign: 'center', fontSize: '0.68rem' }}>
+                          {playerOdds?.anytime ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <span style={{ background: '#f5a623', color: '#1a0a2e', fontSize: '0.55rem', fontWeight: 700, padding: '1px 4px', borderRadius: '2px', whiteSpace: 'nowrap' }}>{playerOdds.anytime.bookie}</span>
+                              <span style={{ color: '#f5a623', fontWeight: 700 }}>{playerOdds.anytime.odds}</span>
+                            </span>
+                          ) : <span style={{ color: '#8892b0' }}>—</span>}
+                        </span>
                         <span style={{ flex: 1, textAlign: 'center', color: '#8892b0' }}>—</span>
                         <span style={{ flex: 1, textAlign: 'center', color: '#8892b0' }}>—</span>
                       </div>
