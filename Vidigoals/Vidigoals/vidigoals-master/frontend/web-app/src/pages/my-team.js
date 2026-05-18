@@ -413,7 +413,7 @@ function PlayerTile({ player }) {
   const posLabels = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
 
   return (
-    <PlayerCard>
+    <PlayerCard onClick={() => { setSelectedPlayer(player); fetchPlayerDetail(player); }} style={{ cursor: 'pointer' }}>
       <ShirtSVG
         teamId={player.team_id}
         isGkp={isGkp}
@@ -449,6 +449,15 @@ export default function MyTeam() {
   const [odds, setOdds]       = useState(null);
   const [selectedMarket, setSelectedMarket] = useState('anytime');
   const [oddsMarketOpen, setOddsMarket] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [playerDetail, setPlayerDetail] = useState(null);
+
+  function fetchPlayerDetail(player) {
+    fetch(`/api/player-detail?id=${player.element}&gw=${gw}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => setPlayerDetail(data))
+      .catch(() => setPlayerDetail(null));
+  }
   const oddsMarketLabel = { anytime: 'To Score Anytime', firstGoal: 'First Goalscorer', twoPlus: '2 or More Goals', hatTrick: 'Hat-trick', assists: 'To Get Assist', yellowCard: 'Yellow Card', redCard: 'Red Card' }[selectedMarket] || 'To Score Anytime';
 
   // Bookie logo mapping — images stored in /public/logos/
@@ -816,6 +825,79 @@ export default function MyTeam() {
             </>
           )}
         </AppShell>
+
+        {/* Player Detail Popup */}
+        {selectedPlayer && (
+          <div onClick={() => { setSelectedPlayer(null); setPlayerDetail(null); }} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '12px', width: '100%', maxWidth: '360px', maxHeight: '80vh', overflow: 'auto', color: '#333' }}>
+              {/* Header - Total Points */}
+              <div style={{ textAlign: 'center', padding: '1rem', borderBottom: '1px solid #eee' }}>
+                <div style={{ display: 'inline-block', background: '#1a0a2e', color: '#fff', fontWeight: 800, fontSize: '1.1rem', padding: '0.4rem 1.2rem', borderRadius: '20px', marginBottom: '0.5rem' }}>
+                  {playerDetail?.totalPoints ?? selectedPlayer.event_points * (selectedPlayer.multiplier || 1)} POINTS
+                </div>
+                <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1a0a2e' }}>{selectedPlayer.name || selectedPlayer.web_name}</div>
+                {/* Close button */}
+                <button onClick={() => { setSelectedPlayer(null); setPlayerDetail(null); }} style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', background: 'transparent', border: 'none', fontSize: '1.5rem', color: '#999', cursor: 'pointer' }}>×</button>
+              </div>
+
+              {/* Fixture + Score */}
+              {playerDetail?.fixture && (
+                <div style={{ padding: '0.75rem', borderBottom: '1px solid #eee', textAlign: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.85rem' }}>
+                    <span>{playerDetail.fixture.home}</span>
+                    <span style={{ background: playerDetail.fixture.finished ? '#6c2eb9' : '#48bb78', color: '#fff', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', fontSize: '0.9rem' }}>
+                      {playerDetail.fixture.homeScore ?? 0} - {playerDetail.fixture.awayScore ?? 0}
+                    </span>
+                    <span>{playerDetail.fixture.away}</span>
+                  </div>
+                  {playerDetail.fixture.minutes && (
+                    <div style={{ fontSize: '0.7rem', color: '#888', marginTop: '4px' }}>{playerDetail.fixture.finished ? 'FT' : `${playerDetail.fixture.minutes}'`}</div>
+                  )}
+                </div>
+              )}
+
+              {/* xG and xA */}
+              {playerDetail && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', padding: '0.75rem', borderBottom: '1px solid #eee' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.65rem', color: '#888', fontWeight: 700, border: '1px solid #ddd', borderRadius: '3px', padding: '1px 6px', display: 'inline-block' }}>xG</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, marginTop: '2px' }}>{playerDetail.xG}</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.65rem', color: '#888', fontWeight: 700, border: '1px solid #ddd', borderRadius: '3px', padding: '1px 6px', display: 'inline-block' }}>xA</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, marginTop: '2px' }}>{playerDetail.xA}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Points Breakdown */}
+              {playerDetail?.breakdown?.length > 0 && (
+                <div style={{ padding: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#888', fontWeight: 700, marginBottom: '0.5rem', padding: '0 0.25rem' }}>
+                    <span>Statistic</span>
+                    <div style={{ display: 'flex', gap: '2rem' }}>
+                      <span>Value</span>
+                      <span>Points</span>
+                    </div>
+                  </div>
+                  {playerDetail.breakdown.map((b, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0.25rem', borderTop: '1px solid #f0f0f0', fontSize: '0.82rem' }}>
+                      <span style={{ fontWeight: 600 }}>{b.stat}</span>
+                      <div style={{ display: 'flex', gap: '2rem' }}>
+                        <span style={{ color: '#666', minWidth: '30px', textAlign: 'right' }}>{b.value}</span>
+                        <span style={{ fontWeight: 700, color: b.points > 0 ? '#48bb78' : b.points < 0 ? '#fc8181' : '#666', minWidth: '40px', textAlign: 'right' }}>{b.points} pts</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!playerDetail && (
+                <div style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>Loading...</div>
+              )}
+            </div>
+          </div>
+        )}
 
         <BottomNav>
           <NavItem href="/"><NavIcon>⚽</NavIcon>Goals</NavItem>
