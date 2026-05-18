@@ -103,14 +103,14 @@ function ShirtSVG({ teamId, isGkp, isCaptain, isVice, size = 52, playerId }) {
       {/* Captain / Vice badge */}
       {isCaptain && (
         <>
-          <circle cx="44" cy="6" r="6" fill="#f5a623" />
-          <text x="44" y="9.5" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#1a0a2e">C</text>
+          <circle cx="44" cy="6" r="8" fill="#f5a623" stroke="#fff" strokeWidth="1"/>
+          <text x="44" y="10" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#1a0a2e">C</text>
         </>
       )}
       {isVice && (
         <>
-          <circle cx="44" cy="6" r="6" fill="#9b59b6" />
-          <text x="44" y="9.5" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#fff">V</text>
+          <circle cx="44" cy="6" r="8" fill="#9b59b6" stroke="#fff" strokeWidth="1"/>
+          <text x="44" y="10" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#fff">V</text>
         </>
       )}
     </svg>
@@ -210,30 +210,82 @@ const PitchWrapper = styled.div`
 
 const Pitch = styled.div`
   background: linear-gradient(180deg,
-    #2e7d32 0%, #33892e 12%, #2e7d32 25%, #33892e 37%, #2e7d32 50%, #33892e 62%, #2e7d32 75%, #33892e 87%, #2e7d32 100%);
+    #2d8a30 0%, #34963a 8%, #2d8a30 16%, #34963a 24%, #2d8a30 32%, #34963a 40%,
+    #2d8a30 48%, #34963a 56%, #2d8a30 64%, #34963a 72%, #2d8a30 80%, #34963a 88%, #2d8a30 100%);
   border-radius: 10px;
-  padding: 1.5rem 0.25rem 1rem;
+  padding: 0 0.25rem 1rem;
   position: relative;
   overflow: hidden;
+`;
+
+const PitchBanner = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 0.5rem;
+`;
+
+const BannerHalf = styled.div`
+  background: ${({ side }) => side === 'left' ? '#6c2eb9' : '#2d0a5e'};
+  padding: 0.4rem 1rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: ${({ side }) => side === 'left' ? '0 0 0 8px' : '0 0 8px 0'};
+  span { color: #f5a623; }
+`;
+
+const PitchMarkings = styled.div`
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
   /* Centre circle */
   &::before {
     content: '';
     position: absolute;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    width: 70px; height: 70px;
+    width: 80px; height: 80px;
     border-radius: 50%;
-    border: 1.5px solid rgba(255,255,255,0.25);
-    pointer-events: none;
+    border: 1.5px solid rgba(255,255,255,0.2);
   }
   /* Half-way line */
   &::after {
     content: '';
     position: absolute;
-    top: 50%; left: 5%; right: 5%;
+    top: 50%; left: 3%; right: 3%;
     height: 1.5px;
-    background: rgba(255,255,255,0.25);
-    pointer-events: none;
+    background: rgba(255,255,255,0.2);
+  }
+`;
+
+const GoalArea = styled.div`
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 40px;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  pointer-events: none;
+  /* Goal net */
+  &::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50px;
+    height: 20px;
+    border: 1.5px solid rgba(255,255,255,0.3);
+    border-top: 2px solid rgba(255,255,255,0.4);
+    border-radius: 2px 2px 0 0;
   }
 `;
 
@@ -547,7 +599,11 @@ export default function MyTeam() {
 
                 {picks?.active_chip && (
                   <ChipBadge>
-                    {picks.active_chip.replace(/_/g, ' ').toUpperCase()}
+                    {picks.active_chip === '3xc' ? 'Triple Captain Played' :
+                     picks.active_chip === 'bboost' ? 'Bench Boost Played' :
+                     picks.active_chip === 'wildcard' ? 'Wildcard Played' :
+                     picks.active_chip === 'freehit' ? 'Free Hit Played' :
+                     picks.active_chip.replace(/_/g, ' ').toUpperCase()}
                   </ChipBadge>
                 )}
               </GWHeader>
@@ -559,6 +615,12 @@ export default function MyTeam() {
                 {!loading && !error && picks && (
                   <>
                     <Pitch>
+                      <PitchBanner>
+                        <BannerHalf side="left">⚽ Vidi<span>Goals</span></BannerHalf>
+                        <BannerHalf side="right">⚽ Vidi<span>Goals</span></BannerHalf>
+                      </PitchBanner>
+                      <PitchMarkings />
+                      <GoalArea />
                       {rows.map((row, i) => (
                         <PitchRow key={i}>
                           {row.map(player => (
