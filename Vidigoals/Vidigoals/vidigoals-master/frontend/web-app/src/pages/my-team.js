@@ -351,58 +351,6 @@ function PlayerTile({ player }) {
   );
 }
 
-// ── Team Shirt SVG Component ──────────────────────────────────────────────────
-const TEAM_COLOURS = {
-  1: { body: '#EF0107', sleeve: '#ffffff', stripe: null, name: 'Arsenal' },
-  2: { body: '#670E36', sleeve: '#95BFE5', stripe: null, name: 'Aston Villa' },
-  3: { body: '#8B0000', sleeve: '#000000', stripe: '#000000', name: 'Bournemouth' },
-  4: { body: '#E30613', sleeve: '#ffffff', stripe: '#ffffff', name: 'Brentford' },
-  5: { body: '#0057B8', sleeve: '#0057B8', stripe: '#ffffff', name: 'Brighton' },
-  6: { body: '#034694', sleeve: '#034694', stripe: null, name: 'Chelsea' },
-  7: { body: '#1B458F', sleeve: '#C4122E', stripe: '#C4122E', name: 'Crystal Palace' },
-  8: { body: '#003399', sleeve: '#003399', stripe: null, name: 'Everton' },
-  9: { body: '#ffffff', sleeve: '#000000', stripe: null, name: 'Fulham' },
-  10: { body: '#0057B8', sleeve: '#0057B8', stripe: null, name: 'Ipswich' },
-  11: { body: '#ffffff', sleeve: '#ffffff', stripe: null, name: 'Leeds' },
-  12: { body: '#C8102E', sleeve: '#C8102E', stripe: null, name: 'Liverpool' },
-  13: { body: '#6CABDD', sleeve: '#6CABDD', stripe: null, name: 'Man City' },
-  14: { body: '#DA291C', sleeve: '#DA291C', stripe: null, name: 'Man Utd' },
-  15: { body: '#241F20', sleeve: '#ffffff', stripe: '#ffffff', name: 'Newcastle' },
-  16: { body: '#E53233', sleeve: '#E53233', stripe: '#ffffff', name: "Nott'm Forest" },
-  17: { body: '#D71920', sleeve: '#ffffff', stripe: '#ffffff', name: 'Southampton' },
-  18: { body: '#ffffff', sleeve: '#132257', stripe: null, name: 'Spurs' },
-  19: { body: '#7A263A', sleeve: '#7A263A', stripe: '#1BB1E7', name: 'West Ham' },
-  20: { body: '#FDB913', sleeve: '#FDB913', stripe: null, name: 'Wolves' },
-  21: { body: '#8B0000', sleeve: '#ffffff', stripe: '#ffffff', name: 'Sunderland' },
-  22: { body: '#670E36', sleeve: '#95BFE5', stripe: null, name: 'Burnley' },
-};
-
-function TeamShirt({ teamId, size = 28 }) {
-  const colours = TEAM_COLOURS[teamId] || { body: '#666', sleeve: '#888', stripe: null };
-  const w = size * 0.85;
-  const h = size;
-  const stripeId = `stripe-${teamId}`;
-  return (
-    <svg width={w} height={h} viewBox="0 0 34 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {colours.stripe && (
-        <defs>
-          <pattern id={stripeId} patternUnits="userSpaceOnUse" width="4" height="4">
-            <rect width="2" height="4" fill={colours.body} />
-            <rect x="2" width="2" height="4" fill={colours.stripe} />
-          </pattern>
-        </defs>
-      )}
-      {/* Sleeves */}
-      <path d="M2 8L8 4V18H2V8Z" fill={colours.sleeve} stroke="#333" strokeWidth="0.5"/>
-      <path d="M32 8L26 4V18H32V8Z" fill={colours.sleeve} stroke="#333" strokeWidth="0.5"/>
-      {/* Body */}
-      <path d="M8 4L12 2H22L26 4V38H8V4Z" fill={colours.stripe ? `url(#${stripeId})` : colours.body} stroke="#333" strokeWidth="0.5"/>
-      {/* Collar */}
-      <path d="M12 2L14 4H20L22 2" fill="none" stroke="#333" strokeWidth="0.8"/>
-    </svg>
-  );
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function MyTeam() {
   const [user, setUser]       = useState(null);
