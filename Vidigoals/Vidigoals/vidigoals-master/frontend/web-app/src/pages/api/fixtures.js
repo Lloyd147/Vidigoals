@@ -103,6 +103,7 @@ export default async function handler(req, res) {
         weekday: 'short',
         day: 'numeric',
         month: 'short',
+        timeZone: 'Europe/London',
       });
 
       if (!grouped[dateKey]) grouped[dateKey] = [];
@@ -110,7 +111,7 @@ export default async function handler(req, res) {
       grouped[dateKey].push({
         id: f.fixture?.id,
         date: f.fixture?.date,
-        time: date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+        time: date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' }),
         status: f.fixture?.status?.short,
         statusLong: f.fixture?.status?.long,
         elapsed: f.fixture?.status?.elapsed || null,

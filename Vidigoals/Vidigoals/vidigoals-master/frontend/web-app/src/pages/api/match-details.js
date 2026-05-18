@@ -75,11 +75,14 @@ export default async function handler(req, res) {
   const { fixtureId } = req.query;
   if (!fixtureId) return res.status(400).json({ error: 'fixtureId required' });
 
-  // Check cache
+  // Check cache — but invalidate if match should be live now (kick-off passed)
   const cached = detailsCache.get(fixtureId);
   if (cached) {
+    // If cached as upcoming/finished but match might now be live, reduce TTL
     const ttl = cached.isLive ? CACHE_TTL_LIVE :
-                cached.isFinished ? CACHE_TTL_FINISHED : CACHE_TTL_UPCOMING;
+                cached.isFinished ? CACHE_TTL_FINISHED : 
+                // For upcoming matches, use shorter TTL if close to kick-off
+                Math.min(CACHE_TTL_UPCOMING, 2 * 60 * 1000); // Max 2 min for upcoming near kick-off
     if (Date.now() - cached.fetchedAt < ttl) {
       return res.status(200).json(cached.data);
     }
