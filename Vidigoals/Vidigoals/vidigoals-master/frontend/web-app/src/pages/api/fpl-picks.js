@@ -166,7 +166,7 @@ export default async function handler(req, res) {
     const result = {
       gameweek: Number(currentGW),
       latestGW,
-      active_chip: picksData.active_chip,
+      active_chip: (Number(actualGW) !== Number(currentGW)) ? null : picksData.active_chip,
       entry_history: picksData.entry_history,
       starting,
       bench,
