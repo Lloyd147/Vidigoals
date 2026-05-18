@@ -349,6 +349,47 @@ function PlayerTile({ player }) {
   );
 }
 
+// ── Team Shirt SVG Component ──────────────────────────────────────────────────
+const TEAM_COLOURS = {
+  1: { body: '#EF0107', sleeve: '#ffffff', name: 'Arsenal' },        // Arsenal
+  2: { body: '#670E36', sleeve: '#95BFE5', name: 'Aston Villa' },    // Aston Villa
+  3: { body: '#DA291C', sleeve: '#DA291C', name: 'Bournemouth' },    // Bournemouth
+  4: { body: '#e30613', sleeve: '#e30613', name: 'Brentford' },      // Brentford
+  5: { body: '#0057B8', sleeve: '#0057B8', name: 'Brighton' },       // Brighton
+  6: { body: '#034694', sleeve: '#034694', name: 'Chelsea' },        // Chelsea
+  7: { body: '#1B458F', sleeve: '#C4122E', name: 'Crystal Palace' }, // Crystal Palace
+  8: { body: '#003399', sleeve: '#003399', name: 'Everton' },        // Everton
+  9: { body: '#ffffff', sleeve: '#CC0000', name: 'Fulham' },         // Fulham
+  10: { body: '#0057B8', sleeve: '#0057B8', name: 'Ipswich' },       // Ipswich
+  11: { body: '#003090', sleeve: '#003090', name: 'Leicester' },     // Leicester
+  12: { body: '#C8102E', sleeve: '#C8102E', name: 'Liverpool' },     // Liverpool
+  13: { body: '#6CABDD', sleeve: '#6CABDD', name: 'Man City' },      // Man City
+  14: { body: '#DA291C', sleeve: '#DA291C', name: 'Man Utd' },       // Man Utd
+  15: { body: '#241F20', sleeve: '#ffffff', name: 'Newcastle' },     // Newcastle
+  16: { body: '#E53233', sleeve: '#E53233', name: "Nott'm Forest" }, // Nott'm Forest
+  17: { body: '#D71920', sleeve: '#ffffff', name: 'Southampton' },   // Southampton
+  18: { body: '#ffffff', sleeve: '#132257', name: 'Spurs' },         // Spurs
+  19: { body: '#7A263A', sleeve: '#7A263A', name: 'West Ham' },      // West Ham
+  20: { body: '#FDB913', sleeve: '#FDB913', name: 'Wolves' },        // Wolves
+};
+
+function TeamShirt({ teamId, size = 28 }) {
+  const colours = TEAM_COLOURS[teamId] || { body: '#666', sleeve: '#888' };
+  const w = size * 0.85;
+  const h = size;
+  return (
+    <svg width={w} height={h} viewBox="0 0 34 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Sleeves */}
+      <path d="M2 8L8 4V18H2V8Z" fill={colours.sleeve} stroke="#333" strokeWidth="0.5"/>
+      <path d="M32 8L26 4V18H32V8Z" fill={colours.sleeve} stroke="#333" strokeWidth="0.5"/>
+      {/* Body */}
+      <path d="M8 4L12 2H22L26 4V38H8V4Z" fill={colours.body} stroke="#333" strokeWidth="0.5"/>
+      {/* Collar */}
+      <path d="M12 2L14 4H20L22 2" fill="none" stroke="#333" strokeWidth="0.8"/>
+    </svg>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function MyTeam() {
   const [user, setUser]       = useState(null);
@@ -483,7 +524,7 @@ export default function MyTeam() {
             <>
               {/* Tab navigation */}
               <div style={{ display: 'flex', borderBottom: '1px solid #4a1a8e', background: '#2d0a5e' }}>
-                <button onClick={() => setActiveTab('points')} style={{ flex: 1, background: 'transparent', border: 'none', borderBottom: activeTab === 'points' ? '2px solid #f5a623' : '2px solid transparent', color: activeTab === 'points' ? '#f5a623' : '#8892b0', fontWeight: 700, fontSize: '0.9rem', padding: '0.75rem', cursor: 'pointer' }}>Match Details</button>
+                <button onClick={() => setActiveTab('points')} style={{ flex: 1, background: 'transparent', border: 'none', borderBottom: activeTab === 'points' ? '2px solid #f5a623' : '2px solid transparent', color: activeTab === 'points' ? '#f5a623' : '#8892b0', fontWeight: 700, fontSize: '0.9rem', padding: '0.75rem', cursor: 'pointer' }}>Team Points</button>
                 <button onClick={() => setActiveTab('odds')} style={{ flex: 1, background: 'transparent', border: 'none', borderBottom: activeTab === 'odds' ? '2px solid #f5a623' : '2px solid transparent', color: activeTab === 'odds' ? '#f5a623' : '#8892b0', fontWeight: 700, fontSize: '0.9rem', padding: '0.75rem', cursor: 'pointer' }}>Player Odds</button>
               </div>
 
@@ -625,16 +666,11 @@ export default function MyTeam() {
                     // Get odds for selected market
                     const marketOdds = playerOdds?.[selectedMarket] || null;
 
-                    // Team shirt URL
-                    const shirtUrl = player.team_id
-                      ? `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.team_id}-110.webp`
-                      : null;
-
                     return (
                       <div key={player.element} style={{ display: 'flex', alignItems: 'center', padding: '0.65rem 0.5rem', borderBottom: '1px solid #2d1a4e' }}>
                         <span style={{ width: '28px', textAlign: 'center', color: posColors[player.element_type] || '#ccc', fontWeight: 700, fontSize: '0.72rem' }}>{posLabels[player.element_type]}</span>
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {shirtUrl && <img src={shirtUrl} alt="" style={{ width: '24px', height: '28px', objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />}
+                          <TeamShirt teamId={player.team_id} size={28} />
                           <div>
                             <div style={{ fontWeight: 700, color: '#eaeaea', fontSize: '0.82rem' }}>{player.web_name}</div>
                             <div style={{ color: '#8892b0', fontSize: '0.6rem' }}>{player.team_name}</div>
