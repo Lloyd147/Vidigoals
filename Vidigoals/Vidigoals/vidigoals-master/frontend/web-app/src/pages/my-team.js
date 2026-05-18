@@ -359,6 +359,9 @@ export default function MyTeam() {
   const [latestGW, setLatestGW] = useState(38);
   const [activeTab, setActiveTab] = useState('points'); // 'points' | 'odds'
   const [odds, setOdds]       = useState(null);
+  const [selectedMarket, setSelectedMarket] = useState('score');
+  const [oddsMarketOpen, setOddsMarket] = useState(false);
+  const oddsMarketLabel = { score: 'Player to Score', shots: 'Player Shots', shotsTarget: 'Shots on Target', cards: 'Player Cards', assists: 'Player to Assist' }[selectedMarket] || 'Player to Score';
 
   // Fetch odds when tab switches to odds
   useEffect(() => {
@@ -532,17 +535,37 @@ export default function MyTeam() {
                     <button onClick={() => gw > 1 && setGw(g => g - 1)} disabled={gw <= 1} style={{ background: 'transparent', border: 'none', color: gw > 1 ? '#f5a623' : '#4a1a8e', fontSize: '1.5rem', cursor: gw > 1 ? 'pointer' : 'not-allowed' }}>‹</button>
                     <span style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>Gameweek {gw}</span>
                     <button onClick={() => gw < 38 && setGw(g => g + 1)} disabled={gw >= 38} style={{ background: 'transparent', border: 'none', color: gw < 38 ? '#f5a623' : '#4a1a8e', fontSize: '1.5rem', cursor: gw < 38 ? 'pointer' : 'not-allowed' }}>›</button>
+
+                    {/* Market dropdown */}
+                    <div style={{ position: 'relative' }}>
+                      <button onClick={() => setOddsMarket(m => m === 'score' ? null : 'score')} style={{ background: '#4a1a8e', border: 'none', color: '#fff', fontSize: '0.72rem', fontWeight: 700, padding: '0.4rem 0.7rem', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {oddsMarketLabel} {oddsMarketOpen ? '▲' : '▼'}
+                      </button>
+                      {oddsMarketOpen && (
+                        <div style={{ position: 'absolute', top: '100%', right: 0, background: '#2d0a5e', border: '1px solid #4a1a8e', borderRadius: '4px', zIndex: 50, minWidth: '180px', marginTop: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                          {[
+                            { key: 'score', label: 'Player to Score' },
+                            { key: 'shots', label: 'Player Shots' },
+                            { key: 'shotsTarget', label: 'Player Shots on Target' },
+                            { key: 'cards', label: 'Player Cards' },
+                            { key: 'assists', label: 'Player to Assist' },
+                          ].map(m => (
+                            <button key={m.key} onClick={() => { setSelectedMarket(m.key); setOddsMarket(null); }} style={{ display: 'block', width: '100%', background: selectedMarket === m.key ? 'rgba(245,166,35,0.15)' : 'transparent', border: 'none', color: selectedMarket === m.key ? '#f5a623' : '#ccc', fontSize: '0.78rem', padding: '0.6rem 0.8rem', textAlign: 'left', cursor: 'pointer', borderBottom: '1px solid #4a1a8e' }}>
+                              {m.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Header banner */}
                   <div style={{ display: 'flex', alignItems: 'center', padding: '0.6rem 0.5rem', background: '#f5a623', color: '#1a0a2e', fontWeight: 700, fontSize: '0.65rem' }}>
                     <span style={{ width: '28px', textAlign: 'center' }}>Pos</span>
-                    <span style={{ width: '120px' }}>Player</span>
-                    <span style={{ width: '60px', textAlign: 'center' }}>GW{gw}</span>
+                    <span style={{ width: '130px' }}>Player</span>
+                    <span style={{ width: '55px', textAlign: 'center' }}>GW{gw}</span>
                     <span style={{ flex: 1, textAlign: 'center' }}>First Goal</span>
                     <span style={{ flex: 1, textAlign: 'center' }}>Anytime</span>
-                    <span style={{ flex: 1, textAlign: 'center' }}>2+</span>
-                    <span style={{ flex: 1, textAlign: 'center' }}>Hat-trick</span>
                   </div>
 
                   {/* Player rows */}
@@ -566,40 +589,32 @@ export default function MyTeam() {
                       });
                     }
 
-                    // Team shirt URL from FPL
+                    // Team shirt URL — FPL uses team_id for shirt images
                     const shirtUrl = player.team_id
                       ? `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.team_id}-110.webp`
                       : null;
 
                     return (
-                      <div key={player.element} style={{ display: 'flex', alignItems: 'center', padding: '0.6rem 0.5rem', borderBottom: '1px solid #2d1a4e', fontSize: '0.72rem' }}>
+                      <div key={player.element} style={{ display: 'flex', alignItems: 'center', padding: '0.55rem 0.5rem', borderBottom: '1px solid #2d1a4e', fontSize: '0.72rem' }}>
                         <span style={{ width: '28px', textAlign: 'center', color: posColors[player.element_type] || '#ccc', fontWeight: 700, fontSize: '0.7rem' }}>{posLabels[player.element_type]}</span>
-                        <div style={{ width: '120px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {shirtUrl && <img src={shirtUrl} alt="" style={{ width: '24px', height: '28px', objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />}
+                        <div style={{ width: '130px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {shirtUrl && <img src={shirtUrl} alt="" style={{ width: '22px', height: '26px', objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />}
                           <div>
                             <div style={{ fontWeight: 700, color: '#eaeaea', fontSize: '0.78rem' }}>{player.web_name}</div>
-                            <div style={{ color: '#8892b0', fontSize: '0.6rem' }}>{player.team_name}</div>
+                            <div style={{ color: '#8892b0', fontSize: '0.58rem' }}>{player.team_name}</div>
                           </div>
                         </div>
-                        <span style={{ width: '60px', textAlign: 'center', color: '#8892b0', fontSize: '0.68rem' }}>{player.fixture || '—'}</span>
+                        <span style={{ width: '55px', textAlign: 'center', color: '#8892b0', fontSize: '0.65rem' }}>{player.fixture || '—'}</span>
                         <span style={{ flex: 1, textAlign: 'center', fontSize: '0.68rem' }}>
                           {playerOdds?.firstGoal ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                              <span style={{ background: '#f5a623', color: '#1a0a2e', fontSize: '0.55rem', fontWeight: 700, padding: '1px 4px', borderRadius: '2px', whiteSpace: 'nowrap' }}>{playerOdds.firstGoal.bookie}</span>
-                              <span style={{ color: '#f5a623', fontWeight: 700 }}>{playerOdds.firstGoal.odds}</span>
-                            </span>
+                            <span style={{ color: '#f5a623', fontWeight: 700 }}>{playerOdds.firstGoal.odds}</span>
                           ) : <span style={{ color: '#8892b0' }}>—</span>}
                         </span>
                         <span style={{ flex: 1, textAlign: 'center', fontSize: '0.68rem' }}>
                           {playerOdds?.anytime ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                              <span style={{ background: '#f5a623', color: '#1a0a2e', fontSize: '0.55rem', fontWeight: 700, padding: '1px 4px', borderRadius: '2px', whiteSpace: 'nowrap' }}>{playerOdds.anytime.bookie}</span>
-                              <span style={{ color: '#f5a623', fontWeight: 700 }}>{playerOdds.anytime.odds}</span>
-                            </span>
+                            <span style={{ color: '#f5a623', fontWeight: 700 }}>{playerOdds.anytime.odds}</span>
                           ) : <span style={{ color: '#8892b0' }}>—</span>}
                         </span>
-                        <span style={{ flex: 1, textAlign: 'center', color: '#8892b0' }}>—</span>
-                        <span style={{ flex: 1, textAlign: 'center', color: '#8892b0' }}>—</span>
                       </div>
                     );
                   })}
