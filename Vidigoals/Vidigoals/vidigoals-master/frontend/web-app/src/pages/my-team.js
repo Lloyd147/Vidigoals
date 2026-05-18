@@ -540,7 +540,7 @@ export default function MyTeam() {
   const displayGwPoints = (history?.points && history.points > 0) ? history.points : (liveGwPoints || history?.points || '—');
 
   const canGoBack    = gw > 1;
-  const canGoForward = gw < latestGW;
+  const canGoForward = gw < 38;
 
   return (
     <>
