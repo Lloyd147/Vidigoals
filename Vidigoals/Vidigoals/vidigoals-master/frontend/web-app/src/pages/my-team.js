@@ -81,6 +81,11 @@ function ShirtSVG({ teamId, isGkp, isCaptain, isVice, size = 52, playerId }) {
         </clipPath>
       </defs>
 
+      {/* Solid background to prevent pitch showing through */}
+      <path d="M14 4 L2 12 L2 24 L10 20 L10 4Z" fill={pattern === 'stripes' ? primary : secondary} />
+      <path d="M38 4 L50 12 L50 24 L42 20 L42 4Z" fill={pattern === 'stripes' ? primary : secondary} />
+      <path d="M10 4 L10 54 L42 54 L42 4 L38 2 C36 6 30 8 26 8 C22 8 16 6 14 2Z" fill={primary} />
+
       {/* Left sleeve */}
       <g clipPath={`url(#clip-lsleeve-${teamId}-${playerId || 0})`}>
         <rect x="0" y="0" width="52" height="58" fill={pattern === 'stripes' ? primary : secondary} />
@@ -107,14 +112,14 @@ function ShirtSVG({ teamId, isGkp, isCaptain, isVice, size = 52, playerId }) {
       {/* Captain / Vice badge */}
       {isCaptain && (
         <>
-          <circle cx="44" cy="6" r="8" fill="#f5a623" stroke="#fff" strokeWidth="1"/>
-          <text x="44" y="10" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#1a0a2e">C</text>
+          <circle cx="46" cy="5" r="10" fill="#f5a623" stroke="#fff" strokeWidth="1.5"/>
+          <text x="46" y="10" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#1a0a2e">C</text>
         </>
       )}
       {isVice && (
         <>
-          <circle cx="44" cy="6" r="8" fill="#9b59b6" stroke="#fff" strokeWidth="1"/>
-          <text x="44" y="10" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#fff">V</text>
+          <circle cx="46" cy="5" r="10" fill="#9b59b6" stroke="#fff" strokeWidth="1.5"/>
+          <text x="46" y="10" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#fff">V</text>
         </>
       )}
     </svg>
@@ -632,6 +637,7 @@ export default function MyTeam() {
                     <Pitch>
                       <PitchBanner>
                         <BannerHalf side="left">⚽ Vidi<span>Goals</span></BannerHalf>
+                        <div style={{ width: '60px' }} />
                         <BannerHalf side="right">⚽ Vidi<span>Goals</span></BannerHalf>
                       </PitchBanner>
                       <PitchMarkings />
