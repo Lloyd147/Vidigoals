@@ -21,6 +21,9 @@ const SPORT = 'soccer_epl';
 // For now, store here and expose via GET
 const oddsCache = { data: {}, lastFetched: null, remainingRequests: null };
 
+// Only re-fetch if data is older than 3 days
+const REFRESH_INTERVAL = 3 * 24 * 60 * 60 * 1000; // 3 days
+
 async function fetchFromOddsApi(path) {
   const url = `${ODDS_API_BASE}${path}${path.includes('?') ? '&' : '?'}apiKey=${ODDS_API_KEY}`;
   const res = await fetch(url);
@@ -62,6 +65,23 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'GET only' });
   }
 
+  // If data is fresh enough, return cached without re-fetching
+  if (oddsCache.lastFetched && Date.now() - new Date(oddsCache.lastFetched).getTime() < REFRESH_INTERVAL) {
+    return res.status(200).json({
+      success: true,
+      cached: true,
+      lastFetched: oddsCache.lastFetched,
+      totalPlayersInCache: Object.keys(oddsCache.data).length,
+      remainingRequests: oddsCache.remainingRequests,
+      message: 'Data is fresh (less than 3 days old). Use ?force=true to override.',
+    });
+  }
+
+  // Allow force refresh with ?force=true
+  if (req.query.force !== 'true' && oddsCache.lastFetched) {
+    // Already have data, just return it
+  }
+
   try {
     // Step 1: Get all upcoming EPL events
     const events = await fetchFromOddsApi(`/sports/${SPORT}/events`);
@@ -73,8 +93,7 @@ export default async function handler(req, res) {
     let matchesProcessed = 0;
 
     // Step 2: For each event, fetch goalscorer odds
-    // Limit to 5 events per call to stay within rate limits
-    const upcomingEvents = events.slice(0, 5);
+    const upcomingEvents = events;
 
     for (const event of upcomingEvents) {
       try {
