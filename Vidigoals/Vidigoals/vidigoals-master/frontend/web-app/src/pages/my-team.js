@@ -357,6 +357,18 @@ export default function MyTeam() {
   const [error, setError]     = useState(null);
   const [gw, setGw]           = useState(null);
   const [latestGW, setLatestGW] = useState(38);
+  const [activeTab, setActiveTab] = useState('points'); // 'points' | 'odds'
+  const [odds, setOdds]       = useState(null);
+
+  // Fetch odds when tab switches to odds
+  useEffect(() => {
+    if (activeTab === 'odds' && gw && !odds) {
+      fetch(`/api/player-odds?gw=${gw}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data?.odds) setOdds(data.odds); })
+        .catch(() => {});
+    }
+  }, [activeTab, gw]);
 
   useEffect(() => {
     try {
@@ -430,6 +442,14 @@ export default function MyTeam() {
 
           {user && (
             <>
+              {/* Tab navigation */}
+              <div style={{ display: 'flex', borderBottom: '1px solid #4a1a8e', background: '#2d0a5e' }}>
+                <button onClick={() => setActiveTab('points')} style={{ flex: 1, background: 'transparent', border: 'none', borderBottom: activeTab === 'points' ? '2px solid #f5a623' : '2px solid transparent', color: activeTab === 'points' ? '#f5a623' : '#8892b0', fontWeight: 700, fontSize: '0.9rem', padding: '0.75rem', cursor: 'pointer' }}>Match Details</button>
+                <button onClick={() => setActiveTab('odds')} style={{ flex: 1, background: 'transparent', border: 'none', borderBottom: activeTab === 'odds' ? '2px solid #f5a623' : '2px solid transparent', color: activeTab === 'odds' ? '#f5a623' : '#8892b0', fontWeight: 700, fontSize: '0.9rem', padding: '0.75rem', cursor: 'pointer' }}>Player Odds</button>
+              </div>
+
+              {activeTab === 'points' && (
+              <>
               <GWHeader>
                 <GWNav>
                   <GWBtn
@@ -500,6 +520,51 @@ export default function MyTeam() {
                   </>
                 )}
               </PitchWrapper>
+            </>
+            )}
+
+              {activeTab === 'odds' && (
+                <div style={{ padding: '0.5rem 0', paddingBottom: '70px' }}>
+                  {/* Header banner */}
+                  <div style={{ display: 'flex', alignItems: 'center', padding: '0.6rem 0.5rem', background: '#f5a623', color: '#1a0a2e', fontWeight: 700, fontSize: '0.65rem', gap: '0' }}>
+                    <span style={{ width: '28px', textAlign: 'center' }}>Pos</span>
+                    <span style={{ width: '100px' }}>Player</span>
+                    <span style={{ width: '55px', textAlign: 'center' }}>GW{gw}</span>
+                    <span style={{ flex: 1, textAlign: 'center' }}>First Goal</span>
+                    <span style={{ flex: 1, textAlign: 'center' }}>Anytime</span>
+                    <span style={{ flex: 1, textAlign: 'center' }}>2+</span>
+                    <span style={{ flex: 1, textAlign: 'center' }}>Hat-trick</span>
+                  </div>
+
+                  {/* Player rows */}
+                  {picks?.starting?.map(player => {
+                    const posLabels = { 1: 'GK', 2: 'D', 3: 'M', 4: 'F' };
+                    const posColors = { 1: '#f5a623', 2: '#48bb78', 3: '#63b3ed', 4: '#fc8181' };
+                    const playerOdds = odds?.[player.element] || {};
+
+                    return (
+                      <div key={player.element} style={{ display: 'flex', alignItems: 'center', padding: '0.6rem 0.5rem', borderBottom: '1px solid #2d1a4e', fontSize: '0.72rem' }}>
+                        <span style={{ width: '28px', textAlign: 'center', color: posColors[player.element_type] || '#ccc', fontWeight: 700 }}>{posLabels[player.element_type]}</span>
+                        <div style={{ width: '100px' }}>
+                          <div style={{ fontWeight: 700, color: '#eaeaea', fontSize: '0.78rem' }}>{player.web_name}</div>
+                          <div style={{ color: '#8892b0', fontSize: '0.65rem' }}>{player.team_short}</div>
+                        </div>
+                        <span style={{ width: '55px', textAlign: 'center', color: '#8892b0', fontSize: '0.7rem' }}>{player.team_short} ({player.position <= 11 ? 'H' : 'A'})</span>
+                        <span style={{ flex: 1, textAlign: 'center', color: '#f5a623' }}>{playerOdds.firstGoal || '—'}</span>
+                        <span style={{ flex: 1, textAlign: 'center', color: '#f5a623' }}>{playerOdds.anytime || '—'}</span>
+                        <span style={{ flex: 1, textAlign: 'center', color: '#f5a623' }}>{playerOdds.twoPlus || '—'}</span>
+                        <span style={{ flex: 1, textAlign: 'center', color: '#f5a623' }}>{playerOdds.hatTrick || '—'}</span>
+                      </div>
+                    );
+                  })}
+
+                  {(!picks?.starting || picks.starting.length === 0) && (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: '#8892b0' }}>
+                      Sign in to see your team's player odds
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </AppShell>
