@@ -764,8 +764,24 @@ export default function MyTeam() {
                         <span style={{ width: '60px', textAlign: 'center', color: '#8892b0', fontSize: '0.68rem', flexShrink: 0 }}>{player.fixture || '—'}</span>
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
                           {player.fixtureFinished ? (
-                            <span style={{ color: player.goalsScored > 0 ? '#48bb78' : '#8892b0', fontWeight: 700, fontSize: '0.85rem' }}>
-                              {player.goalsScored > 0 ? 'Scored' : 'No Goal'}
+                            <span style={{ color: (() => {
+                              if (selectedMarket === 'anytime' || selectedMarket === 'firstGoal' || selectedMarket === 'twoPlus' || selectedMarket === 'hatTrick') {
+                                return player.goalsScored > 0 ? '#48bb78' : '#8892b0';
+                              }
+                              if (selectedMarket === 'yellowCard') return player.yellowCards > 0 ? '#f5a623' : '#8892b0';
+                              if (selectedMarket === 'redCard') return player.redCards > 0 ? '#fc8181' : '#8892b0';
+                              if (selectedMarket === 'assists') return player.assistsMade > 0 ? '#48bb78' : '#8892b0';
+                              return '#8892b0';
+                            })(), fontWeight: 700, fontSize: '0.8rem' }}>
+                              {(() => {
+                                if (selectedMarket === 'anytime' || selectedMarket === 'firstGoal') return player.goalsScored > 0 ? 'Scored' : 'No Goal';
+                                if (selectedMarket === 'twoPlus') return player.goalsScored >= 2 ? `Scored ${player.goalsScored}` : 'No';
+                                if (selectedMarket === 'hatTrick') return player.goalsScored >= 3 ? 'Hat-trick!' : 'No';
+                                if (selectedMarket === 'yellowCard') return player.yellowCards > 0 ? 'Yellow Card' : 'No Card';
+                                if (selectedMarket === 'redCard') return player.redCards > 0 ? 'Red Card' : 'No Card';
+                                if (selectedMarket === 'assists') return player.assistsMade > 0 ? `Assist (${player.assistsMade})` : 'No Assist';
+                                return '—';
+                              })()}
                             </span>
                           ) : marketOdds ? (
                             <>

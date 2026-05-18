@@ -70,6 +70,8 @@ export default async function handler(req, res) {
     // Get GW-specific player points from the live endpoint
     let gwPoints = {};
     let gwGoals = {};
+    let gwCards = {};
+    let gwAssists = {};
     let gwFixtureFinished = {};
     try {
       const liveData = await fplFetch(`https://fantasy.premierleague.com/api/event/${currentGW}/live/`);
@@ -77,6 +79,8 @@ export default async function handler(req, res) {
         for (const el of liveData.elements) {
           gwPoints[el.id] = el.stats?.total_points ?? 0;
           gwGoals[el.id] = el.stats?.goals_scored ?? 0;
+          gwCards[el.id] = { yellow: el.stats?.yellow_cards ?? 0, red: el.stats?.red_cards ?? 0 };
+          gwAssists[el.id] = el.stats?.assists ?? 0;
         }
       }
     } catch {}
@@ -117,6 +121,9 @@ export default async function handler(req, res) {
       }
 
       const goalsScored = gwGoals[pick.element] || 0;
+      const yellowCards = gwCards[pick.element]?.yellow || 0;
+      const redCards = gwCards[pick.element]?.red || 0;
+      const assistsMade = gwAssists[pick.element] || 0;
 
       return {
         element: pick.element,
@@ -136,6 +143,9 @@ export default async function handler(req, res) {
         isHome,
         fixtureFinished,
         goalsScored,
+        yellowCards,
+        redCards,
+        assistsMade,
         event_points: eventPts,
         total_points: player.total_points ?? 0,
         photo: player.photo ? player.photo.replace('.jpg', '.png') : null,
