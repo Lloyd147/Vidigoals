@@ -50,25 +50,51 @@ function getShirtColours(teamId, isGkp) {
 // ── Shirt SVG component ───────────────────────────────────────────────────────
 function ShirtSVG({ teamId, isGkp, isCaptain, isVice, size = 52, playerId }) {
   const { primary, secondary, pattern } = getShirtColours(teamId, isGkp);
-  const id = `stripes-${teamId}-${playerId || '0'}`;
+
+  // Generate stripe rects manually (more reliable than SVG patterns in React)
+  const stripes = [];
+  if (pattern === 'stripes') {
+    for (let x = 0; x < 52; x += 6) {
+      stripes.push(
+        <rect key={`s-${x}`} x={x} y="0" width="3" height="58" fill={secondary} />
+      );
+    }
+  }
 
   return (
     <svg width={size} height={size * 1.1} viewBox="0 0 52 58" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {pattern === 'stripes' && (
-        <defs>
-          <pattern id={id} patternUnits="userSpaceOnUse" width="6" height="58">
-            <rect width="3" height="58" fill={primary} />
-            <rect x="3" width="3" height="58" fill={secondary} />
-          </pattern>
-        </defs>
-      )}
+      <defs>
+        <clipPath id={`clip-body-${teamId}-${playerId || 0}`}>
+          <path d="M10 4 L10 54 L42 54 L42 4 L38 2 C36 6 30 8 26 8 C22 8 16 6 14 2Z" />
+        </clipPath>
+        <clipPath id={`clip-lsleeve-${teamId}-${playerId || 0}`}>
+          <path d="M14 4 L2 12 L2 24 L10 20 L10 4Z" />
+        </clipPath>
+        <clipPath id={`clip-rsleeve-${teamId}-${playerId || 0}`}>
+          <path d="M38 4 L50 12 L50 24 L42 20 L42 4Z" />
+        </clipPath>
+      </defs>
 
       {/* Left sleeve */}
-      <path d="M14 4 L2 12 L2 24 L10 20 L10 4Z" fill={pattern === 'stripes' ? `url(#${id})` : secondary} stroke="rgba(0,0,0,0.2)" strokeWidth="0.5"/>
+      <g clipPath={`url(#clip-lsleeve-${teamId}-${playerId || 0})`}>
+        <rect x="0" y="0" width="52" height="58" fill={pattern === 'stripes' ? primary : secondary} />
+        {pattern === 'stripes' && stripes}
+      </g>
       {/* Right sleeve */}
-      <path d="M38 4 L50 12 L50 24 L42 20 L42 4Z" fill={pattern === 'stripes' ? `url(#${id})` : secondary} stroke="rgba(0,0,0,0.2)" strokeWidth="0.5"/>
+      <g clipPath={`url(#clip-rsleeve-${teamId}-${playerId || 0})`}>
+        <rect x="0" y="0" width="52" height="58" fill={pattern === 'stripes' ? primary : secondary} />
+        {pattern === 'stripes' && stripes}
+      </g>
       {/* Body */}
-      <path d="M10 4 L10 54 L42 54 L42 4 L38 2 C36 6 30 8 26 8 C22 8 16 6 14 2Z" fill={pattern === 'stripes' ? `url(#${id})` : primary} stroke="rgba(0,0,0,0.2)" strokeWidth="0.5"/>
+      <g clipPath={`url(#clip-body-${teamId}-${playerId || 0})`}>
+        <rect x="0" y="0" width="52" height="58" fill={primary} />
+        {pattern === 'stripes' && stripes}
+      </g>
+
+      {/* Outlines */}
+      <path d="M10 4 L10 54 L42 54 L42 4 L38 2 C36 6 30 8 26 8 C22 8 16 6 14 2Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5"/>
+      <path d="M14 4 L2 12 L2 24 L10 20 L10 4Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5"/>
+      <path d="M38 4 L50 12 L50 24 L42 20 L42 4Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5"/>
       {/* Collar */}
       <path d="M18 2 C20 5 23 7 26 7 C29 7 32 5 34 2" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.2"/>
 
