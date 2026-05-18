@@ -229,22 +229,22 @@ const Pitch = styled.div`
 
 const PitchBanner = styled.div`
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 0;
-  margin-bottom: 0.5rem;
+  padding: 0 0.25rem;
+  margin-bottom: 0.25rem;
 `;
 
 const BannerHalf = styled.div`
   background: ${({ side }) => side === 'left' ? '#6c2eb9' : '#2d0a5e'};
-  padding: 0.4rem 1rem;
-  font-size: 0.7rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.6rem;
   font-weight: 800;
   color: #fff;
   display: flex;
   align-items: center;
-  gap: 4px;
-  border-radius: ${({ side }) => side === 'left' ? '0 0 0 8px' : '0 0 8px 0'};
+  gap: 3px;
+  border-radius: 4px;
   span { color: #f5a623; }
 `;
 
@@ -637,7 +637,6 @@ export default function MyTeam() {
                     <Pitch>
                       <PitchBanner>
                         <BannerHalf side="left">⚽ Vidi<span>Goals</span></BannerHalf>
-                        <div style={{ width: '60px' }} />
                         <BannerHalf side="right">⚽ Vidi<span>Goals</span></BannerHalf>
                       </PitchBanner>
                       <PitchMarkings />
@@ -652,6 +651,7 @@ export default function MyTeam() {
                     </Pitch>
 
                     <BenchSection>
+                      <BenchLabel>YOUR BENCH</BenchLabel>
                       <PitchRow>
                         {bench.map(player => {
                           const posLabels = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
