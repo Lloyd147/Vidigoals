@@ -372,7 +372,12 @@ export default function AppShell({ user, page, isLive, onLogout, children }) {
       {user && (
         <PointsBar>
           <div>GW Points <span>{livePoints.gw !== null ? livePoints.gw : (user.gwPoints || '—')}</span></div>
-          <div>Overall Points <span>{livePoints.overall !== null ? livePoints.overall : (user.overallPoints || '—')}</span></div>
+          <div>Overall Points <span>{(() => {
+            const gwPts = livePoints.gw || user.gwPoints || 0;
+            const overallBase = user.overallPoints || 0;
+            // Overall = stored overall + current GW points (FPL's overall doesn't update live)
+            return overallBase + gwPts;
+          })()}</span></div>
         </PointsBar>
       )}
 
