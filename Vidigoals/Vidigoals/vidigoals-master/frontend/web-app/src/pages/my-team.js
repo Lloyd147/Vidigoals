@@ -753,7 +753,11 @@ export default function MyTeam() {
                         </div>
                         <span style={{ width: '60px', textAlign: 'center', color: '#8892b0', fontSize: '0.68rem', flexShrink: 0 }}>{player.fixture || '—'}</span>
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
-                          {marketOdds ? (
+                          {player.fixtureFinished ? (
+                            <span style={{ color: player.goalsScored > 0 ? '#48bb78' : '#8892b0', fontWeight: 700, fontSize: '0.85rem' }}>
+                              {player.goalsScored > 0 ? 'Scored' : 'No Goal'}
+                            </span>
+                          ) : marketOdds ? (
                             <>
                               <span style={{ color: '#f5a623', fontWeight: 700, fontSize: '0.95rem' }}>{marketOdds.odds}</span>
                               <div style={{ width: '80px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

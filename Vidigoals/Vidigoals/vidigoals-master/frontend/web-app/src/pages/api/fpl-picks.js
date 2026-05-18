@@ -69,11 +69,14 @@ export default async function handler(req, res) {
 
     // Get GW-specific player points from the live endpoint
     let gwPoints = {};
+    let gwGoals = {};
+    let gwFixtureFinished = {};
     try {
       const liveData = await fplFetch(`https://fantasy.premierleague.com/api/event/${currentGW}/live/`);
       if (liveData?.elements) {
         for (const el of liveData.elements) {
           gwPoints[el.id] = el.stats?.total_points ?? 0;
+          gwGoals[el.id] = el.stats?.goals_scored ?? 0;
         }
       }
     } catch {}
@@ -99,6 +102,7 @@ export default async function handler(req, res) {
       let fixture = null;
       let opponent = null;
       let isHome = false;
+      let fixtureFinished = false;
       const playerTeamId = player.team;
       if (playerTeamId && gwFixtures.length > 0) {
         const fix = gwFixtures.find(f => f.team_h === playerTeamId || f.team_a === playerTeamId);
@@ -108,8 +112,11 @@ export default async function handler(req, res) {
           const oppTeam = teamMap[oppTeamId] || {};
           opponent = oppTeam.short_name || '';
           fixture = `${opponent} (${isHome ? 'H' : 'A'})`;
+          fixtureFinished = fix.finished || fix.finished_provisional || false;
         }
       }
+
+      const goalsScored = gwGoals[pick.element] || 0;
 
       return {
         element: pick.element,
@@ -127,6 +134,8 @@ export default async function handler(req, res) {
         fixture,
         opponent,
         isHome,
+        fixtureFinished,
+        goalsScored,
         event_points: eventPts,
         total_points: player.total_points ?? 0,
         photo: player.photo ? player.photo.replace('.jpg', '.png') : null,
