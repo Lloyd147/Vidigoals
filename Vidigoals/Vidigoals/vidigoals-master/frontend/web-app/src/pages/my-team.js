@@ -11,6 +11,10 @@ const GlobalStyle = createGlobalStyle`
     color: #eaeaea;
     min-height: 100vh;
   }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
 `;
 
 // ── Team shirt colour map (by FPL team_id) ────────────────────────────────────
@@ -87,7 +91,7 @@ function ShirtSVG({ teamId, isGkp, isCaptain, isVice, size = 52, playerId }) {
         <rect x="0" y="0" width="52" height="58" fill={pattern === 'stripes' ? primary : secondary} />
         {pattern === 'stripes' && stripes}
       </g>
-      {/* Body */}
+      {/* Body - solid background first to prevent transparency */}
       <g clipPath={`url(#clip-body-${teamId}-${playerId || 0})`}>
         <rect x="0" y="0" width="52" height="58" fill={primary} />
         {pattern === 'stripes' && stripes}
@@ -342,7 +346,7 @@ const PointsBadge = styled.div`
 `;
 
 const BenchSection = styled.div`
-  background: #e0e0e0;
+  background: #1a5e2a;
   border-radius: 8px;
   padding: 0.5rem 0.25rem;
   margin-top: 0.75rem;
@@ -351,14 +355,14 @@ const BenchSection = styled.div`
 const BenchLabel = styled.div`
   text-align: center;
   font-size: 0.6rem;
-  color: #666;
+  color: rgba(255,255,255,0.6);
   font-weight: 700;
   margin-bottom: 2px;
 `;
 
 const BenchPosLabel = styled.div`
   font-size: 0.5rem;
-  color: #888;
+  color: rgba(255,255,255,0.7);
   font-weight: 700;
   text-align: center;
   margin-bottom: 2px;
@@ -576,10 +580,21 @@ export default function MyTeam() {
                   >›</GWBtn>
                 </GWNav>
 
+                {/* Current Round Active indicator */}
+                {gw === latestGW && (
+                  <div style={{ textAlign: 'center', padding: '0.3rem 0', fontSize: '0.65rem', color: '#48bb78', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#48bb78', display: 'inline-block', animation: 'pulse-dot 1.5s infinite' }} />
+                    CURRENT ROUND ACTIVE
+                  </div>
+                )}
+
                 {history && (
                   <StatsRow>
                     <StatBox>
-                      <StatValue large>{displayGwPoints}</StatValue>
+                      <StatValue large>
+                        {gw === latestGW && <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#48bb78', marginRight: '4px', animation: 'pulse-dot 1.5s infinite' }} />}
+                        {displayGwPoints}
+                      </StatValue>
                       <StatLabel>GW Points</StatLabel>
                     </StatBox>
                     <StatBox>
