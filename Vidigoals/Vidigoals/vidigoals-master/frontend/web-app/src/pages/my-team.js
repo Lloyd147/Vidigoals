@@ -719,7 +719,7 @@ export default function MyTeam() {
                       const webName = (player.web_name || '').toLowerCase();
                       const fullName = (player.name || '').toLowerCase();
                       const lastName = fullName.split(' ').pop() || '';
-                      playerOdds = Object.values(odds).find(o => {
+                      const match = Object.values(odds).find(o => {
                         const oddsName = (o.name || '').toLowerCase();
                         const oddsLast = oddsName.split(' ').pop() || '';
                         return oddsName === fullName ||
@@ -727,6 +727,15 @@ export default function MyTeam() {
                                webName.includes(oddsLast) ||
                                oddsLast === lastName;
                       });
+                      // Only show odds if the fixture matches (odds are for a specific match)
+                      if (match && player.fixture) {
+                        const oddsFixture = (match.fixture || '').toLowerCase();
+                        const playerTeam = (player.team_name || '').toLowerCase();
+                        // Check if the odds fixture involves this player's team
+                        if (oddsFixture.includes(playerTeam) || oddsFixture.includes(playerTeam.split(' ')[0])) {
+                          playerOdds = match;
+                        }
+                      }
                     }
 
                     // Get odds for selected market
