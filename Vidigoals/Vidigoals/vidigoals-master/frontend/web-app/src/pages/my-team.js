@@ -465,6 +465,7 @@ export default function MyTeam() {
       'draftkings': '/logos/draftkings',
       'betmgm': '/logos/betmgm',
       'livescorebet': '/logos/livescorebet',
+      'livescore': '/logos/livescorebet',
       'boylesports': '/logos/boylesports',
       'betvictor': '/logos/betvictor',
     };
@@ -741,8 +742,8 @@ export default function MyTeam() {
                             <div style={{ color: '#8892b0', fontSize: '0.6rem' }}>{player.team_name}</div>
                           </div>
                         </div>
-                        <span style={{ width: '65px', textAlign: 'center', color: '#8892b0', fontSize: '0.68rem' }}>{player.fixture || '—'}</span>
-                        <div style={{ width: '160px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                        <span style={{ width: '65px', textAlign: 'center', color: '#8892b0', fontSize: '0.68rem', flexShrink: 0 }}>{player.fixture || '—'}</span>
+                        <div style={{ width: '160px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', flexShrink: 0 }}>
                           {marketOdds ? (
                             <>
                               <span style={{ color: '#f5a623', fontWeight: 700, fontSize: '0.95rem', minWidth: '45px', textAlign: 'right' }}>{marketOdds.odds}</span>

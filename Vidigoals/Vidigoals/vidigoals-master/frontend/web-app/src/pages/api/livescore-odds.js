@@ -34,7 +34,7 @@ async function fetchAllOdds() {
   const events = [];
   for (const cat of categories) {
     for (const ev of (cat.events || [])) {
-      if (ev.state === 'NOTSTARTED') {
+      if (ev.state === 'NOTSTARTED' || ev.state === 'INPLAY') {
         events.push({
           id: ev.id,
           home: ev.participants?.find(p => p.venueRole === 'Home')?.name || '',
