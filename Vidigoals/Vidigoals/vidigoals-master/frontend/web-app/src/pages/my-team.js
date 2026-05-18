@@ -643,7 +643,7 @@ export default function MyTeam() {
                           {playerOdds?.firstGoal ? (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
                               <span style={{ color: '#f5a623', fontWeight: 700 }}>{playerOdds.firstGoal.odds}</span>
-                              <img src={getBookieLogo(playerOdds.firstGoal.bookie)} alt={playerOdds.firstGoal.bookie} style={{ height: '20px', borderRadius: '3px' }} onError={e => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'inline'); }} />
+                              <img src={getBookieLogo(playerOdds.firstGoal.bookie)} alt={playerOdds.firstGoal.bookie} style={{ height: '22px', maxWidth: '70px', objectFit: 'contain', borderRadius: '3px' }} onError={e => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'inline'); }} />
                               <span style={{ display: 'none', background: '#f5a623', color: '#1a0a2e', fontSize: '0.5rem', fontWeight: 700, padding: '1px 3px', borderRadius: '2px' }}>{playerOdds.firstGoal.bookie}</span>
                             </span>
                           ) : <span style={{ color: '#8892b0' }}>—</span>}
@@ -652,7 +652,7 @@ export default function MyTeam() {
                           {playerOdds?.anytime ? (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
                               <span style={{ color: '#f5a623', fontWeight: 700 }}>{playerOdds.anytime.odds}</span>
-                              <img src={getBookieLogo(playerOdds.anytime.bookie)} alt={playerOdds.anytime.bookie} style={{ height: '20px', borderRadius: '3px' }} onError={e => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'inline'); }} />
+                              <img src={getBookieLogo(playerOdds.anytime.bookie)} alt={playerOdds.anytime.bookie} style={{ height: '22px', maxWidth: '70px', objectFit: 'contain', borderRadius: '3px' }} onError={e => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'inline'); }} />
                               <span style={{ display: 'none', background: '#f5a623', color: '#1a0a2e', fontSize: '0.5rem', fontWeight: 700, padding: '1px 3px', borderRadius: '2px' }}>{playerOdds.anytime.bookie}</span>
                             </span>
                           ) : <span style={{ color: '#8892b0' }}>—</span>}
