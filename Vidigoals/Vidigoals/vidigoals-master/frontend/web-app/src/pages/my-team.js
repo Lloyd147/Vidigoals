@@ -527,11 +527,18 @@ export default function MyTeam() {
 
               {activeTab === 'odds' && (
                 <div style={{ padding: '0.5rem 0', paddingBottom: '70px' }}>
+                  {/* GW Navigation for odds */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.6rem', gap: '1.5rem', background: '#2d0a5e', borderBottom: '1px solid #4a1a8e' }}>
+                    <button onClick={() => gw > 1 && setGw(g => g - 1)} disabled={gw <= 1} style={{ background: 'transparent', border: 'none', color: gw > 1 ? '#f5a623' : '#4a1a8e', fontSize: '1.5rem', cursor: gw > 1 ? 'pointer' : 'not-allowed' }}>‹</button>
+                    <span style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>Gameweek {gw}</span>
+                    <button onClick={() => gw < 38 && setGw(g => g + 1)} disabled={gw >= 38} style={{ background: 'transparent', border: 'none', color: gw < 38 ? '#f5a623' : '#4a1a8e', fontSize: '1.5rem', cursor: gw < 38 ? 'pointer' : 'not-allowed' }}>›</button>
+                  </div>
+
                   {/* Header banner */}
-                  <div style={{ display: 'flex', alignItems: 'center', padding: '0.6rem 0.5rem', background: '#f5a623', color: '#1a0a2e', fontWeight: 700, fontSize: '0.65rem', gap: '0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', padding: '0.6rem 0.5rem', background: '#f5a623', color: '#1a0a2e', fontWeight: 700, fontSize: '0.65rem' }}>
                     <span style={{ width: '28px', textAlign: 'center' }}>Pos</span>
-                    <span style={{ width: '100px' }}>Player</span>
-                    <span style={{ width: '55px', textAlign: 'center' }}>GW{gw}</span>
+                    <span style={{ width: '120px' }}>Player</span>
+                    <span style={{ width: '60px', textAlign: 'center' }}>GW{gw}</span>
                     <span style={{ flex: 1, textAlign: 'center' }}>First Goal</span>
                     <span style={{ flex: 1, textAlign: 'center' }}>Anytime</span>
                     <span style={{ flex: 1, textAlign: 'center' }}>2+</span>
@@ -543,30 +550,40 @@ export default function MyTeam() {
                     const posLabels = { 1: 'GK', 2: 'D', 3: 'M', 4: 'F' };
                     const posColors = { 1: '#f5a623', 2: '#48bb78', 3: '#63b3ed', 4: '#fc8181' };
 
-                    // Match player to odds by last name (odds use full names)
+                    // Match player to odds by name
                     let playerOdds = null;
                     if (odds) {
-                      const lastName = (player.web_name || '').toLowerCase();
+                      const webName = (player.web_name || '').toLowerCase();
                       const fullName = (player.name || '').toLowerCase();
-                      // Try exact web_name match, then last name match
+                      const lastName = fullName.split(' ').pop() || '';
                       playerOdds = Object.values(odds).find(o => {
                         const oddsName = (o.name || '').toLowerCase();
+                        const oddsLast = oddsName.split(' ').pop() || '';
                         return oddsName === fullName ||
-                               oddsName.includes(lastName) ||
-                               lastName.includes(oddsName.split(' ').pop());
+                               oddsName.includes(webName) ||
+                               webName.includes(oddsLast) ||
+                               oddsLast === lastName;
                       });
                     }
 
+                    // Team shirt URL from FPL
+                    const shirtUrl = player.team_id
+                      ? `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.team_id}-110.webp`
+                      : null;
+
                     return (
                       <div key={player.element} style={{ display: 'flex', alignItems: 'center', padding: '0.6rem 0.5rem', borderBottom: '1px solid #2d1a4e', fontSize: '0.72rem' }}>
-                        <span style={{ width: '28px', textAlign: 'center', color: posColors[player.element_type] || '#ccc', fontWeight: 700 }}>{posLabels[player.element_type]}</span>
-                        <div style={{ width: '100px' }}>
-                          <div style={{ fontWeight: 700, color: '#eaeaea', fontSize: '0.78rem' }}>{player.web_name}</div>
-                          <div style={{ color: '#8892b0', fontSize: '0.65rem' }}>{player.team_name || player.team_short}</div>
+                        <span style={{ width: '28px', textAlign: 'center', color: posColors[player.element_type] || '#ccc', fontWeight: 700, fontSize: '0.7rem' }}>{posLabels[player.element_type]}</span>
+                        <div style={{ width: '120px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {shirtUrl && <img src={shirtUrl} alt="" style={{ width: '24px', height: '28px', objectFit: 'contain' }} onError={e => { e.target.style.display = 'none'; }} />}
+                          <div>
+                            <div style={{ fontWeight: 700, color: '#eaeaea', fontSize: '0.78rem' }}>{player.web_name}</div>
+                            <div style={{ color: '#8892b0', fontSize: '0.6rem' }}>{player.team_name}</div>
+                          </div>
                         </div>
-                        <span style={{ width: '55px', textAlign: 'center', color: '#8892b0', fontSize: '0.7rem' }}>{playerOdds?.fixture || '—'}</span>
-                        <span style={{ flex: 1, textAlign: 'center', color: '#f5a623', fontSize: '0.72rem' }}>{playerOdds?.firstGoal ? `${playerOdds.firstGoal.odds}` : '—'}</span>
-                        <span style={{ flex: 1, textAlign: 'center', color: '#f5a623', fontSize: '0.72rem' }}>{playerOdds?.anytime ? `${playerOdds.anytime.odds}` : '—'}</span>
+                        <span style={{ width: '60px', textAlign: 'center', color: '#8892b0', fontSize: '0.68rem' }}>{player.fixture || '—'}</span>
+                        <span style={{ flex: 1, textAlign: 'center', color: '#f5a623', fontSize: '0.72rem' }}>{playerOdds?.firstGoal ? playerOdds.firstGoal.odds : '—'}</span>
+                        <span style={{ flex: 1, textAlign: 'center', color: '#f5a623', fontSize: '0.72rem' }}>{playerOdds?.anytime ? playerOdds.anytime.odds : '—'}</span>
                         <span style={{ flex: 1, textAlign: 'center', color: '#8892b0' }}>—</span>
                         <span style={{ flex: 1, textAlign: 'center', color: '#8892b0' }}>—</span>
                       </div>

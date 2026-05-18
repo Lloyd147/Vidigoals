@@ -66,11 +66,35 @@ export default async function handler(req, res) {
     } catch {}
 
     // Enrich picks with player data
+    // Also get fixtures for this GW to show opponent
+    let gwFixtures = [];
+    try {
+      const fixturesData = await fplFetch(`https://fantasy.premierleague.com/api/fixtures/?event=${currentGW}`);
+      if (fixturesData) gwFixtures = fixturesData;
+    } catch {}
+
     const picks = (picksData.picks || []).map(pick => {
       const player = playerMap[pick.element] || {};
       const team = teamMap[player.team] || {};
       // Use GW-specific points if available, otherwise fall back to bootstrap
       const eventPts = gwPoints[pick.element] ?? player.event_points ?? 0;
+
+      // Find this player's fixture in the GW
+      let fixture = null;
+      let opponent = null;
+      let isHome = false;
+      const playerTeamId = player.team;
+      if (playerTeamId && gwFixtures.length > 0) {
+        const fix = gwFixtures.find(f => f.team_h === playerTeamId || f.team_a === playerTeamId);
+        if (fix) {
+          isHome = fix.team_h === playerTeamId;
+          const oppTeamId = isHome ? fix.team_a : fix.team_h;
+          const oppTeam = teamMap[oppTeamId] || {};
+          opponent = oppTeam.short_name || '';
+          fixture = `${opponent} (${isHome ? 'H' : 'A'})`;
+        }
+      }
+
       return {
         element: pick.element,
         position: pick.position,
@@ -84,6 +108,9 @@ export default async function handler(req, res) {
         team_name: team.name || '',
         team_short: team.short_name || '',
         team_id: player.team || null,
+        fixture,
+        opponent,
+        isHome,
         event_points: eventPts,
         total_points: player.total_points ?? 0,
         photo: player.photo ? player.photo.replace('.jpg', '.png') : null,
