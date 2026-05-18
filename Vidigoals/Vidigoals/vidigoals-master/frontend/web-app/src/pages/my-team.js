@@ -344,10 +344,11 @@ const PointsBadge = styled.div`
   font-size: 0.62rem;
   font-weight: 700;
   color: #fff;
-  background: ${({ hasPoints }) => hasPoints ? '#6c2eb9' : '#1a0a2e'};
+  background: ${({ live, hasPoints }) => live ? '#48bb78' : hasPoints ? '#6c2eb9' : '#1a0a2e'};
   text-align: center;
   padding: 2px 4px;
   width: 100%;
+  ${({ live }) => live && 'animation: pulse-dot 1.5s infinite;'}
 `;
 
 const BenchSection = styled.div`
@@ -423,8 +424,14 @@ function PlayerTile({ player }) {
       />
       <PlayerInfoBox>
         <PlayerNameLabel>{player.web_name}</PlayerNameLabel>
-        {player.fixture && <PlayerFixtureLabel>{player.fixture}</PlayerFixtureLabel>}
-        <PointsBadge hasPoints={pts > 0}>{pts}</PointsBadge>
+        {player.fixtureLive ? (
+          <PlayerFixtureLabel style={{ color: '#48bb78', fontWeight: 700 }}>
+            LIVE {player.fixtureMinutes ? `${player.fixtureMinutes}'` : ''}
+          </PlayerFixtureLabel>
+        ) : player.fixture ? (
+          <PlayerFixtureLabel>{player.fixture}</PlayerFixtureLabel>
+        ) : null}
+        <PointsBadge hasPoints={pts > 0} live={player.fixtureLive}>{pts}</PointsBadge>
       </PlayerInfoBox>
     </PlayerCard>
   );

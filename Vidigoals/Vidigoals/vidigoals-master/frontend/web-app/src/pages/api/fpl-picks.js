@@ -107,6 +107,8 @@ export default async function handler(req, res) {
       let opponent = null;
       let isHome = false;
       let fixtureFinished = false;
+      let fixtureLive = false;
+      let fixtureMinutes = null;
       const playerTeamId = player.team;
       if (playerTeamId && gwFixtures.length > 0) {
         const fix = gwFixtures.find(f => f.team_h === playerTeamId || f.team_a === playerTeamId);
@@ -117,6 +119,8 @@ export default async function handler(req, res) {
           opponent = oppTeam.short_name || '';
           fixture = `${opponent} (${isHome ? 'H' : 'A'})`;
           fixtureFinished = fix.finished || fix.finished_provisional || false;
+          fixtureLive = fix.started && !fix.finished && !fix.finished_provisional;
+          fixtureMinutes = fix.minutes || null;
         }
       }
 
@@ -142,6 +146,8 @@ export default async function handler(req, res) {
         opponent,
         isHome,
         fixtureFinished,
+        fixtureLive,
+        fixtureMinutes,
         goalsScored,
         yellowCards,
         redCards,
