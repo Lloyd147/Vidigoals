@@ -16,26 +16,28 @@ const GlobalStyle = createGlobalStyle`
 // ── Team shirt colour map (by FPL team_id) ────────────────────────────────────
 // Colours only — no logos. Pattern: solid | stripes | hoops | halves
 const TEAM_COLOURS = {
-  1:  { primary: '#ef0107', secondary: '#ffffff', pattern: 'stripes' },   // Arsenal
-  2:  { primary: '#95bfe5', secondary: '#ffffff', pattern: 'solid' },     // Aston Villa (claret/blue - using away)
-  3:  { primary: '#d71920', secondary: '#ffffff', pattern: 'stripes' },   // Bournemouth
-  4:  { primary: '#e30613', secondary: '#ffffff', pattern: 'stripes' },   // Brentford
-  5:  { primary: '#0057b8', secondary: '#ffffff', pattern: 'stripes' },   // Brighton
-  6:  { primary: '#034694', secondary: '#ffffff', pattern: 'solid' },     // Chelsea
-  7:  { primary: '#1b458f', secondary: '#c8102e', pattern: 'halves' },    // Crystal Palace
-  8:  { primary: '#003399', secondary: '#ffffff', pattern: 'solid' },     // Everton
-  9:  { primary: '#ffffff', secondary: '#000000', pattern: 'stripes' },   // Fulham
-  10: { primary: '#003090', secondary: '#ffffff', pattern: 'solid' },     // Ipswich
-  11: { primary: '#0057a8', secondary: '#ffffff', pattern: 'solid' },     // Leicester
-  12: { primary: '#c8102e', secondary: '#ffffff', pattern: 'solid' },     // Liverpool
-  13: { primary: '#6cabdd', secondary: '#ffffff', pattern: 'solid' },     // Man City
-  14: { primary: '#da291c', secondary: '#000000', pattern: 'solid' },     // Man Utd
-  15: { primary: '#241f20', secondary: '#ffffff', pattern: 'stripes' },   // Newcastle
-  16: { primary: '#d71920', secondary: '#ffffff', pattern: 'solid' },     // Nottm Forest
-  17: { primary: '#132257', secondary: '#ffffff', pattern: 'solid' },     // Southampton
-  18: { primary: '#001c58', secondary: '#ffffff', pattern: 'solid' },     // Spurs
-  19: { primary: '#7a263a', secondary: '#ffffff', pattern: 'solid' },     // West Ham
-  20: { primary: '#fdbe11', secondary: '#231f20', pattern: 'solid' },     // Wolves
+  1:  { primary: '#EF0107', secondary: '#ffffff', pattern: 'solid' },     // Arsenal - red with white sleeves
+  2:  { primary: '#670E36', secondary: '#95BFE5', pattern: 'solid' },     // Aston Villa - brown with light blue sleeves
+  3:  { primary: '#8B0000', secondary: '#000000', pattern: 'stripes' },   // Bournemouth - dark red and black stripes
+  4:  { primary: '#E30613', secondary: '#ffffff', pattern: 'stripes' },   // Brentford - red and white stripes
+  5:  { primary: '#0057B8', secondary: '#ffffff', pattern: 'stripes' },   // Brighton - dark blue and white stripes
+  6:  { primary: '#034694', secondary: '#034694', pattern: 'solid' },     // Chelsea - dark blue
+  7:  { primary: '#1B458F', secondary: '#C4122E', pattern: 'stripes' },   // Crystal Palace - dark blue and red stripes
+  8:  { primary: '#003399', secondary: '#003399', pattern: 'solid' },     // Everton - blue
+  9:  { primary: '#ffffff', secondary: '#000000', pattern: 'solid' },     // Fulham - white with black sleeves
+  10: { primary: '#0057B8', secondary: '#0057B8', pattern: 'solid' },     // Ipswich - blue
+  11: { primary: '#ffffff', secondary: '#ffffff', pattern: 'solid' },     // Leeds - white
+  12: { primary: '#C8102E', secondary: '#C8102E', pattern: 'solid' },     // Liverpool - dark red
+  13: { primary: '#6CABDD', secondary: '#6CABDD', pattern: 'solid' },     // Man City - light blue
+  14: { primary: '#DA291C', secondary: '#DA291C', pattern: 'solid' },     // Man Utd - red
+  15: { primary: '#241F20', secondary: '#ffffff', pattern: 'stripes' },   // Newcastle - black and white stripes
+  16: { primary: '#E53233', secondary: '#ffffff', pattern: 'stripes' },   // Nottm Forest - red and white stripes
+  17: { primary: '#D71920', secondary: '#ffffff', pattern: 'stripes' },   // Southampton - red and white stripes (using for Sunderland too)
+  18: { primary: '#ffffff', secondary: '#132257', pattern: 'solid' },     // Spurs - white with dark blue sleeves
+  19: { primary: '#7A263A', secondary: '#1BB1E7', pattern: 'solid' },     // West Ham - dark brown with light blue sleeves
+  20: { primary: '#FDB913', secondary: '#FDB913', pattern: 'solid' },     // Wolves - orange
+  21: { primary: '#8B0000', secondary: '#ffffff', pattern: 'stripes' },   // Sunderland - dark red and white stripes
+  22: { primary: '#670E36', secondary: '#95BFE5', pattern: 'solid' },     // Burnley - brown with light blue sleeves
 };
 
 const GKP_COLOURS = { primary: '#f5a623', secondary: '#1a0a2e', pattern: 'solid' };
@@ -351,39 +353,50 @@ function PlayerTile({ player }) {
 
 // ── Team Shirt SVG Component ──────────────────────────────────────────────────
 const TEAM_COLOURS = {
-  1: { body: '#EF0107', sleeve: '#ffffff', name: 'Arsenal' },        // Arsenal
-  2: { body: '#670E36', sleeve: '#95BFE5', name: 'Aston Villa' },    // Aston Villa
-  3: { body: '#DA291C', sleeve: '#DA291C', name: 'Bournemouth' },    // Bournemouth
-  4: { body: '#e30613', sleeve: '#e30613', name: 'Brentford' },      // Brentford
-  5: { body: '#0057B8', sleeve: '#0057B8', name: 'Brighton' },       // Brighton
-  6: { body: '#034694', sleeve: '#034694', name: 'Chelsea' },        // Chelsea
-  7: { body: '#1B458F', sleeve: '#C4122E', name: 'Crystal Palace' }, // Crystal Palace
-  8: { body: '#003399', sleeve: '#003399', name: 'Everton' },        // Everton
-  9: { body: '#ffffff', sleeve: '#CC0000', name: 'Fulham' },         // Fulham
-  10: { body: '#0057B8', sleeve: '#0057B8', name: 'Ipswich' },       // Ipswich
-  11: { body: '#003090', sleeve: '#003090', name: 'Leicester' },     // Leicester
-  12: { body: '#C8102E', sleeve: '#C8102E', name: 'Liverpool' },     // Liverpool
-  13: { body: '#6CABDD', sleeve: '#6CABDD', name: 'Man City' },      // Man City
-  14: { body: '#DA291C', sleeve: '#DA291C', name: 'Man Utd' },       // Man Utd
-  15: { body: '#241F20', sleeve: '#ffffff', name: 'Newcastle' },     // Newcastle
-  16: { body: '#E53233', sleeve: '#E53233', name: "Nott'm Forest" }, // Nott'm Forest
-  17: { body: '#D71920', sleeve: '#ffffff', name: 'Southampton' },   // Southampton
-  18: { body: '#ffffff', sleeve: '#132257', name: 'Spurs' },         // Spurs
-  19: { body: '#7A263A', sleeve: '#7A263A', name: 'West Ham' },      // West Ham
-  20: { body: '#FDB913', sleeve: '#FDB913', name: 'Wolves' },        // Wolves
+  1: { body: '#EF0107', sleeve: '#ffffff', stripe: null, name: 'Arsenal' },
+  2: { body: '#670E36', sleeve: '#95BFE5', stripe: null, name: 'Aston Villa' },
+  3: { body: '#8B0000', sleeve: '#000000', stripe: '#000000', name: 'Bournemouth' },
+  4: { body: '#E30613', sleeve: '#ffffff', stripe: '#ffffff', name: 'Brentford' },
+  5: { body: '#0057B8', sleeve: '#0057B8', stripe: '#ffffff', name: 'Brighton' },
+  6: { body: '#034694', sleeve: '#034694', stripe: null, name: 'Chelsea' },
+  7: { body: '#1B458F', sleeve: '#C4122E', stripe: '#C4122E', name: 'Crystal Palace' },
+  8: { body: '#003399', sleeve: '#003399', stripe: null, name: 'Everton' },
+  9: { body: '#ffffff', sleeve: '#000000', stripe: null, name: 'Fulham' },
+  10: { body: '#0057B8', sleeve: '#0057B8', stripe: null, name: 'Ipswich' },
+  11: { body: '#ffffff', sleeve: '#ffffff', stripe: null, name: 'Leeds' },
+  12: { body: '#C8102E', sleeve: '#C8102E', stripe: null, name: 'Liverpool' },
+  13: { body: '#6CABDD', sleeve: '#6CABDD', stripe: null, name: 'Man City' },
+  14: { body: '#DA291C', sleeve: '#DA291C', stripe: null, name: 'Man Utd' },
+  15: { body: '#241F20', sleeve: '#ffffff', stripe: '#ffffff', name: 'Newcastle' },
+  16: { body: '#E53233', sleeve: '#E53233', stripe: '#ffffff', name: "Nott'm Forest" },
+  17: { body: '#D71920', sleeve: '#ffffff', stripe: '#ffffff', name: 'Southampton' },
+  18: { body: '#ffffff', sleeve: '#132257', stripe: null, name: 'Spurs' },
+  19: { body: '#7A263A', sleeve: '#7A263A', stripe: '#1BB1E7', name: 'West Ham' },
+  20: { body: '#FDB913', sleeve: '#FDB913', stripe: null, name: 'Wolves' },
+  21: { body: '#8B0000', sleeve: '#ffffff', stripe: '#ffffff', name: 'Sunderland' },
+  22: { body: '#670E36', sleeve: '#95BFE5', stripe: null, name: 'Burnley' },
 };
 
 function TeamShirt({ teamId, size = 28 }) {
-  const colours = TEAM_COLOURS[teamId] || { body: '#666', sleeve: '#888' };
+  const colours = TEAM_COLOURS[teamId] || { body: '#666', sleeve: '#888', stripe: null };
   const w = size * 0.85;
   const h = size;
+  const stripeId = `stripe-${teamId}`;
   return (
     <svg width={w} height={h} viewBox="0 0 34 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {colours.stripe && (
+        <defs>
+          <pattern id={stripeId} patternUnits="userSpaceOnUse" width="4" height="4">
+            <rect width="2" height="4" fill={colours.body} />
+            <rect x="2" width="2" height="4" fill={colours.stripe} />
+          </pattern>
+        </defs>
+      )}
       {/* Sleeves */}
       <path d="M2 8L8 4V18H2V8Z" fill={colours.sleeve} stroke="#333" strokeWidth="0.5"/>
       <path d="M32 8L26 4V18H32V8Z" fill={colours.sleeve} stroke="#333" strokeWidth="0.5"/>
       {/* Body */}
-      <path d="M8 4L12 2H22L26 4V38H8V4Z" fill={colours.body} stroke="#333" strokeWidth="0.5"/>
+      <path d="M8 4L12 2H22L26 4V38H8V4Z" fill={colours.stripe ? `url(#${stripeId})` : colours.body} stroke="#333" strokeWidth="0.5"/>
       {/* Collar */}
       <path d="M12 2L14 4H20L22 2" fill="none" stroke="#333" strokeWidth="0.8"/>
     </svg>
@@ -670,7 +683,7 @@ export default function MyTeam() {
                       <div key={player.element} style={{ display: 'flex', alignItems: 'center', padding: '0.65rem 0.5rem', borderBottom: '1px solid #2d1a4e' }}>
                         <span style={{ width: '28px', textAlign: 'center', color: posColors[player.element_type] || '#ccc', fontWeight: 700, fontSize: '0.72rem' }}>{posLabels[player.element_type]}</span>
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <TeamShirt teamId={player.team_id} size={28} />
+                          <ShirtSVG teamId={player.team_id} isGkp={player.element_type === 1} size={32} />
                           <div>
                             <div style={{ fontWeight: 700, color: '#eaeaea', fontSize: '0.82rem' }}>{player.web_name}</div>
                             <div style={{ color: '#8892b0', fontSize: '0.6rem' }}>{player.team_name}</div>
