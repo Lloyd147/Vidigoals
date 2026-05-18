@@ -50,61 +50,39 @@ function getShirtColours(teamId, isGkp) {
 // ── Shirt SVG component ───────────────────────────────────────────────────────
 function ShirtSVG({ teamId, isGkp, isCaptain, isVice, size = 52 }) {
   const { primary, secondary, pattern } = getShirtColours(teamId, isGkp);
-
-  const stripeCount = 5;
-  const stripeW = size / stripeCount;
+  const id = `shirt-${teamId}-${Math.random().toString(36).substr(2, 5)}`;
 
   return (
     <svg width={size} height={size * 1.1} viewBox="0 0 52 58" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <clipPath id={`shirt-clip-${teamId}-${isGkp}`}>
-          <path d="M14 2 L2 14 L10 18 L10 54 L42 54 L42 18 L50 14 L38 2 C36 8 28 10 26 10 C24 10 16 8 14 2Z" />
-        </clipPath>
-        {pattern === 'stripes' && (
-          <pattern id={`stripes-${teamId}-${isGkp}`} x="0" y="0" width={stripeW * 2} height="58" patternUnits="userSpaceOnUse">
-            <rect width={stripeW} height="58" fill={primary} />
-            <rect x={stripeW} width={stripeW} height="58" fill={secondary} />
+      {pattern === 'stripes' && (
+        <defs>
+          <pattern id={id} patternUnits="userSpaceOnUse" width="8" height="58">
+            <rect width="4" height="58" fill={primary} />
+            <rect x="4" width="4" height="58" fill={secondary} />
           </pattern>
-        )}
-      </defs>
+        </defs>
+      )}
 
-      {/* Shirt body (torso area) */}
-      <path
-        d="M10 18 L10 54 L42 54 L42 18 L26 10Z"
-        fill={pattern === 'stripes' ? `url(#stripes-${teamId}-${isGkp})` : primary}
-      />
-
-      {/* Sleeves */}
-      <path d="M14 2 L2 14 L10 18 L10 10 C16 8 24 10 26 10Z" fill={pattern === 'stripes' ? `url(#stripes-${teamId}-${isGkp})` : secondary} />
-      <path d="M38 2 L50 14 L42 18 L42 10 C36 8 28 10 26 10Z" fill={pattern === 'stripes' ? `url(#stripes-${teamId}-${isGkp})` : secondary} />
-
-      {/* Outline */}
-      <path
-        d="M14 2 L2 14 L10 18 L10 54 L42 54 L42 18 L50 14 L38 2 C36 8 28 10 26 10 C24 10 16 8 14 2Z"
-        fill="none"
-        stroke="rgba(255,255,255,0.2)"
-        strokeWidth="0.5"
-      />
-
+      {/* Left sleeve */}
+      <path d="M14 4 L2 12 L2 24 L10 20 L10 4Z" fill={pattern === 'stripes' ? `url(#${id})` : secondary} stroke="rgba(0,0,0,0.2)" strokeWidth="0.5"/>
+      {/* Right sleeve */}
+      <path d="M38 4 L50 12 L50 24 L42 20 L42 4Z" fill={pattern === 'stripes' ? `url(#${id})` : secondary} stroke="rgba(0,0,0,0.2)" strokeWidth="0.5"/>
+      {/* Body */}
+      <path d="M10 4 L10 54 L42 54 L42 4 L38 2 C36 6 30 8 26 8 C22 8 16 6 14 2Z" fill={pattern === 'stripes' ? `url(#${id})` : primary} stroke="rgba(0,0,0,0.2)" strokeWidth="0.5"/>
       {/* Collar */}
-      <path
-        d="M20 2 C22 6 24 8 26 8 C28 8 30 6 32 2"
-        fill="none"
-        stroke="rgba(255,255,255,0.4)"
-        strokeWidth="1.5"
-      />
+      <path d="M18 2 C20 5 23 7 26 7 C29 7 32 5 34 2" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.2"/>
 
       {/* Captain / Vice badge */}
       {isCaptain && (
         <>
-          <circle cx="42" cy="8" r="7" fill="#f5a623" />
-          <text x="42" y="12" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#1a0a2e">C</text>
+          <circle cx="44" cy="6" r="6" fill="#f5a623" />
+          <text x="44" y="9.5" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#1a0a2e">C</text>
         </>
       )}
       {isVice && (
         <>
-          <circle cx="42" cy="8" r="7" fill="#9b59b6" />
-          <text x="42" y="12" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#fff">V</text>
+          <circle cx="44" cy="6" r="6" fill="#9b59b6" />
+          <text x="44" y="9.5" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#fff">V</text>
         </>
       )}
     </svg>
