@@ -203,32 +203,36 @@ const ChipBadge = styled.div`
 
 const PitchWrapper = styled.div`
   flex: 1;
-  padding: 0.75rem;
+  padding: 0.5rem;
   overflow-y: auto;
+  padding-bottom: 70px;
 `;
 
 const Pitch = styled.div`
   background: linear-gradient(180deg,
-    #2e7d32 0%, #388e3c 20%, #2e7d32 50%, #388e3c 80%, #2e7d32 100%);
+    #2e7d32 0%, #33892e 12%, #2e7d32 25%, #33892e 37%, #2e7d32 50%, #33892e 62%, #2e7d32 75%, #33892e 87%, #2e7d32 100%);
   border-radius: 10px;
-  padding: 1.25rem 0.5rem 1rem;
+  padding: 1.5rem 0.25rem 1rem;
   position: relative;
+  overflow: hidden;
+  /* Centre circle */
   &::before {
     content: '';
     position: absolute;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    width: 56px; height: 56px;
+    width: 70px; height: 70px;
     border-radius: 50%;
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1.5px solid rgba(255,255,255,0.25);
     pointer-events: none;
   }
+  /* Half-way line */
   &::after {
     content: '';
     position: absolute;
-    top: 50%; left: 8%; right: 8%;
-    height: 1px;
-    background: rgba(255,255,255,0.2);
+    top: 50%; left: 5%; right: 5%;
+    height: 1.5px;
+    background: rgba(255,255,255,0.25);
     pointer-events: none;
   }
 `;
@@ -236,8 +240,8 @@ const Pitch = styled.div`
 const PitchRow = styled.div`
   display: flex;
   justify-content: center;
-  gap: 2px;
-  margin-bottom: 0.5rem;
+  gap: 4px;
+  margin-bottom: 0.75rem;
   flex-wrap: wrap;
 `;
 
@@ -245,49 +249,67 @@ const PlayerCard = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 62px;
+  width: 68px;
+`;
+
+const PlayerInfoBox = styled.div`
+  width: 64px;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 2px;
 `;
 
 const PlayerNameLabel = styled.div`
-  font-size: 0.6rem;
-  font-weight: 600;
-  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: #333;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 62px;
-  margin-top: 2px;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  background: #fff;
+  padding: 2px 2px 1px;
+`;
+
+const PlayerFixtureLabel = styled.div`
+  font-size: 0.52rem;
+  color: #666;
+  text-align: center;
+  background: #e8e8e8;
+  padding: 1px 2px;
 `;
 
 const PointsBadge = styled.div`
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 700;
   color: #fff;
-  background: #1a0a2e;
-  border-radius: 3px;
-  padding: 1px 6px;
-  margin-top: 2px;
-  min-width: 20px;
+  background: ${({ hasPoints }) => hasPoints ? '#6c2eb9' : '#1a0a2e'};
   text-align: center;
+  padding: 2px 4px;
+  width: 100%;
 `;
 
 const BenchSection = styled.div`
-  background: rgba(0,0,0,0.25);
+  background: #e0e0e0;
   border-radius: 8px;
-  padding: 0.75rem 0.5rem 0.5rem;
+  padding: 0.5rem 0.25rem;
   margin-top: 0.75rem;
 `;
 
 const BenchLabel = styled.div`
   text-align: center;
-  font-size: 0.68rem;
-  color: #8892b0;
+  font-size: 0.6rem;
+  color: #666;
   font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  margin-bottom: 0.5rem;
+  margin-bottom: 2px;
+`;
+
+const BenchPosLabel = styled.div`
+  font-size: 0.5rem;
+  color: #888;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 2px;
 `;
 
 const BottomNav = styled.nav`
@@ -326,6 +348,7 @@ function PlayerTile({ player }) {
     ? player.event_points * player.multiplier
     : player.event_points;
   const isGkp = player.element_type === 1;
+  const posLabels = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
 
   return (
     <PlayerCard>
@@ -334,11 +357,14 @@ function PlayerTile({ player }) {
         isGkp={isGkp}
         isCaptain={player.is_captain}
         isVice={player.is_vice_captain}
-        size={48}
+        size={44}
         playerId={player.element}
       />
-      <PlayerNameLabel>{player.web_name}</PlayerNameLabel>
-      <PointsBadge>{pts}</PointsBadge>
+      <PlayerInfoBox>
+        <PlayerNameLabel>{player.web_name}</PlayerNameLabel>
+        {player.fixture && <PlayerFixtureLabel>{player.fixture}</PlayerFixtureLabel>}
+        <PointsBadge hasPoints={pts > 0}>{pts}</PointsBadge>
+      </PlayerInfoBox>
     </PlayerCard>
   );
 }
@@ -543,11 +569,16 @@ export default function MyTeam() {
                     </Pitch>
 
                     <BenchSection>
-                      <BenchLabel>Substitutes</BenchLabel>
                       <PitchRow>
-                        {bench.map(player => (
-                          <PlayerTile key={player.element} player={player} />
-                        ))}
+                        {bench.map(player => {
+                          const posLabels = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
+                          return (
+                            <div key={player.element} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              <BenchPosLabel>{posLabels[player.element_type] || ''}</BenchPosLabel>
+                              <PlayerTile player={player} />
+                            </div>
+                          );
+                        })}
                       </PitchRow>
                     </BenchSection>
                   </>
