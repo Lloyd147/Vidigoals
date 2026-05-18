@@ -405,7 +405,7 @@ function groupByPosition(players) {
   return [1, 2, 3, 4].map(type => players.filter(p => p.element_type === type));
 }
 
-function PlayerTile({ player }) {
+function PlayerTile({ player, onPlayerClick }) {
   const pts = player.multiplier > 1
     ? player.event_points * player.multiplier
     : player.event_points;
@@ -413,7 +413,7 @@ function PlayerTile({ player }) {
   const posLabels = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
 
   return (
-    <PlayerCard onClick={() => { setSelectedPlayer(player); fetchPlayerDetail(player); }} style={{ cursor: 'pointer' }}>
+    <PlayerCard onClick={() => onPlayerClick && onPlayerClick(player)} style={{ cursor: 'pointer' }}>
       <ShirtSVG
         teamId={player.team_id}
         isGkp={isGkp}
@@ -659,7 +659,7 @@ export default function MyTeam() {
                       {rows.map((row, i) => (
                         <PitchRow key={i}>
                           {row.map(player => (
-                            <PlayerTile key={player.element} player={player} />
+                            <PlayerTile key={player.element} player={player} onPlayerClick={(p) => { setSelectedPlayer(p); fetchPlayerDetail(p); }} />
                           ))}
                         </PitchRow>
                       ))}
@@ -673,7 +673,7 @@ export default function MyTeam() {
                           return (
                             <div key={player.element} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                               <BenchPosLabel>{posLabels[player.element_type] || ''}</BenchPosLabel>
-                              <PlayerTile player={player} />
+                              <PlayerTile player={player} onPlayerClick={(p) => { setSelectedPlayer(p); fetchPlayerDetail(p); }} />
                             </div>
                           );
                         })}
