@@ -6,7 +6,15 @@
  * - xG, xA (from FPL live stats)
  * - Fixture score
  * - Player info
+ *
+ * Caching:
+ * - Live match: 2 min TTL
+ * - Finished match: 4 hours TTL
  */
+
+const detailCache = new Map();
+const CACHE_TTL_LIVE = 2 * 60 * 1000;        // 2 minutes during live
+const CACHE_TTL_FINISHED = 4 * 60 * 60 * 1000; // 4 hours after match ends
 
 async function fplFetch(url) {
   const res = await fetch(url, {
@@ -21,6 +29,16 @@ export default async function handler(req, res) {
 
   const { id, gw } = req.query;
   if (!id || !gw) return res.status(400).json({ error: 'id and gw required' });
+
+  // Check cache
+  const cacheKey = `${id}-${gw}`;
+  const cached = detailCache.get(cacheKey);
+  if (cached) {
+    const ttl = cached.isLive ? CACHE_TTL_LIVE : CACHE_TTL_FINISHED;
+    if (Date.now() - cached.fetchedAt < ttl) {
+      return res.status(200).json(cached.data);
+    }
+  }
 
   try {
     const [bootstrap, liveData, fixtures] = await Promise.all([
@@ -111,7 +129,10 @@ export default async function handler(req, res) {
 
     const totalPoints = stats.total_points || 0;
 
-    return res.status(200).json({
+    // Determine if match is live or finished for cache TTL
+    const isLive = playerFixture && playerFixture.started && !playerFixture.finished && !playerFixture.finished_provisional;
+
+    const result = {
       player: {
         id: player.id,
         name: `${player.first_name} ${player.second_name}`,
@@ -130,7 +151,12 @@ export default async function handler(req, res) {
         value: b.value,
         points: b.points,
       })),
-    });
+    };
+
+    // Store in cache
+    detailCache.set(cacheKey, { data: result, fetchedAt: Date.now(), isLive });
+
+    return res.status(200).json(result);
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
