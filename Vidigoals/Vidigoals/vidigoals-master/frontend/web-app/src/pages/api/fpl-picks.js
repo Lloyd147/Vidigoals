@@ -101,7 +101,10 @@ export default async function handler(req, res) {
       const team = teamMap[player.team] || {};
       // Use GW-specific points if available; if this is a future GW (fallback), show 0
       const isFutureGW = Number(actualGW) !== Number(currentGW);
-      const eventPts = isFutureGW ? 0 : (gwPoints[pick.element] ?? player.event_points ?? 0);
+      // Also check if the requested GW has actually started (any fixture started)
+      const gwHasStarted = gwFixtures.some(f => f.started === true);
+      const showZeroPoints = isFutureGW || !gwHasStarted;
+      const eventPts = showZeroPoints ? 0 : (gwPoints[pick.element] ?? player.event_points ?? 0);
 
       // Find this player's fixture in the GW
       let fixture = null;
@@ -125,10 +128,10 @@ export default async function handler(req, res) {
         }
       }
 
-      const goalsScored = isFutureGW ? 0 : (gwGoals[pick.element] || 0);
-      const yellowCards = isFutureGW ? 0 : (gwCards[pick.element]?.yellow || 0);
-      const redCards = isFutureGW ? 0 : (gwCards[pick.element]?.red || 0);
-      const assistsMade = isFutureGW ? 0 : (gwAssists[pick.element] || 0);
+      const goalsScored = showZeroPoints ? 0 : (gwGoals[pick.element] || 0);
+      const yellowCards = showZeroPoints ? 0 : (gwCards[pick.element]?.yellow || 0);
+      const redCards = showZeroPoints ? 0 : (gwCards[pick.element]?.red || 0);
+      const assistsMade = showZeroPoints ? 0 : (gwAssists[pick.element] || 0);
 
       return {
         element: pick.element,
