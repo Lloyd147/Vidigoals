@@ -125,6 +125,7 @@ export default async function handler(req, res) {
         position: posMap[player.element_type] || '',
         team: team.name || '',
         teamShort: team.short_name || '',
+        teamId: player.team || null,
         ownership: parseFloat(player.selected_by_percent) || 0,
         price: (player.now_cost / 10).toFixed(1),
         priceChange: (player.cost_change_event / 10).toFixed(1),

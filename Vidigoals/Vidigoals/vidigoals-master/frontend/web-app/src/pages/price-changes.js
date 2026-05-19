@@ -13,6 +13,56 @@ const GlobalStyle = createGlobalStyle`
   }
 `;
 
+// ── Team shirt colours (same as my-team.js) ───────────────────────────────────
+const TEAM_COLOURS = {
+  1:  { primary: '#EF0107', secondary: '#ffffff', pattern: 'solid' },
+  2:  { primary: '#670E36', secondary: '#95BFE5', pattern: 'solid' },
+  3:  { primary: '#670E36', secondary: '#95BFE5', pattern: 'solid' },
+  4:  { primary: '#8B0000', secondary: '#000000', pattern: 'stripes' },
+  5:  { primary: '#E30613', secondary: '#ffffff', pattern: 'stripes' },
+  6:  { primary: '#0057B8', secondary: '#ffffff', pattern: 'stripes' },
+  7:  { primary: '#034694', secondary: '#034694', pattern: 'solid' },
+  8:  { primary: '#1B458F', secondary: '#C4122E', pattern: 'stripes' },
+  9:  { primary: '#003399', secondary: '#003399', pattern: 'solid' },
+  10: { primary: '#ffffff', secondary: '#000000', pattern: 'solid' },
+  11: { primary: '#ffffff', secondary: '#ffffff', pattern: 'solid' },
+  12: { primary: '#C8102E', secondary: '#C8102E', pattern: 'solid' },
+  13: { primary: '#6CABDD', secondary: '#6CABDD', pattern: 'solid' },
+  14: { primary: '#DA291C', secondary: '#DA291C', pattern: 'solid' },
+  15: { primary: '#241F20', secondary: '#ffffff', pattern: 'stripes' },
+  16: { primary: '#E53233', secondary: '#ffffff', pattern: 'stripes' },
+  17: { primary: '#8B0000', secondary: '#ffffff', pattern: 'stripes' },
+  18: { primary: '#ffffff', secondary: '#132257', pattern: 'solid' },
+  19: { primary: '#7A263A', secondary: '#1BB1E7', pattern: 'solid' },
+  20: { primary: '#FDB913', secondary: '#FDB913', pattern: 'solid' },
+};
+
+function ShirtSVG({ teamId, size = 28 }) {
+  const { primary, secondary, pattern } = TEAM_COLOURS[teamId] || { primary: '#1a3a6e', secondary: '#ffffff', pattern: 'solid' };
+  const stripes = [];
+  if (pattern === 'stripes') {
+    for (let x = 0; x < 52; x += 6) {
+      stripes.push(<rect key={x} x={x} y="0" width="3" height="58" fill={secondary} />);
+    }
+  }
+  return (
+    <svg width={size} height={size * 1.1} viewBox="0 0 52 58" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <clipPath id={`pc-body-${teamId}`}><path d="M10 4 L10 54 L42 54 L42 4 L38 2 C36 6 30 8 26 8 C22 8 16 6 14 2Z" /></clipPath>
+        <clipPath id={`pc-ls-${teamId}`}><path d="M14 4 L2 12 L2 24 L10 20 L10 4Z" /></clipPath>
+        <clipPath id={`pc-rs-${teamId}`}><path d="M38 4 L50 12 L50 24 L42 20 L42 4Z" /></clipPath>
+      </defs>
+      <path d="M14 4 L2 12 L2 24 L10 20 L10 4Z" fill={pattern === 'stripes' ? primary : secondary} />
+      <path d="M38 4 L50 12 L50 24 L42 20 L42 4Z" fill={pattern === 'stripes' ? primary : secondary} />
+      <path d="M10 4 L10 54 L42 54 L42 4 L38 2 C36 6 30 8 26 8 C22 8 16 6 14 2Z" fill={primary} />
+      <g clipPath={`url(#pc-ls-${teamId})`}><rect x="0" y="0" width="52" height="58" fill={pattern === 'stripes' ? primary : secondary} />{pattern === 'stripes' && stripes}</g>
+      <g clipPath={`url(#pc-rs-${teamId})`}><rect x="0" y="0" width="52" height="58" fill={pattern === 'stripes' ? primary : secondary} />{pattern === 'stripes' && stripes}</g>
+      <g clipPath={`url(#pc-body-${teamId})`}><rect x="0" y="0" width="52" height="58" fill={primary} />{pattern === 'stripes' && stripes}</g>
+      <path d="M10 4 L10 54 L42 54 L42 4 L38 2 C36 6 30 8 26 8 C22 8 16 6 14 2Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5"/>
+    </svg>
+  );
+}
+
 const Wrapper = styled.div`
   max-width: 480px;
   margin: 0 auto;
@@ -238,8 +288,8 @@ export default function PriceChanges() {
               <>
                 {/* Column headers */}
                 <HeaderRow>
-                  <span style={{ width: '130px' }}>Player</span>
-                  <span style={{ width: '55px', textAlign: 'center' }}>Price</span>
+                  <span style={{ width: '140px' }}>Player</span>
+                  <span style={{ width: '50px', textAlign: 'center' }}>Price</span>
                   <span style={{ width: '50px', textAlign: 'center' }}>Own%</span>
                   <span style={{ flex: 1, textAlign: 'center' }}>Progress</span>
                   <span style={{ width: '60px', textAlign: 'center' }}>Time</span>
@@ -247,25 +297,23 @@ export default function PriceChanges() {
 
                 {players.map(player => (
                   <PlayerRow key={player.id}>
-                    {/* Player info */}
-                    <div style={{ width: '130px', minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <StatusDot status={player.status} />
-                        <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#eaeaea', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.name}</span>
-                      </div>
-                      <div style={{ fontSize: '0.6rem', color: '#8892b0', marginTop: '1px' }}>
-                        {player.position} · {player.teamShort}
+                    {/* Shirt + Player info */}
+                    <div style={{ width: '140px', minWidth: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <ShirtSVG teamId={player.teamId} size={26} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          <StatusDot status={player.status} />
+                          <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#eaeaea', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.name}</span>
+                        </div>
+                        <div style={{ fontSize: '0.6rem', color: '#8892b0', marginTop: '1px' }}>
+                          {player.position} · {player.teamShort}
+                        </div>
                       </div>
                     </div>
 
                     {/* Price */}
-                    <div style={{ width: '55px', textAlign: 'center' }}>
+                    <div style={{ width: '50px', textAlign: 'center' }}>
                       <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>£{player.price}</div>
-                      {player.priceChange !== '0.0' && (
-                        <div style={{ fontSize: '0.58rem', color: parseFloat(player.priceChange) > 0 ? '#48bb78' : '#fc8181' }}>
-                          {parseFloat(player.priceChange) > 0 ? '+' : ''}{player.priceChange}
-                        </div>
-                      )}
                     </div>
 
                     {/* Ownership */}
