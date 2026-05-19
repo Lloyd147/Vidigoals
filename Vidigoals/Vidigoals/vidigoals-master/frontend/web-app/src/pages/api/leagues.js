@@ -36,15 +36,24 @@ export default async function handler(req, res) {
       const entry = await fplFetch(`https://fantasy.premierleague.com/api/entry/${id}/`);
       const leagues = entry.leagues || {};
 
+      // FPL returns leagues in multiple categories
+      const allClassic = [
+        ...(leagues.classic || []),
+      ];
+      const allH2H = [
+        ...(leagues.h2h || []),
+      ];
+
       const result = {
-        classic: (leagues.classic || []).map(l => ({
+        classic: allClassic.map(l => ({
           id: l.id,
           name: l.name,
           rank: l.entry_rank,
           lastRank: l.entry_last_rank,
           type: 'classic',
+          leagueType: l.league_type, // 's' = general/system, 'x' = classic invitational
         })),
-        h2h: (leagues.h2h || []).map(l => ({
+        h2h: allH2H.map(l => ({
           id: l.id,
           name: l.name,
           rank: l.entry_rank,

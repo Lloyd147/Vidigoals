@@ -276,21 +276,26 @@ export default function Leaderboard() {
 
                 {user && myLeagues && (
                   <div style={{ padding: '0.75rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                      <h2 style={{ fontSize: '1rem', fontWeight: 700 }}>My Leagues</h2>
-                    </div>
+                    <h2 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem' }}>My Leagues</h2>
 
                     {/* Classic Leagues */}
                     {myLeagues.classic?.length > 0 && (
                       <>
                         <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8892b0', marginTop: '0.75rem', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Classic Leagues</div>
+                        <div style={{ display: 'flex', padding: '0.3rem 0.5rem', fontSize: '0.6rem', color: '#6b7280', borderBottom: '1px solid #4a1a8e' }}>
+                          <span style={{ flex: 1 }}>League</span>
+                          <span style={{ width: '70px', textAlign: 'right' }}>Rank</span>
+                          <span style={{ width: '70px', textAlign: 'right' }}>Last Rank</span>
+                        </div>
                         {myLeagues.classic.map(league => (
-                          <div key={league.id} onClick={() => openLeague(league)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0.5rem', borderBottom: '1px solid #2d1a4e', cursor: 'pointer' }}>
-                            <span style={{ fontSize: '0.85rem', color: '#eaeaea', fontWeight: 600 }}>{league.name}</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#8892b0' }}>{league.rank?.toLocaleString()}</span>
-                              <span style={{ color: '#48bb78', fontSize: '0.7rem' }}>●</span>
+                          <div key={league.id} onClick={() => openLeague(league)} style={{ display: 'flex', alignItems: 'center', padding: '0.65rem 0.5rem', borderBottom: '1px solid #2d1a4e', cursor: 'pointer' }}>
+                            <span style={{ flex: 1, fontSize: '0.85rem', color: '#eaeaea', fontWeight: 600 }}>{league.name}</span>
+                            <div style={{ width: '70px', textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff' }}>{league.rank?.toLocaleString()}</span>
+                              {league.lastRank && league.rank < league.lastRank && <span style={{ color: '#48bb78', fontSize: '0.6rem' }}>●</span>}
+                              {league.lastRank && league.rank > league.lastRank && <span style={{ color: '#fc8181', fontSize: '0.6rem' }}>●</span>}
                             </div>
+                            <span style={{ width: '70px', textAlign: 'right', fontSize: '0.75rem', color: '#8892b0' }}>{league.lastRank?.toLocaleString() || '—'}</span>
                           </div>
                         ))}
                       </>
@@ -304,7 +309,7 @@ export default function Leaderboard() {
                           <div key={league.id} onClick={() => openLeague(league)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0.5rem', borderBottom: '1px solid #2d1a4e', cursor: 'pointer' }}>
                             <span style={{ fontSize: '0.85rem', color: '#eaeaea', fontWeight: 600 }}>{league.name}</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#8892b0' }}>{league.rank?.toLocaleString()}</span>
+                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#8892b0' }}>{league.rank}</span>
                               <span style={{ color: '#8892b0', fontSize: '0.7rem' }}>●</span>
                             </div>
                           </div>
@@ -326,7 +331,40 @@ export default function Leaderboard() {
 
                 {loadingLeagueStandings && <StatusMsg>Loading standings…</StatusMsg>}
 
-                {leagueStandings && (
+                {leagueStandings && leagueStandings.type === 'h2h' && (
+                  <div style={{ padding: '0.5rem' }}>
+                    {/* H2H Match View */}
+                    {leagueStandings.matches?.length > 0 ? (
+                      leagueStandings.matches.map((match, i) => {
+                        const isUserMatch = match.player1.entry === Number(user?.id) || match.player2.entry === Number(user?.id);
+                        return (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '0.75rem 0.5rem', borderBottom: '1px solid #2d1a4e', background: isUserMatch ? 'linear-gradient(135deg, rgba(108,46,185,0.3), rgba(99,179,237,0.15))' : 'transparent', borderRadius: isUserMatch ? '8px' : 0, marginBottom: isUserMatch ? '4px' : 0 }}>
+                            <span style={{ width: '35px', fontSize: '0.6rem', color: '#8892b0', fontWeight: 700 }}>GW{match.event}</span>
+                            {/* Player 1 */}
+                            <div style={{ flex: 1, textAlign: 'right', paddingRight: '8px' }} onClick={() => viewPlayerTeam({ entry: match.player1.entry, playerName: match.player1.name, entryName: match.player1.teamName })}>
+                              <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#eaeaea', cursor: 'pointer' }}>{match.player1.name}</div>
+                              <div style={{ fontSize: '0.6rem', color: '#8892b0' }}>{match.player1.teamName}</div>
+                            </div>
+                            {/* Scores */}
+                            <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                              <span style={{ background: '#2d0a5e', color: '#fff', fontWeight: 700, fontSize: '0.85rem', padding: '4px 8px', borderRadius: '4px 0 0 4px', minWidth: '32px', textAlign: 'center' }}>{match.player1.points}</span>
+                              <span style={{ background: '#2d0a5e', color: '#fff', fontWeight: 700, fontSize: '0.85rem', padding: '4px 8px', borderRadius: '0 4px 4px 0', minWidth: '32px', textAlign: 'center' }}>{match.player2.points}</span>
+                            </div>
+                            {/* Player 2 */}
+                            <div style={{ flex: 1, paddingLeft: '8px' }} onClick={() => viewPlayerTeam({ entry: match.player2.entry, playerName: match.player2.name, entryName: match.player2.teamName })}>
+                              <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#eaeaea', cursor: 'pointer' }}>{match.player2.name}</div>
+                              <div style={{ fontSize: '0.6rem', color: '#8892b0' }}>{match.player2.teamName}</div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <StatusMsg>No H2H matches found for this gameweek.</StatusMsg>
+                    )}
+                  </div>
+                )}
+
+                {leagueStandings && leagueStandings.type !== 'h2h' && (
                   <div style={{ padding: '0 0.5rem' }}>
                     <div style={{ display: 'flex', padding: '0.5rem 0.5rem', fontSize: '0.7rem', fontWeight: 700, color: '#8892b0', borderBottom: '1px solid #4a1a8e' }}>
                       <span style={{ width: '35px' }}>Pos</span>
