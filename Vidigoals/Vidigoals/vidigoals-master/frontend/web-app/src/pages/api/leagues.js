@@ -61,26 +61,57 @@ export default async function handler(req, res) {
     // Mode 2: Get standings for a specific league
     if (leagueId) {
       const pageNum = page || 1;
-      const cacheKey = `league-${leagueId}-${pageNum}`;
+      const leagueType = req.query.type || 'classic'; // 'classic' or 'h2h'
+      const cacheKey = `league-${leagueId}-${leagueType}-${pageNum}`;
       const cached = leagueCache.get(cacheKey);
       if (cached && Date.now() - cached.fetchedAt < CACHE_TTL) {
         return res.status(200).json(cached.data);
       }
 
+      // H2H leagues use a different endpoint
+      if (leagueType === 'h2h') {
+        const data = await fplFetch(`https://fantasy.premierleague.com/api/leagues-h2h/${leagueId}/standings/?page_standings=${pageNum}`);
+        const league = data.league || {};
+        const standings = data.standings || {};
+        // Also fetch matches for current GW
+        let matches = [];
+        try {
+          const matchData = await fplFetch(`https://fantasy.premierleague.com/api/leagues-h2h-matches/league/${leagueId}/?page=1`);
+          matches = (matchData.results || []).map(m => ({
+            event: m.event,
+            player1: { entry: m.entry_1_entry, name: m.entry_1_player_name, teamName: m.entry_1_name, points: m.entry_1_points },
+            player2: { entry: m.entry_2_entry, name: m.entry_2_player_name, teamName: m.entry_2_name, points: m.entry_2_points },
+          }));
+        } catch {}
+
+        const result = {
+          league: { id: league.id, name: league.name },
+          standings: (standings.results || []).map(s => ({
+            rank: s.rank,
+            entry: s.entry,
+            entryName: s.entry_name,
+            playerName: s.player_name,
+            total: s.total,
+            eventTotal: s.points_for || 0,
+            wins: s.matches_won || 0,
+            draws: s.matches_drawn || 0,
+            losses: s.matches_lost || 0,
+          })),
+          matches,
+          hasNext: standings.has_next || false,
+          page: Number(pageNum),
+          type: 'h2h',
+        };
+
+        leagueCache.set(cacheKey, { data: result, fetchedAt: Date.now() });
+        return res.status(200).json(result);
+      }
+
+      // Classic league
+
       const data = await fplFetch(`https://fantasy.premierleague.com/api/leagues-classic/${leagueId}/standings/?page_standings=${pageNum}`);
       const league = data.league || {};
       const standings = data.standings || {};
-
-      // If GW specified, get GW-specific points from the entries
-      let gwPoints = {};
-      if (gw) {
-        // Fetch live data for this GW to get per-manager points
-        try {
-          const bootstrap = await fplFetch('https://fantasy.premierleague.com/api/bootstrap-static/');
-          // We can't easily get per-manager GW points without fetching each one
-          // FPL standings already include event_total for current GW
-        } catch {}
-      }
 
       const result = {
         league: {
@@ -99,6 +130,7 @@ export default async function handler(req, res) {
         })),
         hasNext: standings.has_next || false,
         page: Number(pageNum),
+        type: 'classic',
       };
 
       leagueCache.set(cacheKey, { data: result, fetchedAt: Date.now() });

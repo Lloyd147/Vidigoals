@@ -135,7 +135,8 @@ export default function Leaderboard() {
     setSelectedLeague(league);
     setViewingPlayer(null);
     setLoadingLeagueStandings(true);
-    fetch(`/api/leagues?leagueId=${league.id}`)
+    const type = league.type || 'classic';
+    fetch(`/api/leagues?leagueId=${league.id}&type=${type}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => { setLeagueStandings(data); setLoadingLeagueStandings(false); })
       .catch(() => setLoadingLeagueStandings(false));
