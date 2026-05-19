@@ -301,14 +301,20 @@ export default function PriceChanges() {
                     <div style={{ width: '140px', minWidth: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <ShirtSVG teamId={player.teamId} size={26} />
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                          <StatusDot status={player.status} />
-                          <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#eaeaea', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.name}</span>
-                        </div>
+                        <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#eaeaea', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{player.name}</span>
                         <div style={{ fontSize: '0.6rem', color: '#8892b0', marginTop: '1px' }}>
                           {player.position} · {player.teamShort}
                         </div>
                       </div>
+                    </div>
+
+                    {/* Status icon between name and price */}
+                    <div style={{ width: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {player.status === 'i' && <span style={{ fontSize: '0.85rem' }} title="Injured">🏥</span>}
+                      {player.status === 's' && <span style={{ fontSize: '0.85rem' }} title="Suspended">🚫</span>}
+                      {player.status === 'd' && <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f5a623', display: 'inline-block' }} title="Doubtful" />}
+                      {player.status === 'a' && <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#48bb78', display: 'inline-block' }} title="Available" />}
+                      {player.status === 'u' && <span style={{ fontSize: '0.85rem' }} title="Unavailable">❌</span>}
                     </div>
 
                     {/* Price */}
