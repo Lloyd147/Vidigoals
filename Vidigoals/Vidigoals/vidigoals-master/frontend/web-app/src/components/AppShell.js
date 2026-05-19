@@ -277,11 +277,11 @@ export default function AppShell({ user, page, isLive, onLogout, children }) {
             sum + (p.event_points || 0) * (p.multiplier || 1), 0) - hits;
           if (total > 0) {
             setLivePoints(prev => ({ ...prev, gw: total }));
-            try {
-              const stored = JSON.parse(localStorage.getItem('vidigoals_user') || '{}');
-              stored.gwPoints = total;
-              localStorage.setItem('vidigoals_user', JSON.stringify(stored));
-            } catch {}
+          }
+          // Use entry_history overall_rank's associated overall points if available
+          // entry_history.total_points = overall points INCLUDING this GW
+          if (picksData.entry_history?.total_points) {
+            setLivePoints(prev => ({ ...prev, overall: picksData.entry_history.total_points }));
           }
         }
       })
@@ -372,12 +372,7 @@ export default function AppShell({ user, page, isLive, onLogout, children }) {
       {user && (
         <PointsBar>
           <div>GW Points <span>{livePoints.gw !== null ? livePoints.gw : (user.gwPoints || '—')}</span></div>
-          <div>Overall Points <span>{(() => {
-            const gwPts = livePoints.gw || user.gwPoints || 0;
-            const overallBase = user.overallPoints || 0;
-            // Overall = stored overall + current GW points (FPL's overall doesn't update live)
-            return overallBase + gwPts;
-          })()}</span></div>
+          <div>Overall Points <span>{livePoints.overall || user.overallPoints || '—'}</span></div>
         </PointsBar>
       )}
 
