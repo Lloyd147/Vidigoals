@@ -310,11 +310,11 @@ export default function PriceChanges() {
 
                     {/* Status icon between name and price */}
                     <div style={{ width: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {player.status === 'i' && <span style={{ fontSize: '0.85rem' }} title="Injured">🏥</span>}
-                      {player.status === 's' && <span style={{ fontSize: '0.85rem' }} title="Suspended">🚫</span>}
-                      {player.status === 'd' && <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f5a623', display: 'inline-block' }} title="Doubtful" />}
+                      {player.status === 'i' && <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fc8181', lineHeight: 1 }} title="Injured">+</span>}
+                      {player.status === 's' && <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fc8181', lineHeight: 1 }} title="Suspended">!</span>}
+                      {player.status === 'd' && <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f5a623', lineHeight: 1 }} title="Doubtful">?</span>}
                       {player.status === 'a' && <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#48bb78', display: 'inline-block' }} title="Available" />}
-                      {player.status === 'u' && <span style={{ fontSize: '0.85rem' }} title="Unavailable">❌</span>}
+                      {player.status === 'u' && <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fc8181', lineHeight: 1 }} title="Unavailable">+</span>}
                     </div>
 
                     {/* Price */}
