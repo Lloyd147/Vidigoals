@@ -1,47 +1,103 @@
 /**
  * API Route: /api/livescore-odds
  *
- * Scrapes player odds from Livescorebet UK's internal API.
- * GET: Returns stored odds or fetches fresh if stale
- * GET ?refresh=true: Forces a fresh fetch
+ * Scrapes player odds from Livescorebet's internal API.
+ * Supports multiple countries — detects user's country via Vercel geo header.
  *
- * Endpoints used:
- * - League: https://gateway-uk.livescorebet.com/sportsbook/gateway/v3/view/events/matches?categoryid=SBTC3_40253&interval=ALL&lang=en-gb
- * - Event: https://gateway-uk.livescorebet.com/sportsbook/gateway/v1/view/event?eventid={id}&lang=en-gb
+ * GET: Returns stored odds for user's country (or fetches fresh if stale)
+ * GET ?refresh=true: Forces a fresh fetch
+ * GET ?country=ng: Override country (for testing)
+ *
+ * Supported countries:
+ * - UK (default): gateway-uk.livescorebet.com, lang=en-gb
+ * - NG (Nigeria): gateway-ng.livescorebet.com, lang=en-ng
+ * - More can be added by extending COUNTRY_CONFIG
  */
 
-const LEAGUE_URL = 'https://gateway-uk.livescorebet.com/sportsbook/gateway/v3/view/events/matches?categoryid=SBTC3_40253&interval=ALL&lang=en-gb';
-const EVENT_URL = 'https://gateway-uk.livescorebet.com/sportsbook/gateway/v1/view/event';
-const HEADERS = {
-  'Referer': 'https://www.livescorebet.com/uk/',
-  'Origin': 'https://www.livescorebet.com',
+// ── Country Configuration ─────────────────────────────────────────────────────
+const COUNTRY_CONFIG = {
+  gb: {
+    gateway: 'gateway-uk.livescorebet.com',
+    lang: 'en-gb',
+    sitePath: '/uk/',
+    referer: 'https://www.livescorebet.com/uk/',
+    leagueEndpoint: '/sportsbook/gateway/v3/view/events/matches?categoryid=SBTC3_40253&interval=ALL',
+    eventEndpoint: '/sportsbook/gateway/v1/view/event',
+  },
+  ng: {
+    gateway: 'gateway-ng.livescorebet.com',
+    lang: 'en-ng',
+    sitePath: '/ng/',
+    referer: 'https://www.livescorebet.com/ng/',
+    leagueEndpoint: '/sportsbook/gateway/v3/view/events/matches?categoryid=SBTC3_40253&interval=ALL',
+    eventEndpoint: '/sportsbook/gateway/v1/view/event',
+  },
 };
 
-// In-memory odds store
-let oddsStore = { data: {}, lastFetched: null, matches: [] };
+const DEFAULT_COUNTRY = 'gb';
+
+// ── In-memory odds store (per country) ────────────────────────────────────────
+const oddsStores = {}; // { gb: { data, lastFetched, matches }, ng: { ... } }
 const CACHE_TTL = 3 * 60 * 60 * 1000; // 3 hours
 
-async function fetchJson(url) {
-  const res = await fetch(url, { headers: HEADERS });
+function getStore(country) {
+  if (!oddsStores[country]) {
+    oddsStores[country] = { data: {}, lastFetched: null, matches: [] };
+  }
+  return oddsStores[country];
+}
+
+async function fetchJson(url, headers) {
+  const res = await fetch(url, { headers });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
-async function fetchAllOdds() {
+async function fetchAllOdds(country) {
+  const config = COUNTRY_CONFIG[country] || COUNTRY_CONFIG[DEFAULT_COUNTRY];
+  const baseUrl = `https://${config.gateway}`;
+  const headers = {
+    'Referer': config.referer,
+    'Origin': 'https://www.livescorebet.com',
+  };
+
   // Step 1: Get all EPL matches
-  const leagueData = await fetchJson(LEAGUE_URL);
-  const categories = leagueData.events?.categories || [];
-  const events = [];
-  for (const cat of categories) {
-    for (const ev of (cat.events || [])) {
-      if (ev.state === 'NOTSTARTED' || ev.state === 'INPLAY') {
-        events.push({
-          id: ev.id,
-          home: ev.participants?.find(p => p.venueRole === 'Home')?.name || '',
-          away: ev.participants?.find(p => p.venueRole === 'Away')?.name || '',
-          startTime: ev.startTime,
-        });
+  const leagueUrl = `${baseUrl}${config.leagueEndpoint}&lang=${config.lang}`;
+  let events = [];
+
+  try {
+    const leagueData = await fetchJson(leagueUrl, headers);
+    const categories = leagueData.events?.categories || [];
+    for (const cat of categories) {
+      for (const ev of (cat.events || [])) {
+        if (ev.state === 'NOTSTARTED' || ev.state === 'INPLAY') {
+          events.push({
+            id: ev.id,
+            home: ev.participants?.find(p => p.venueRole === 'Home')?.name || '',
+            away: ev.participants?.find(p => p.venueRole === 'Away')?.name || '',
+            startTime: ev.startTime,
+          });
+        }
       }
+    }
+  } catch (err) {
+    // If v3 events/matches fails (Nigeria might not support it), try coupon endpoint
+    try {
+      const couponUrl = `${baseUrl}/sportsbook/gateway/v2/view/coupon?id=3103&interval=ALL&lang=${config.lang}`;
+      const couponData = await fetchJson(couponUrl, headers);
+      const couponEvents = couponData.events || couponData.coupon?.events || [];
+      for (const ev of couponEvents) {
+        if (ev.state === 'NOTSTARTED' || ev.state === 'INPLAY') {
+          events.push({
+            id: ev.id,
+            home: ev.participants?.find(p => p.venueRole === 'Home')?.name || '',
+            away: ev.participants?.find(p => p.venueRole === 'Away')?.name || '',
+            startTime: ev.startTime,
+          });
+        }
+      }
+    } catch (err2) {
+      throw new Error(`Could not fetch matches for ${country}: ${err.message} / ${err2.message}`);
     }
   }
 
@@ -49,17 +105,17 @@ async function fetchAllOdds() {
   const allOdds = {};
   const matchesProcessed = [];
 
-  // Build Livescorebet event page URL from team names + event ID
   function buildEventUrl(home, away, eventId) {
     const slug = `${home}-${away}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-    return `https://www.livescorebet.com/uk/sports/football/england-premier-league/${slug}/${eventId}/?marketGroupId=213`;
+    return `https://www.livescorebet.com${config.sitePath}sports/football/england-premier-league/${slug}/${eventId}/?marketGroupId=213`;
   }
 
   for (const event of events) {
     try {
-      const eventData = await fetchJson(`${EVENT_URL}?eventid=${event.id}&lang=en-gb`);
+      const eventUrl = `${baseUrl}${config.eventEndpoint}?eventid=${event.id}&lang=${config.lang}`;
+      const eventData = await fetchJson(eventUrl, headers);
       const markets = eventData.event?.markets || eventData.markets || [];
-      const eventUrl = buildEventUrl(event.home, event.away, event.id);
+      const deepLink = buildEventUrl(event.home, event.away, event.id);
 
       // Extract goalscorer (anytime)
       const goalscorer = markets.find(m => m.name === 'Goalscorer');
@@ -71,7 +127,7 @@ async function fetchAllOdds() {
 
           const key = playerName.toLowerCase();
           if (!allOdds[key]) {
-            allOdds[key] = { name: playerName, fixture: `${event.home} v ${event.away}`, eventUrl, selectionId: sel.id || null };
+            allOdds[key] = { name: playerName, fixture: `${event.home} v ${event.away}`, eventUrl: deepLink, selectionId: sel.id || null };
           }
 
           if (type === 'TO_SCORE_ANYTIME' || sel.name?.startsWith('Anytime:')) {
@@ -114,7 +170,7 @@ async function fetchAllOdds() {
           const playerName = sel.name?.replace(' - Yes', '') || '';
           const key = playerName.toLowerCase();
           if (!allOdds[key]) {
-            allOdds[key] = { name: playerName, fixture: `${event.home} v ${event.away}`, eventUrl, selectionId: sel.id || null };
+            allOdds[key] = { name: playerName, fixture: `${event.home} v ${event.away}`, eventUrl: deepLink, selectionId: sel.id || null };
           }
           allOdds[key].assists = { odds: sel.odds?.toFixed(2), bookie: 'LivescoreBet', selectionId: sel.id || null };
         }
@@ -127,7 +183,7 @@ async function fetchAllOdds() {
           const playerName = sel.name?.replace(' - Yes', '') || '';
           const key = playerName.toLowerCase();
           if (!allOdds[key]) {
-            allOdds[key] = { name: playerName, fixture: `${event.home} v ${event.away}`, eventUrl, selectionId: sel.id || null };
+            allOdds[key] = { name: playerName, fixture: `${event.home} v ${event.away}`, eventUrl: deepLink, selectionId: sel.id || null };
           }
           allOdds[key].yellowCard = { odds: sel.odds?.toFixed(2), bookie: 'LivescoreBet', selectionId: sel.id || null };
         }
@@ -135,7 +191,7 @@ async function fetchAllOdds() {
 
       matchesProcessed.push(`${event.home} v ${event.away}`);
     } catch (err) {
-      console.warn(`Failed to fetch ${event.home} v ${event.away}:`, err.message);
+      console.warn(`[${country}] Failed to fetch ${event.home} v ${event.away}:`, err.message);
     }
   }
 
@@ -145,42 +201,54 @@ async function fetchAllOdds() {
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'GET only' });
 
+  // Detect country: query param override > Vercel geo header > default UK
+  const queryCountry = (req.query.country || '').toLowerCase();
+  const vercelCountry = (req.headers['x-vercel-ip-country'] || '').toLowerCase();
+  const detectedCountry = queryCountry || vercelCountry || DEFAULT_COUNTRY;
+
+  // Map to supported country (fall back to UK if unsupported)
+  const country = COUNTRY_CONFIG[detectedCountry] ? detectedCountry : DEFAULT_COUNTRY;
+
   const forceRefresh = req.query.refresh === 'true';
+  const store = getStore(country);
 
   // Return cached if fresh enough
-  if (!forceRefresh && oddsStore.lastFetched && Date.now() - new Date(oddsStore.lastFetched).getTime() < CACHE_TTL) {
+  if (!forceRefresh && store.lastFetched && Date.now() - new Date(store.lastFetched).getTime() < CACHE_TTL) {
     return res.status(200).json({
-      odds: oddsStore.data,
-      lastFetched: oddsStore.lastFetched,
-      matches: oddsStore.matches,
+      odds: store.data,
+      lastFetched: store.lastFetched,
+      matches: store.matches,
       cached: true,
-      playerCount: Object.keys(oddsStore.data).length,
+      country,
+      playerCount: Object.keys(store.data).length,
     });
   }
 
   try {
-    const { odds, matches } = await fetchAllOdds();
-    oddsStore = { data: odds, lastFetched: new Date().toISOString(), matches };
+    const { odds, matches } = await fetchAllOdds(country);
+    oddsStores[country] = { data: odds, lastFetched: new Date().toISOString(), matches };
 
     return res.status(200).json({
       odds,
-      lastFetched: oddsStore.lastFetched,
+      lastFetched: oddsStores[country].lastFetched,
       matches,
       cached: false,
+      country,
       playerCount: Object.keys(odds).length,
     });
   } catch (err) {
     // Return stale data if available
-    if (oddsStore.data && Object.keys(oddsStore.data).length > 0) {
+    if (store.data && Object.keys(store.data).length > 0) {
       return res.status(200).json({
-        odds: oddsStore.data,
-        lastFetched: oddsStore.lastFetched,
-        matches: oddsStore.matches,
+        odds: store.data,
+        lastFetched: store.lastFetched,
+        matches: store.matches,
         cached: true,
         stale: true,
+        country,
         error: err.message,
       });
     }
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message, country });
   }
 }
