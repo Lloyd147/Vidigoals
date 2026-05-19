@@ -31,7 +31,22 @@ export default class MyDocument extends Document {
   render() {
     return (
       <Html lang="en">
-        <Head />
+        <Head>
+          {/* Open Graph / WhatsApp link preview */}
+          <meta property="og:title" content="VidiGoals — Live FPL Companion" />
+          <meta property="og:description" content="Real-time Premier League goal alerts, FPL points tracking, player odds, and match statistics. The ultimate FPL companion app." />
+          <meta property="og:type" content="website" />
+          <meta property="og:url" content="https://vidigoals.com" />
+          <meta property="og:site_name" content="VidiGoals" />
+          {/* Twitter Card */}
+          <meta name="twitter:card" content="summary" />
+          <meta name="twitter:title" content="VidiGoals — Live FPL Companion" />
+          <meta name="twitter:description" content="Real-time Premier League goal alerts, FPL points tracking, player odds, and match statistics." />
+          {/* General SEO */}
+          <meta name="description" content="VidiGoals is a live FPL companion app with real-time Premier League goal alerts, FPL points tracking, player betting odds, and match statistics." />
+          <meta name="theme-color" content="#1a0a2e" />
+          <link rel="icon" href="/favicon.ico" />
+        </Head>
         <body>
           <Main />
           <NextScript />
