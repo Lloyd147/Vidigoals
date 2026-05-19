@@ -288,8 +288,9 @@ export default function PriceChanges() {
     else if (sortBy === 'price') { aVal = parseFloat(a.price); bVal = parseFloat(b.price); }
     else if (sortBy === 'ownership') { aVal = a.ownership; bVal = b.ownership; }
     else if (sortBy === 'speed') {
-      aVal = a.speed || 0;
-      bVal = b.speed || 0;
+      // Speed with direction: +0.5 is highest, -0.4 is lower than +0.1
+      aVal = (a.speedDirection === 'up' ? 1 : -1) * (a.speed || 0.1);
+      bVal = (b.speedDirection === 'up' ? 1 : -1) * (b.speed || 0.1);
     }
     else { aVal = a.progress; bVal = b.progress; }
     return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
