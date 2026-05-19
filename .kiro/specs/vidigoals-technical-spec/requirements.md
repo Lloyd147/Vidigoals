@@ -901,24 +901,256 @@ frontend/web-app/
 - **Platform:** Vercel Pro ($20/month)
 - **Region:** Default (auto)
 - **Function timeout:** 60s for livescore-odds, 10s default for others
-- **Git:** GitHub repo (Lloyd147), pushes to main
+- **Git:** GitHub repo (Lloyd147, PRIVATE), pushes to main
 - **Environment variables:** Set in Vercel dashboard
 - **No database** — all caching is in-memory (resets on cold start/redeploy)
 - **No cron jobs** — odds fetched on-demand with 3-hour cache
 
 ---
 
-## 26. Known Limitations / Future Work
+## 26. Multi-Country Odds Support
 
-- **Odds storage is in-memory** — lost on cold start. Needs persistent storage (Vercel KV or Supabase)
-- **Single bookie** — only Livescorebet currently. Plan for 10 bookies
-- **No cron jobs** — scraping only happens when a user hits the endpoint
-- **Price Changes page** — placeholder only
+The Livescorebet scraping supports multiple countries with automatic geo-detection.
+
+### Country Configuration:
+```
+UK:      gateway-uk.livescorebet.com, lang=en-gb, site=/uk/
+Nigeria: gateway-ng.livescorebet.com, lang=en-ng, site=/ng/
+```
+
+### How it works:
+1. Vercel sends `x-vercel-ip-country` header with every request (free, automatic)
+2. API reads the country code and selects the correct gateway/lang
+3. Odds are scraped from that country's Livescorebet instance
+4. Deep links point to the correct country's site (e.g., `/ng/sports/...`)
+5. Unsupported countries fall back to UK odds
+6. Can override with `?country=ng` query param for testing
+7. Separate in-memory cache per country (each with 3-hour TTL)
+
+### Nigeria-specific:
+- League endpoint: tries `events/matches` first, falls back to `coupon?id=3103`
+- Event endpoint: same format as UK (`/v1/view/event?eventid={id}&lang=en-ng`)
+- Event IDs are shared across countries (same `SBTE_2_` prefix)
+
+### Adding new countries:
+Add entry to `COUNTRY_CONFIG` with gateway, lang, sitePath, referer, and endpoint paths.
+
+---
+
+## 27. Odds Deep Linking
+
+When a user taps the odds on the Player Odds tab, it opens Livescorebet in a new tab.
+
+### URL Format:
+```
+https://www.livescorebet.com/{country}/sports/football/england-premier-league/{home}-{away}/{eventId}/?marketGroupId=213
+```
+
+### Implementation:
+- `eventUrl` built during scraping from team names + event ID
+- `selectionId` stored per selection (for future betslip pre-loading)
+- Entire odds area (number + logo) is a single `<a>` tag with `target="_blank"`
+- Country path adapts based on user's geo location
+
+### Betslip Integration (not yet possible):
+- Livescorebet doesn't support URL-based betslip pre-loading
+- Selection IDs are stored (format: `SBTS_2_{id}`) for future use
+- Their `calculatebets` endpoint uses POST with selection IDs
+- If a bookie with URL betslip support is added later, IDs are ready
+
+---
+
+## 28. Price Changes Page (`src/pages/price-changes.js`)
+
+Full price change prediction system with progress bars, speed indicators, and sortable columns.
+
+### Layout:
+- Search bar at top (filters by player name, team, position)
+- Single scrollable list (highest + progress at top, lowest - at bottom)
+- Sortable column headers (click to sort asc/desc)
+
+### Columns:
+| Column | Sortable | Description |
+|--------|----------|-------------|
+| Player | No | Shirt SVG + name + position/team |
+| Fitness | No | Green dot (fit), ? (doubtful), + (injured), ! (suspended) |
+| Price | Yes | Current FPL price (£) |
+| Own% | Yes | Ownership percentage |
+| Progress | Yes (default) | Progress bar + percentage badge (green for +, red for -) |
+| Spd | Yes | Transfer speed per hour (▲0.2 green or ▼0.3 red) |
+| Time | No | Estimated change time (Tonight, Tomorrow, < 2 days, > 2 days, etc.) |
+
+### Progress Model:
+```
+threshold = BASE_FACTOR × (1 + ownership^0.55)
+BASE_FACTOR = 65000
+
+For seeded players:
+  progress = seed_value + small_delta_from_transfers
+
+For non-seeded players:
+  progress = (net_transfers / threshold) × 100
+```
+
+### Seed Data:
+- ~200 players hardcoded with FFF progress values as starting points
+- Keyed by `web_name` (e.g., `'Doku': 100.1, 'Mitchell': 88.8`)
+- Formula only adds tiny delta on top of seed (0.3 multiplier)
+- Non-seeded players start at 0%
+
+### Speed Calculation:
+```
+hourly_rate = |net_transfers| / 24 hours
+speed = (hourly_rate / threshold) × 100
+```
+- Capped at 0.5, minimum 0.1
+- Direction independent of riser/faller: based on whether transfers_in > transfers_out
+- A faller can have ▲ speed (recovering) and a riser can have ▼ speed (slowing)
+
+### Price Change Reset:
+- Stores each player's last known price in memory
+- On each poll, compares current price vs stored
+- If price moved ±0.1 → player's progress resets to 0%
+- Prevents showing 100% for a player who already changed
+
+### Change Time Estimates:
+- ≥95% → "Tonight"
+- ≥80% → "Tomorrow"
+- ≥60% → "< 2 days"
+- ≥40% → "> 2 days"
+- ≥25% → "> 3 days"
+- <25% → "> 4 days"
+
+### Caching:
+- 15-minute TTL on the API response
+
+---
+
+## 29. API Protection (`src/lib/api-protection.js`)
+
+Shared middleware for rate limiting and origin verification.
+
+### Rate Limiting:
+- 60 requests per minute per IP address
+- In-memory store: `{ ip: { count, resetAt } }`
+- Exceeding limit returns `429 Too Many Requests`
+- Auto-cleanup of expired entries every 5 minutes
+
+### Origin Check:
+- Allowed origins: `vidigoals.com`, `www.vidigoals.com`, `localhost:3000/3001`, `*.vercel.app`
+- Checks both `Origin` and `Referer` headers
+- Requests with no origin/referer are allowed (server-side, curl)
+- External scrapers with wrong origin get `403 Forbidden`
+
+### Security Headers (added to every response):
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `X-XSS-Protection: 1; mode=block`
+
+### Protected Endpoints:
+- `/api/feed`
+- `/api/livescore-odds`
+- `/api/price-changes`
+
+### Usage:
+```javascript
+import { protect } from '../../lib/api-protection';
+export default async function handler(req, res) {
+  const blocked = protect(req, res);
+  if (blocked) return;
+  // ... handler logic
+}
+```
+
+---
+
+## 30. Authentication & Session Persistence
+
+### Sign-in Flow:
+1. User enters FPL Manager ID
+2. Calls `/api/fpl-team` to verify and fetch team data
+3. Stores user object in `localStorage('vidigoals_user')`
+4. Stores ID separately in `localStorage('vidigoals_last_id')` (persists after logout)
+5. Redirects to `/my-team`
+
+### Persistent Login:
+- User stays logged in until they explicitly log out
+- If user visits `/signin` while logged in → auto-redirects to `/my-team`
+- After logout: Team ID is pre-filled in the input for one-tap re-login
+- `vidigoals_last_id` never gets cleared (even on logout)
+
+### Overall Points (fixed):
+- Uses `entry_history.total_points` from FPL picks endpoint
+- This is FPL's own live-updating total (includes current GW)
+- No double-counting with GW points
+- Falls back to `user.overallPoints` from localStorage if API unavailable
+
+---
+
+## 31. Player Detail Caching
+
+### Smart TTL:
+- **Live match:** 2-minute cache (points updating)
+- **Finished match:** 4-hour cache (data won't change)
+- Keyed by `{playerId}-{gameweek}`
+- Determines live/finished from fixture data in the response
+
+---
+
+## 32. File Structure (Updated)
+
+```
+frontend/web-app/
+├── package.json
+├── vercel.json
+├── public/
+│   └── logos/
+│       ├── livescorebet.png
+│       └── ... (other bookie logos)
+└── src/
+    ├── lib/
+    │   └── api-protection.js    → Rate limiting + origin check middleware
+    ├── components/
+    │   └── AppShell.js          → Shared header, menu, points bar
+    └── pages/
+        ├── _app.js
+        ├── _document.js
+        ├── index.js
+        ├── vidiprinter.js       → Live goal feed
+        ├── my-team.js           → Team Points + Player Odds
+        ├── matches.js           → Fixtures + match details
+        ├── price-changes.js     → Price prediction with progress bars
+        ├── signin.js            → FPL Manager ID login (with remember)
+        ├── leaderboard.js       → (placeholder)
+        ├── settings.js          → (placeholder)
+        └── api/
+            ├── feed.js          → Live event feed [PROTECTED]
+            ├── fixtures.js      → GW fixtures
+            ├── match-details.js → Match stats, lineups, BPS
+            ├── fpl-picks.js     → Manager's team picks
+            ├── fpl-entry.js     → Live GW points
+            ├── fpl-team.js      → Manager lookup
+            ├── player-detail.js → Player breakdown (2min/4hr cache)
+            ├── livescore-odds.js → Multi-country odds scraping [PROTECTED]
+            ├── price-changes.js → Price predictions [PROTECTED]
+            ├── login.js         → FPL credential auth
+            └── (debug/legacy endpoints)
+```
+
+---
+
+## 33. Known Limitations / Future Work
+
+- **Odds storage is in-memory** — lost on cold start. Plan: Vercel KV or Supabase
+- **Single bookie** — only Livescorebet. Plan: 10 bookies with acca builder
+- **No cron jobs** — scraping on-demand only. Plan: Vercel Cron every 3 hours
+- **Price change model** — seeded from FFF snapshot, not tracking live deltas between polls
+- **Betslip pre-loading** — not possible with Livescorebet (no URL-based betslip)
 - **Leaderboard page** — placeholder only
 - **No push notifications** — toggle exists but not wired
 - **Red card market** — not yet extracted from Livescorebet
-- **Player odds fixture matching** — can fail for players with very common last names
-- **SVG shirt stripes** — clipPath approach may not render on all browsers/devices
+- **FPL 403 on Vercel** — intermittent blocking of Vercel's shared IPs by FPL. May need proxy (IPRoyal) if persistent
+- **Duplicate player names** — "Anderson" exists for both Nott'm Forest and Sunderland; seed data may match wrong player
 
 ---
 
