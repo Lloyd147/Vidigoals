@@ -263,9 +263,6 @@ export default function Leaderboard() {
                   <div style={{ padding: '0.75rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                       <h2 style={{ fontSize: '1rem', fontWeight: 700 }}>My Leagues</h2>
-                      <a href={VIDIGOALS_JOIN_URL} target="_blank" rel="noopener noreferrer" style={{ background: '#f5a623', color: '#1a0a2e', fontSize: '0.7rem', fontWeight: 700, padding: '0.35rem 0.7rem', borderRadius: '6px', textDecoration: 'none' }}>
-                        Join League
-                      </a>
                     </div>
 
                     {/* Classic Leagues */}
@@ -450,7 +447,7 @@ export default function Leaderboard() {
         <BottomNav>
           <NavItem href="/"><NavIcon>⚽</NavIcon>Goals</NavItem>
           <NavItem href={user ? '/my-team' : '/signin'}><NavIcon>👕</NavIcon>My Team</NavItem>
-          <NavItem href="/leaderboard" active={1}><NavIcon>🏆</NavIcon>Leaderboard</NavItem>
+          <NavItem href="/leaderboard" active={1}><NavIcon>🏆</NavIcon>Leagues</NavItem>
           <NavItem href="/matches"><NavIcon>📋</NavIcon>Matches</NavItem>
           <NavItem href="/price-changes"><NavIcon>📈</NavIcon>Prices</NavItem>
         </BottomNav>
