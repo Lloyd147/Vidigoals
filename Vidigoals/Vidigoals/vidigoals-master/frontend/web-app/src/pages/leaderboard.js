@@ -100,6 +100,8 @@ export default function Leaderboard() {
   const [viewingPlayer, setViewingPlayer] = useState(null); // { entry, playerName, entryName }
   const [viewingPlayerPicks, setViewingPlayerPicks] = useState(null);
   const [loadingPlayerPicks, setLoadingPlayerPicks] = useState(false);
+  const [viewingGw, setViewingGw] = useState(CURRENT_GW);
+  const [viewingTab, setViewingTab] = useState('points'); // 'points' | 'odds'
 
   useEffect(() => {
     try {
@@ -146,8 +148,14 @@ export default function Leaderboard() {
   // View another player's team
   function viewPlayerTeam(entry) {
     setViewingPlayer(entry);
+    setViewingGw(CURRENT_GW);
+    setViewingTab('points');
+    fetchViewingPicks(entry.entry, CURRENT_GW);
+  }
+
+  function fetchViewingPicks(entryId, gwNum) {
     setLoadingPlayerPicks(true);
-    fetch(`/api/fpl-picks?id=${entry.entry}&gw=${CURRENT_GW}`)
+    fetch(`/api/fpl-picks?id=${entryId}&gw=${gwNum}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => { setViewingPlayerPicks(data); setLoadingPlayerPicks(false); })
       .catch(() => setLoadingPlayerPicks(false));
@@ -335,24 +343,43 @@ export default function Leaderboard() {
             {viewingPlayer && (
               <>
                 <div style={{ padding: '0.75rem', borderBottom: '1px solid #4a1a8e', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <button onClick={() => { setViewingPlayer(null); setViewingPlayerPicks(null); }} style={{ background: 'transparent', border: 'none', color: '#f5a623', fontSize: '1.2rem', cursor: 'pointer' }}>←</button>
+                  <button onClick={() => { setViewingPlayer(null); setViewingPlayerPicks(null); setViewingGw(CURRENT_GW); setViewingTab('points'); }} style={{ background: 'transparent', border: 'none', color: '#f5a623', fontSize: '1.2rem', cursor: 'pointer' }}>←</button>
                   <div>
                     <div style={{ fontSize: '1rem', fontWeight: 700, color: '#fff' }}>{viewingPlayer.playerName}</div>
                     <div style={{ fontSize: '0.7rem', color: '#8892b0' }}>{viewingPlayer.entryName}</div>
                   </div>
                 </div>
 
+                {/* Team Points / Player Odds tabs */}
+                <div style={{ display: 'flex', borderBottom: '1px solid #4a1a8e', background: '#2d0a5e' }}>
+                  <button onClick={() => setViewingTab('points')} style={{ flex: 1, background: 'transparent', border: 'none', borderBottom: viewingTab === 'points' ? '2px solid #f5a623' : '2px solid transparent', color: viewingTab === 'points' ? '#f5a623' : '#8892b0', fontWeight: 700, fontSize: '0.9rem', padding: '0.75rem', cursor: 'pointer' }}>Team Points</button>
+                  <button onClick={() => setViewingTab('odds')} style={{ flex: 1, background: 'transparent', border: 'none', borderBottom: viewingTab === 'odds' ? '2px solid #f5a623' : '2px solid transparent', color: viewingTab === 'odds' ? '#f5a623' : '#8892b0', fontWeight: 700, fontSize: '0.9rem', padding: '0.75rem', cursor: 'pointer' }}>Player Odds</button>
+                </div>
+
+                {/* GW Navigation */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.6rem', gap: '1.5rem', background: '#2d0a5e', borderBottom: '1px solid #4a1a8e' }}>
+                  <button onClick={() => { if (viewingGw > 1) { setViewingGw(g => g - 1); fetchViewingPicks(viewingPlayer.entry, viewingGw - 1); } }} disabled={viewingGw <= 1} style={{ background: 'transparent', border: 'none', color: viewingGw > 1 ? '#f5a623' : '#4a1a8e', fontSize: '1.5rem', cursor: viewingGw > 1 ? 'pointer' : 'not-allowed' }}>‹</button>
+                  <span style={{ fontWeight: 700, fontSize: '1.05rem', color: '#fff', minWidth: '140px', textAlign: 'center' }}>Gameweek {viewingGw}</span>
+                  <button onClick={() => { if (viewingGw < 38) { setViewingGw(g => g + 1); fetchViewingPicks(viewingPlayer.entry, viewingGw + 1); } }} disabled={viewingGw >= 38} style={{ background: 'transparent', border: 'none', color: viewingGw < 38 ? '#f5a623' : '#4a1a8e', fontSize: '1.5rem', cursor: viewingGw < 38 ? 'pointer' : 'not-allowed' }}>›</button>
+                </div>
+
                 {loadingPlayerPicks && <StatusMsg>Loading team…</StatusMsg>}
 
-                {viewingPlayerPicks && (
+                {viewingPlayerPicks && viewingTab === 'points' && (
                   <>
-                    {/* GW Stats row */}
+                    {/* Stats row */}
                     <div style={{ display: 'flex', gap: '0.5rem', padding: '0.75rem' }}>
                       <div style={{ flex: 1, textAlign: 'center', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '0.5rem 0.25rem' }}>
                         <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f5a623' }}>
                           {viewingPlayerPicks.starting?.reduce((sum, p) => sum + (p.event_points || 0) * (p.multiplier || 1), 0) || 0}
                         </div>
                         <div style={{ fontSize: '0.6rem', color: '#8892b0', marginTop: '2px' }}>GW POINTS</div>
+                      </div>
+                      <div style={{ flex: 1, textAlign: 'center', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '0.5rem 0.25rem' }}>
+                        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#fff' }}>
+                          {viewingPlayerPicks.entry_history?.rank?.toLocaleString() || '—'}
+                        </div>
+                        <div style={{ fontSize: '0.6rem', color: '#8892b0', marginTop: '2px' }}>GW RANK</div>
                       </div>
                       <div style={{ flex: 1, textAlign: 'center', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '0.5rem 0.25rem' }}>
                         <div style={{ fontSize: '1rem', fontWeight: 800, color: '#fff' }}>
@@ -368,9 +395,52 @@ export default function Leaderboard() {
                       </div>
                     </div>
 
+                    {/* Chip badge */}
+                    {viewingPlayerPicks.active_chip && (
+                      <div style={{ padding: '0 0.75rem 0.5rem' }}>
+                        <span style={{ display: 'inline-block', background: '#f5a623', color: '#1a0a2e', fontSize: '0.7rem', fontWeight: 800, padding: '3px 10px', borderRadius: '10px' }}>
+                          {viewingPlayerPicks.active_chip === '3xc' ? 'Triple Captain Played' :
+                           viewingPlayerPicks.active_chip === 'bboost' ? 'Bench Boost Played' :
+                           viewingPlayerPicks.active_chip === 'wildcard' ? 'Wildcard Played' :
+                           viewingPlayerPicks.active_chip === 'freehit' ? 'Free Hit Played' :
+                           viewingPlayerPicks.active_chip.replace(/_/g, ' ').toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+
                     {/* Pitch view */}
-                    <TeamPitchView picks={viewingPlayerPicks} gw={CURRENT_GW} />
+                    <TeamPitchView picks={viewingPlayerPicks} gw={viewingGw} />
                   </>
+                )}
+
+                {viewingPlayerPicks && viewingTab === 'odds' && (
+                  <div style={{ padding: '0.75rem' }}>
+                    {/* Player Odds - same format as My Team odds tab */}
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem', background: '#f5a623', color: '#1a0a2e', fontWeight: 700, fontSize: '0.7rem', borderRadius: '6px', marginBottom: '0.5rem' }}>
+                      <span style={{ width: '28px', textAlign: 'center' }}>Pos</span>
+                      <span style={{ flex: 1 }}>Player</span>
+                      <span style={{ width: '65px', textAlign: 'center' }}>GW{viewingGw}</span>
+                      <span style={{ width: '80px', textAlign: 'center' }}>Odds</span>
+                    </div>
+                    {[...(viewingPlayerPicks.starting || []), ...(viewingPlayerPicks.bench || [])].map(player => {
+                      const posLabels = { 1: 'GK', 2: 'D', 3: 'M', 4: 'F' };
+                      const posColors = { 1: '#f5a623', 2: '#48bb78', 3: '#63b3ed', 4: '#fc8181' };
+                      return (
+                        <div key={player.element} style={{ display: 'flex', alignItems: 'center', padding: '0.55rem 0', borderBottom: '1px solid #2d1a4e' }}>
+                          <span style={{ width: '28px', textAlign: 'center', color: posColors[player.element_type], fontWeight: 700, fontSize: '0.7rem' }}>{posLabels[player.element_type]}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#eaeaea' }}>{player.web_name}</div>
+                            <div style={{ fontSize: '0.6rem', color: '#8892b0' }}>{player.team_name}</div>
+                          </div>
+                          <span style={{ width: '65px', textAlign: 'center', fontSize: '0.68rem', color: '#8892b0' }}>{player.fixture || '—'}</span>
+                          <span style={{ width: '80px', textAlign: 'center', fontSize: '0.8rem', color: '#8892b0' }}>—</span>
+                        </div>
+                      );
+                    })}
+                    <div style={{ textAlign: 'center', padding: '1rem', fontSize: '0.75rem', color: '#8892b0' }}>
+                      Odds display coming soon for league player views
+                    </div>
+                  </div>
                 )}
               </>
             )}
