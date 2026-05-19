@@ -38,6 +38,9 @@ export default class MyDocument extends Document {
           <meta property="og:type" content="website" />
           <meta property="og:url" content="https://vidigoals.com" />
           <meta property="og:site_name" content="VidiGoals" />
+          <meta property="og:image" content="https://vidigoals.com/og-image.png" />
+          <meta property="og:image:width" content="1200" />
+          <meta property="og:image:height" content="630" />
           {/* Twitter Card */}
           <meta name="twitter:card" content="summary" />
           <meta name="twitter:title" content="VidiGoals — Live FPL Companion" />

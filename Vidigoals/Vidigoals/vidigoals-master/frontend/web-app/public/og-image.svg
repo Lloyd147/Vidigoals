@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#1a0a2e"/>
+  <text x="600" y="280" text-anchor="middle" font-family="Arial, sans-serif" font-size="80" font-weight="800" fill="#ffffff">⚽ Vidi</text>
+  <text x="600" y="280" text-anchor="middle" font-family="Arial, sans-serif" font-size="80" font-weight="800" fill="#f5a623" dx="200">Goals</text>
+  <text x="600" y="380" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" fill="#8892b0">Live FPL Companion</text>
+  <text x="600" y="440" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#6b7280">Real-time goals • Points tracking • Player odds</text>
+</svg>
