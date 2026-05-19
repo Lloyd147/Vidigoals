@@ -770,15 +770,15 @@ export default function MyTeam() {
                     return (
                       <div key={player.element} style={{ display: 'flex', alignItems: 'center', padding: '0.65rem 0.5rem', borderBottom: '1px solid #2d1a4e' }}>
                         <span style={{ width: '28px', textAlign: 'center', color: posColors[player.element_type] || '#ccc', fontWeight: 700, fontSize: '0.72rem' }}>{posLabels[player.element_type]}</span>
-                        <div style={{ width: '120px', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                           <ShirtSVG teamId={player.team_id} isGkp={player.element_type === 1} size={32} playerId={player.element} />
-                          <div>
-                            <div style={{ fontWeight: 700, color: '#eaeaea', fontSize: '0.82rem' }}>{player.web_name}</div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, color: '#eaeaea', fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.web_name}</div>
                             <div style={{ color: '#8892b0', fontSize: '0.6rem' }}>{player.team_name}</div>
                           </div>
                         </div>
-                        <span style={{ width: '60px', textAlign: 'center', color: '#8892b0', fontSize: '0.68rem', flexShrink: 0 }}>{player.fixture || '—'}</span>
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                        <span style={{ width: '65px', textAlign: 'center', color: '#8892b0', fontSize: '0.68rem', flexShrink: 0 }}>{player.fixture || '—'}</span>
+                        <div style={{ width: '160px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexShrink: 0 }}>
                           {player.fixtureFinished ? (
                             <span style={{ color: (() => {
                               if (selectedMarket === 'anytime' || selectedMarket === 'firstGoal' || selectedMarket === 'twoPlus' || selectedMarket === 'hatTrick') {
@@ -805,7 +805,7 @@ export default function MyTeam() {
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', cursor: 'pointer' }}
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', textDecoration: 'none', cursor: 'pointer', width: '100%' }}
                             >
                               <span style={{ color: '#f5a623', fontWeight: 700, fontSize: '0.95rem' }}>{marketOdds.odds}</span>
                               <div style={{ width: '80px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
