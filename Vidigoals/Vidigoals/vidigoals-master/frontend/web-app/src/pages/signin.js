@@ -178,6 +178,24 @@ export default function SignIn() {
   const [error, setError]     = useState(null);
   const [team, setTeam]       = useState(null);
 
+  // Pre-fill with last used ID (persists even after logout)
+  useState(() => {
+    try {
+      const savedId = localStorage.getItem('vidigoals_last_id');
+      if (savedId) setFplId(savedId);
+    } catch {}
+  });
+
+  // Auto-login: if user data exists, redirect immediately
+  useState(() => {
+    try {
+      const stored = localStorage.getItem('vidigoals_user');
+      if (stored) {
+        window.location.href = '/my-team';
+      }
+    } catch {}
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const id = fplId.trim();
@@ -205,6 +223,8 @@ export default function SignIn() {
         overallRank: data.summary_overall_rank,
       };
       localStorage.setItem('vidigoals_user', JSON.stringify(userData));
+      // Save ID separately so it persists after logout for quick re-login
+      localStorage.setItem('vidigoals_last_id', id);
       setTeam(data);
       // Redirect to My Team page after short delay so user sees their data
       setTimeout(() => { window.location.href = '/my-team'; }, 1500);
