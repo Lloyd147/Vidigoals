@@ -1,14 +1,15 @@
 /**
- * API Route: /api/projections?id={managerId}
+ * API Route: /api/projections
  *
- * Calculates projected points for a manager's squad for the next GW.
+ * Calculates the best projected starting 11 from ALL Premier League players
+ * for the next GW. Same result for every user.
+ *
  * Uses: FPL ep_next, fixture difficulty, odds data, chance of playing.
- *
- * Returns: best starting 11 + bench with projected points per player.
+ * Picks best valid formation (1 GK, 3-5 DEF, 2-5 MID, 1-3 FWD) = 11 players.
  */
 
-let projectionsCache = new Map();
-const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+let projectionsCache = { data: null, fetchedAt: 0 };
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes (same for all users)
 
 async function fplFetch(url) {
   const res = await fetch(url, {
@@ -21,13 +22,9 @@ async function fplFetch(url) {
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'GET only' });
 
-  const { id } = req.query;
-  if (!id) return res.status(400).json({ error: 'id required' });
-
-  const cacheKey = `proj-${id}`;
-  const cached = projectionsCache.get(cacheKey);
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL) {
-    return res.status(200).json(cached.data);
+  // Same for all users — single cache
+  if (projectionsCache.data && Date.now() - projectionsCache.fetchedAt < CACHE_TTL) {
+    return res.status(200).json(projectionsCache.data);
   }
 
   try {
@@ -48,100 +45,56 @@ export default async function handler(req, res) {
 
     // Build team lookup
     const teamMap = {};
-    for (const t of teams) {
-      teamMap[t.id] = t;
-    }
+    for (const t of teams) teamMap[t.id] = t;
 
     // Build fixture difficulty map: teamId → { opponent, difficulty, isHome }
     const fixtureDiffMap = {};
     for (const fix of nextFixtures) {
-      fixtureDiffMap[fix.team_h] = {
-        opponent: teamMap[fix.team_a]?.short_name || '',
-        difficulty: fix.team_h_difficulty || 3,
-        isHome: true,
-        opponentId: fix.team_a,
-      };
-      fixtureDiffMap[fix.team_a] = {
-        opponent: teamMap[fix.team_h]?.short_name || '',
-        difficulty: fix.team_a_difficulty || 3,
-        isHome: false,
-        opponentId: fix.team_h,
-      };
+      fixtureDiffMap[fix.team_h] = { opponent: teamMap[fix.team_a]?.short_name || '', difficulty: fix.team_h_difficulty || 3, isHome: true };
+      fixtureDiffMap[fix.team_a] = { opponent: teamMap[fix.team_h]?.short_name || '', difficulty: fix.team_a_difficulty || 3, isHome: false };
     }
 
-    // Get manager's current squad
-    const picksData = await fplFetch(`https://fantasy.premierleague.com/api/entry/${id}/event/${nextGWId}/picks/`);
-    let squadIds = [];
-    if (picksData?.picks) {
-      squadIds = picksData.picks.map(p => p.element);
-    } else {
-      // Try previous GW
-      const prevPicks = await fplFetch(`https://fantasy.premierleague.com/api/entry/${id}/event/${nextGWId - 1}/picks/`);
-      if (prevPicks?.picks) {
-        squadIds = prevPicks.picks.map(p => p.element);
-      }
-    }
-
-    if (squadIds.length === 0) {
-      return res.status(404).json({ error: 'Could not load squad' });
-    }
-
-    // Get odds data (try to fetch, non-blocking)
+    // Get odds data
     let oddsData = null;
     try {
       const oddsRes = await fetch(`${req.headers.origin || 'http://localhost:3000'}/api/livescore-odds`);
-      if (oddsRes.ok) {
-        const od = await oddsRes.json();
-        oddsData = od.odds || null;
-      }
+      if (oddsRes.ok) { const od = await oddsRes.json(); oddsData = od.odds || null; }
     } catch {}
 
-    // Calculate projections for each squad player
+    // Calculate projections for ALL players
     const posMap = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
     const projections = [];
 
-    for (const playerId of squadIds) {
-      const player = players.find(p => p.id === playerId);
-      if (!player) continue;
-
+    for (const player of players) {
       const team = teamMap[player.team] || {};
       const fixture = fixtureDiffMap[player.team] || null;
+
+      // Skip players without a fixture this GW
+      if (!fixture) continue;
+
+      // Skip players unlikely to play
       const chanceOfPlaying = player.chance_of_playing_next_round;
+      if (player.status === 'i' || player.status === 'u') continue;
+      if (chanceOfPlaying !== null && chanceOfPlaying < 50) continue;
 
       // Base projection: FPL's own expected points
       let baseProjection = parseFloat(player.ep_next) || 0;
-
-      // If no ep_next, estimate from form
-      if (baseProjection === 0 && player.form) {
-        baseProjection = parseFloat(player.form) || 2;
-      }
+      if (baseProjection === 0 && player.form) baseProjection = parseFloat(player.form) || 0;
+      if (baseProjection <= 0) continue; // Skip players with no expected output
 
       // Fixture difficulty adjustment
-      // FDR 1-2 = easy (boost), 3 = neutral, 4-5 = hard (reduce)
       let fdrMultiplier = 1.0;
-      if (fixture) {
-        if (fixture.difficulty <= 2) fdrMultiplier = 1.15; // Easy fixture boost
-        else if (fixture.difficulty === 3) fdrMultiplier = 1.0;
-        else if (fixture.difficulty === 4) fdrMultiplier = 0.85;
-        else if (fixture.difficulty >= 5) fdrMultiplier = 0.7;
+      if (fixture.difficulty <= 2) fdrMultiplier = 1.15;
+      else if (fixture.difficulty === 4) fdrMultiplier = 0.85;
+      else if (fixture.difficulty >= 5) fdrMultiplier = 0.7;
+      if (fixture.isHome) fdrMultiplier *= 1.05;
 
-        // Home advantage slight boost
-        if (fixture.isHome) fdrMultiplier *= 1.05;
-      }
+      // Playing probability
+      let playingMult = 1.0;
+      if (chanceOfPlaying !== null && chanceOfPlaying < 100) playingMult = chanceOfPlaying / 100;
+      if (player.status === 'd') playingMult = Math.min(playingMult, 0.6);
 
-      // Chance of playing adjustment
-      let playingMultiplier = 1.0;
-      if (chanceOfPlaying !== null && chanceOfPlaying !== undefined) {
-        playingMultiplier = chanceOfPlaying / 100;
-      }
-      // If status is injured/unavailable and no chance given, assume low
-      if (player.status === 'i' || player.status === 'u') {
-        playingMultiplier = Math.min(playingMultiplier, 0.1);
-      } else if (player.status === 'd') {
-        playingMultiplier = Math.min(playingMultiplier, 0.5);
-      }
-
-      // Odds boost: if we have anytime goalscorer odds, lower odds = higher chance
+      // Odds boost
       let oddsBoost = 0;
       if (oddsData) {
         const webName = (player.web_name || '').toLowerCase();
@@ -150,23 +103,18 @@ export default async function handler(req, res) {
           return oddsName.includes(webName) || webName.includes(oddsName.split(' ').pop());
         });
         if (oddsEntry) {
-          // Anytime goalscorer odds → implied probability → bonus points
           if (oddsEntry.anytime?.odds) {
-            const impliedProb = 1 / parseFloat(oddsEntry.anytime.odds);
-            // GK/DEF goal = 6pts, MID = 5, FWD = 4
+            const prob = 1 / parseFloat(oddsEntry.anytime.odds);
             const goalPts = player.element_type <= 2 ? 6 : player.element_type === 3 ? 5 : 4;
-            oddsBoost += impliedProb * goalPts;
+            oddsBoost += prob * goalPts;
           }
-          // Assist odds
           if (oddsEntry.assists?.odds) {
-            const assistProb = 1 / parseFloat(oddsEntry.assists.odds);
-            oddsBoost += assistProb * 3; // 3 pts for assist
+            oddsBoost += (1 / parseFloat(oddsEntry.assists.odds)) * 3;
           }
         }
       }
 
-      // Final projection
-      const projectedPoints = Math.round(((baseProjection * fdrMultiplier) + oddsBoost) * playingMultiplier * 10) / 10;
+      const projectedPoints = Math.round(((baseProjection * fdrMultiplier) + oddsBoost) * playingMult * 10) / 10;
 
       projections.push({
         id: player.id,
@@ -177,85 +125,60 @@ export default async function handler(req, res) {
         team: team.name || '',
         teamShort: team.short_name || '',
         teamId: player.team,
-        fixture: fixture ? `${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})` : '—',
-        difficulty: fixture?.difficulty || 3,
+        fixture: `${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})`,
+        difficulty: fixture.difficulty,
         projectedPoints,
         epNext: parseFloat(player.ep_next) || 0,
         form: parseFloat(player.form) || 0,
-        chanceOfPlaying,
-        status: player.status,
+        price: (player.now_cost / 10).toFixed(1),
       });
     }
 
-    // Sort by projected points descending
+    // Sort all by projected points
     projections.sort((a, b) => b.projectedPoints - a.projectedPoints);
 
-    // Pick best starting 11 (must have valid formation: 1 GK, 3-5 DEF, 2-5 MID, 1-3 FWD)
+    // Pick best valid starting 11 from ALL players
     const bestXI = pickBestXI(projections);
-    const bench = projections.filter(p => !bestXI.includes(p));
-
-    // Total projected points
     const totalProjected = Math.round(bestXI.reduce((sum, p) => sum + p.projectedPoints, 0) * 10) / 10;
 
     const result = {
       gameweek: nextGWId,
       totalProjected,
       starting: bestXI,
-      bench,
     };
 
-    projectionsCache.set(cacheKey, { data: result, fetchedAt: Date.now() });
+    projectionsCache = { data: result, fetchedAt: Date.now() };
     return res.status(200).json(result);
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 }
 
-// Pick best valid starting 11 from squad
+// Pick best valid starting 11 from all players
 function pickBestXI(players) {
-  // Sort by projected points desc
   const sorted = [...players].sort((a, b) => b.projectedPoints - a.projectedPoints);
-
   const gks = sorted.filter(p => p.position === 1);
   const defs = sorted.filter(p => p.position === 2);
   const mids = sorted.filter(p => p.position === 3);
   const fwds = sorted.filter(p => p.position === 4);
 
-  // Must have: 1 GK, at least 3 DEF, at least 2 MID, at least 1 FWD
-  // Total = 11
-  const xi = [];
+  // Try formations: 3-5-2, 3-4-3, 4-4-2, 4-3-3, 4-5-1, 5-4-1, 5-3-2
+  const formations = [
+    [3, 5, 2], [3, 4, 3], [4, 4, 2], [4, 3, 3], [4, 5, 1], [5, 4, 1], [5, 3, 2],
+  ];
 
-  // Pick best GK
-  if (gks.length > 0) xi.push(gks[0]);
+  let bestTeam = null;
+  let bestTotal = 0;
 
-  // Start with minimum: 3 DEF, 2 MID, 1 FWD = 6 outfield + 1 GK = 7
-  // Need 4 more from remaining players (sorted by projection)
-  const minDef = defs.slice(0, 3);
-  const minMid = mids.slice(0, 2);
-  const minFwd = fwds.slice(0, 1);
-
-  xi.push(...minDef, ...minMid, ...minFwd);
-
-  // Fill remaining 4 spots from best available (respecting max: 5 DEF, 5 MID, 3 FWD)
-  const remaining = sorted.filter(p => !xi.includes(p) && p.position !== 1);
-  const defCount = xi.filter(p => p.position === 2).length;
-  const midCount = xi.filter(p => p.position === 3).length;
-  const fwdCount = xi.filter(p => p.position === 4).length;
-
-  let spotsLeft = 11 - xi.length;
-  for (const p of remaining) {
-    if (spotsLeft <= 0) break;
-    const currentDef = xi.filter(x => x.position === 2).length;
-    const currentMid = xi.filter(x => x.position === 3).length;
-    const currentFwd = xi.filter(x => x.position === 4).length;
-
-    if (p.position === 2 && currentDef >= 5) continue;
-    if (p.position === 3 && currentMid >= 5) continue;
-    if (p.position === 4 && currentFwd >= 3) continue;
-
-    xi.push(p);
-    spotsLeft--;
+  for (const [d, m, f] of formations) {
+    if (defs.length < d || mids.length < m || fwds.length < f || gks.length < 1) continue;
+    const team = [gks[0], ...defs.slice(0, d), ...mids.slice(0, m), ...fwds.slice(0, f)];
+    const total = team.reduce((sum, p) => sum + p.projectedPoints, 0);
+    if (total > bestTotal) {
+      bestTotal = total;
+      bestTeam = team;
+    }
   }
 
-  return xi;
+  return bestTeam || sorted.slice(0, 11);
 }

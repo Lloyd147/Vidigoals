@@ -308,7 +308,7 @@ export default function AppShell({ user, page, isLive, onLogout, children }) {
           <MenuLink href="/" active={page === 'feed' ? 1 : 0}>FPL Goal Feed</MenuLink>
           <MenuLink href={user ? '/my-team?tab=points' : '/signin'} active={page === 'my-team' ? 1 : 0}>My Team Points</MenuLink>
           <MenuLink href={user ? '/my-team?tab=odds' : '/signin'} active={0}>My Player Odds</MenuLink>
-          <MenuLink href={user ? '/projections' : '/signin'} active={page === 'projections' ? 1 : 0}>Player Projections</MenuLink>
+          <MenuLink href="/projections" active={page === 'projections' ? 1 : 0}>Player Projections</MenuLink>
           <MenuLink href="/leaderboard" active={page === 'leaderboard' ? 1 : 0}>VidiGoals Leaderboard</MenuLink>
           <MenuLink href="/leaderboard?tab=myleagues" active={0}>My Leagues</MenuLink>
           <MenuLink href="/matches" active={page === 'matches' ? 1 : 0}>Matches</MenuLink>

@@ -78,12 +78,11 @@ export default function Projections() {
   }, []);
 
   useEffect(() => {
-    if (!user?.id) return;
-    fetch(`/api/projections?id=${user.id}`)
+    fetch('/api/projections')
       .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
       .then(d => { setData(d); setLoading(false); })
       .catch(e => { setError(typeof e === 'string' ? e : e.message); setLoading(false); });
-  }, [user]);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('vidigoals_user');
@@ -108,11 +107,7 @@ export default function Projections() {
       <Wrapper>
         <AppShell user={user} page="projections" onLogout={handleLogout}>
           <Content>
-            {!user && !loading && (
-              <StatusMsg>Sign in to see your projected best XI.<br /><br /><a href="/signin">Enter your FPL Manager ID →</a></StatusMsg>
-            )}
-
-            {loading && user && <StatusMsg>Calculating projections…</StatusMsg>}
+            {loading && <StatusMsg>Calculating projections…</StatusMsg>}
             {error && <StatusMsg>Could not load projections.<br />{error}</StatusMsg>}
 
             {data && (
@@ -137,19 +132,7 @@ export default function Projections() {
                   event_points: p.projectedPoints,
                   fixture: p.fixture,
                   fixtureLive: false,
-                })), bench: data.bench.map(p => ({
-                  ...p,
-                  element: p.id,
-                  element_type: p.position,
-                  web_name: p.name,
-                  team_id: p.teamId,
-                  is_captain: false,
-                  is_vice_captain: false,
-                  multiplier: 1,
-                  event_points: p.projectedPoints,
-                  fixture: p.fixture,
-                  fixtureLive: false,
-                })) }} gw={data.gameweek} />
+                })), bench: [] }} gw={data.gameweek} />
 
                 {/* Detailed breakdown table */}
                 <div style={{ padding: '0.75rem' }}>
@@ -162,8 +145,8 @@ export default function Projections() {
                     <span style={{ width: '35px', textAlign: 'center' }}>Form</span>
                     <span style={{ width: '45px', textAlign: 'right' }}>Proj</span>
                   </div>
-                  {[...data.starting, ...data.bench].map((p, i) => (
-                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', padding: '0.5rem', borderBottom: '1px solid #2d1a4e', opacity: i >= data.starting.length ? 0.5 : 1 }}>
+                  {data.starting.map((p, i) => (
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', padding: '0.5rem', borderBottom: '1px solid #2d1a4e' }}>
                       <span style={{ width: '30px', fontSize: '0.65rem', color: '#8892b0', fontWeight: 700 }}>{p.posLabel}</span>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#eaeaea' }}>{p.name}</div>
