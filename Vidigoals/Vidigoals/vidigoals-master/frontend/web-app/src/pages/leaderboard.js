@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import styled, { createGlobalStyle } from 'styled-components';
 import AppShell from '../components/AppShell';
+import TeamPitchView from '../components/TeamPitchView';
 
 const GlobalStyle = createGlobalStyle`
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -344,45 +345,32 @@ export default function Leaderboard() {
                 {loadingPlayerPicks && <StatusMsg>Loading team…</StatusMsg>}
 
                 {viewingPlayerPicks && (
-                  <div style={{ padding: '0.5rem' }}>
-                    {/* GW Points summary */}
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', padding: '0.75rem', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', marginBottom: '0.75rem' }}>
-                      <div style={{ textAlign: 'center' }}>
+                  <>
+                    {/* GW Stats row */}
+                    <div style={{ display: 'flex', gap: '0.5rem', padding: '0.75rem' }}>
+                      <div style={{ flex: 1, textAlign: 'center', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '0.5rem 0.25rem' }}>
                         <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f5a623' }}>
                           {viewingPlayerPicks.starting?.reduce((sum, p) => sum + (p.event_points || 0) * (p.multiplier || 1), 0) || 0}
                         </div>
-                        <div style={{ fontSize: '0.6rem', color: '#8892b0' }}>GW{CURRENT_GW} Points</div>
+                        <div style={{ fontSize: '0.6rem', color: '#8892b0', marginTop: '2px' }}>GW POINTS</div>
+                      </div>
+                      <div style={{ flex: 1, textAlign: 'center', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '0.5rem 0.25rem' }}>
+                        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#fff' }}>
+                          {viewingPlayerPicks.entry_history?.overall_rank?.toLocaleString() || '—'}
+                        </div>
+                        <div style={{ fontSize: '0.6rem', color: '#8892b0', marginTop: '2px' }}>OVERALL RANK</div>
+                      </div>
+                      <div style={{ flex: 1, textAlign: 'center', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '0.5rem 0.25rem' }}>
+                        <div style={{ fontSize: '1rem', fontWeight: 800, color: '#fff' }}>
+                          {viewingPlayerPicks.entry_history?.event_transfers || 0}
+                        </div>
+                        <div style={{ fontSize: '0.6rem', color: '#8892b0', marginTop: '2px' }}>TRANSFERS</div>
                       </div>
                     </div>
 
-                    {/* Starting XI */}
-                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#8892b0', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Starting XI</div>
-                    {viewingPlayerPicks.starting?.map(player => (
-                      <div key={player.element} style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.25rem', borderBottom: '1px solid #2d1a4e' }}>
-                        <span style={{ width: '30px', fontSize: '0.65rem', color: '#8892b0', fontWeight: 700 }}>{player.pos_label}</span>
-                        <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 600, color: '#eaeaea' }}>
-                          {player.web_name}
-                          {player.is_captain && <span style={{ color: '#f5a623', marginLeft: '4px', fontSize: '0.7rem' }}>(C)</span>}
-                          {player.is_vice_captain && <span style={{ color: '#9b59b6', marginLeft: '4px', fontSize: '0.7rem' }}>(V)</span>}
-                        </span>
-                        <span style={{ width: '55px', textAlign: 'right', fontSize: '0.72rem', color: '#8892b0' }}>{player.fixture || ''}</span>
-                        <span style={{ width: '35px', textAlign: 'right', fontWeight: 700, fontSize: '0.85rem', color: player.event_points > 0 ? '#48bb78' : '#fff' }}>
-                          {(player.event_points || 0) * (player.multiplier || 1)}
-                        </span>
-                      </div>
-                    ))}
-
-                    {/* Bench */}
-                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#8892b0', marginTop: '0.75rem', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Bench</div>
-                    {viewingPlayerPicks.bench?.map(player => (
-                      <div key={player.element} style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.25rem', borderBottom: '1px solid #2d1a4e', opacity: 0.6 }}>
-                        <span style={{ width: '30px', fontSize: '0.65rem', color: '#8892b0', fontWeight: 700 }}>{player.pos_label}</span>
-                        <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 600, color: '#eaeaea' }}>{player.web_name}</span>
-                        <span style={{ width: '55px', textAlign: 'right', fontSize: '0.72rem', color: '#8892b0' }}>{player.fixture || ''}</span>
-                        <span style={{ width: '35px', textAlign: 'right', fontSize: '0.82rem', color: '#8892b0' }}>{player.event_points || 0}</span>
-                      </div>
-                    ))}
-                  </div>
+                    {/* Pitch view */}
+                    <TeamPitchView picks={viewingPlayerPicks} gw={CURRENT_GW} />
+                  </>
                 )}
               </>
             )}
