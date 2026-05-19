@@ -45,7 +45,8 @@ export default class MyDocument extends Document {
           {/* General SEO */}
           <meta name="description" content="VidiGoals is a live FPL companion app with real-time Premier League goal alerts, FPL points tracking, player betting odds, and match statistics." />
           <meta name="theme-color" content="#1a0a2e" />
-          <link rel="icon" href="/favicon.ico" />
+          <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+          <link rel="icon" href="/favicon.ico" sizes="any" />
         </Head>
         <body>
           <Main />
