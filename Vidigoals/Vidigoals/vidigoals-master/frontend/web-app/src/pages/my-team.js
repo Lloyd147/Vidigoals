@@ -800,23 +800,18 @@ export default function MyTeam() {
                               })()}
                             </span>
                           ) : marketOdds ? (
-                            <>
-                              <span
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  // Open Livescorebet event page for this player's match
-                                  const url = playerOdds?.eventUrl;
-                                  if (url) window.open(url, '_blank');
-                                }}
-                                style={{ color: '#f5a623', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '3px' }}
-                              >
-                                {marketOdds.odds}
-                              </span>
+                            <a
+                              href={playerOdds?.eventUrl || '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', cursor: 'pointer' }}
+                            >
+                              <span style={{ color: '#f5a623', fontWeight: 700, fontSize: '0.95rem' }}>{marketOdds.odds}</span>
                               <div style={{ width: '80px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                <img src={getBookieLogo(marketOdds.bookie)} alt={marketOdds.bookie} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', borderRadius: '3px' }} onError={e => { e.target.style.display = 'none'; e.target.parentElement.nextSibling && (e.target.parentElement.nextSibling.style.display = 'inline'); }} />
+                                <img src={getBookieLogo(marketOdds.bookie)} alt={marketOdds.bookie} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', borderRadius: '3px' }} onError={e => { e.target.style.display = 'none'; }} />
                               </div>
-                              <span style={{ display: 'none', background: '#f5a623', color: '#1a0a2e', fontSize: '0.6rem', fontWeight: 700, padding: '2px 5px', borderRadius: '3px' }}>{marketOdds.bookie}</span>
-                            </>
+                            </a>
                           ) : (
                             <span style={{ color: '#8892b0' }}>—</span>
                           )}
