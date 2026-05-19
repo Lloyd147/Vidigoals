@@ -240,6 +240,25 @@ export default async function handler(req, res) {
       const { riseProgress, fallProgress, netIn, netOut } = calculateProgress(player);
       const team = teamMap[player.team] || {};
 
+      // Calculate speed: transfer rate relative to threshold
+      // Speed = how much progress changes per hour based on current transfer velocity
+      // Higher transfers relative to threshold = faster speed
+      const ownership = parseFloat(player.selected_by_percent) || 0;
+      const threshold = BASE_FACTOR * (1 + Math.pow(ownership + 0.1, 0.55));
+      const transfersInRate = transfersIn;
+      const transfersOutRate = transfersOut;
+      // Speed = how fast progress is currently moving (per hour)
+      // Use net transfers relative to threshold, assume ~24 hours of activity
+      // Lower ownership players move faster with same transfer volume
+      const hoursActive = 24;
+      const netRate = Math.abs(transfersIn - transfersOut) / hoursActive;
+      const rawSpeed = (netRate / threshold) * 100;
+      // Round to nearest 0.1, min 0.1 if any activity, cap at 0.5
+      const speed = (transfersIn > 0 || transfersOut > 0) ? Math.min(0.5, Math.max(0.1, Math.round(rawSpeed * 10) / 10)) : 0;
+      // Speed direction: if net transfers IN > OUT, speed is ▲ (rising), else ▼ (falling)
+      // This is independent of whether the player is in risers or fallers list
+      const speedDirection = (transfersIn >= transfersOut) ? 'up' : 'down';
+
       const playerData = {
         id: player.id,
         name: player.web_name,
@@ -255,10 +274,11 @@ export default async function handler(req, res) {
         transfersIn,
         transfersOut,
         netTransfers: netIn,
-        status: player.status, // a=available, i=injured, u=unavailable, s=suspended, d=doubtful
+        speed, // %/hour based on actual transfer velocity
+        speedDirection, // 'up' or 'down' — independent of riser/faller status
+        status: player.status,
         news: player.news || '',
         chanceOfPlaying: player.chance_of_playing_next_round,
-        // Detect potentially locked players
         locked: player.status === 'u' || (player.news && player.news.toLowerCase().includes('joined')),
       };
 

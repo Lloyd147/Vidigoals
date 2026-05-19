@@ -288,10 +288,8 @@ export default function PriceChanges() {
     else if (sortBy === 'price') { aVal = parseFloat(a.price); bVal = parseFloat(b.price); }
     else if (sortBy === 'ownership') { aVal = a.ownership; bVal = b.ownership; }
     else if (sortBy === 'speed') {
-      const absA = Math.abs(a.progress);
-      const absB = Math.abs(b.progress);
-      aVal = absA >= 90 ? 0.4 : absA >= 60 ? 0.3 : absA >= 30 ? 0.2 : 0.1;
-      bVal = absB >= 90 ? 0.4 : absB >= 60 ? 0.3 : absB >= 30 ? 0.2 : 0.1;
+      aVal = a.speed || 0;
+      bVal = b.speed || 0;
     }
     else { aVal = a.progress; bVal = b.progress; }
     return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
@@ -344,7 +342,7 @@ export default function PriceChanges() {
                 {allPlayers.map(player => {
                   const isRising = player.progress >= 0;
                   const absProgress = Math.abs(player.progress);
-                  const speed = absProgress >= 90 ? 0.4 : absProgress >= 60 ? 0.3 : absProgress >= 30 ? 0.2 : 0.1;
+                  const speed = player.speed || 0.1;
 
                   return (
                   <PlayerRow key={player.id}>
@@ -392,8 +390,8 @@ export default function PriceChanges() {
 
                     {/* Speed */}
                     <div style={{ width: '38px', textAlign: 'center', fontSize: '0.65rem', fontWeight: 700 }}>
-                      <span style={{ color: isRising ? '#48bb78' : '#fc8181' }}>
-                        {isRising ? '▲' : '▼'}{speed.toFixed(1)}
+                      <span style={{ color: (player.speedDirection || (isRising ? 'up' : 'down')) === 'up' ? '#48bb78' : '#fc8181' }}>
+                        {(player.speedDirection || (isRising ? 'up' : 'down')) === 'up' ? '▲' : '▼'}{speed.toFixed(1)}
                       </span>
                     </div>
 
