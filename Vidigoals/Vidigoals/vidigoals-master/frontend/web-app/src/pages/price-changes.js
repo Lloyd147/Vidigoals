@@ -235,6 +235,9 @@ export default function PriceChanges() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('progress'); // 'progress' | 'price' | 'ownership' | 'speed'
+  const [sortDir, setSortDir] = useState('desc'); // 'asc' | 'desc'
 
   useEffect(() => {
     try {
@@ -255,9 +258,46 @@ export default function PriceChanges() {
     setUser(null);
   };
 
-  // Single list: combine risers and fallers, sort by progress (highest + first, lowest - last)
-  const allPlayers = [...(data?.risers || []), ...(data?.fallers || []).map(p => ({ ...p, progress: -p.progress }))];
-  allPlayers.sort((a, b) => b.progress - a.progress);
+  function handleSort(col) {
+    if (sortBy === col) {
+      setSortDir(d => d === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortBy(col);
+      setSortDir('desc');
+    }
+  }
+
+  // Single list: combine risers and fallers
+  let allPlayers = [...(data?.risers || []), ...(data?.fallers || []).map(p => ({ ...p, progress: -p.progress }))];
+
+  // Filter by search
+  if (search.trim()) {
+    const q = search.trim().toLowerCase();
+    allPlayers = allPlayers.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.team.toLowerCase().includes(q) ||
+      p.teamShort.toLowerCase().includes(q) ||
+      p.position.toLowerCase().includes(q)
+    );
+  }
+
+  // Sort
+  allPlayers.sort((a, b) => {
+    let aVal, bVal;
+    if (sortBy === 'progress') { aVal = a.progress; bVal = b.progress; }
+    else if (sortBy === 'price') { aVal = parseFloat(a.price); bVal = parseFloat(b.price); }
+    else if (sortBy === 'ownership') { aVal = a.ownership; bVal = b.ownership; }
+    else if (sortBy === 'speed') {
+      const absA = Math.abs(a.progress);
+      const absB = Math.abs(b.progress);
+      aVal = absA >= 90 ? 0.4 : absA >= 60 ? 0.3 : absA >= 30 ? 0.2 : 0.1;
+      bVal = absB >= 90 ? 0.4 : absB >= 60 ? 0.3 : absB >= 30 ? 0.2 : 0.1;
+    }
+    else { aVal = a.progress; bVal = b.progress; }
+    return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
+  });
+
+  const sortArrow = (col) => sortBy === col ? (sortDir === 'desc' ? ' ▼' : ' ▲') : '';
 
   return (
     <>
@@ -269,32 +309,41 @@ export default function PriceChanges() {
       <Wrapper>
         <AppShell user={user} page="price-changes" onLogout={handleLogout}>
 
+          {/* Search bar */}
+          <div style={{ padding: '0.6rem 0.75rem', borderBottom: '1px solid #4a1a8e' }}>
+            <input
+              type="text"
+              placeholder="Search Player"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid #4a1a8e', background: '#fff', color: '#1a0a2e', fontSize: '0.9rem', fontWeight: 600, outline: 'none' }}
+            />
+          </div>
+
           <Content>
             {loading && <StatusMsg>Loading price predictions…</StatusMsg>}
             {error && <StatusMsg>Could not load data.<br />{error}</StatusMsg>}
 
             {!loading && !error && allPlayers.length === 0 && (
-              <StatusMsg>No price change data available right now.</StatusMsg>
+              <StatusMsg>{search ? `No players matching "${search}"` : 'No price change data available right now.'}</StatusMsg>
             )}
 
             {!loading && !error && allPlayers.length > 0 && (
               <>
-                {/* Column headers */}
+                {/* Sortable column headers */}
                 <HeaderRow>
                   <span style={{ width: '140px' }}>Player</span>
                   <span style={{ width: '40px', textAlign: 'center' }}>Fitness</span>
-                  <span style={{ width: '50px', textAlign: 'center' }}>Price</span>
-                  <span style={{ width: '45px', textAlign: 'center' }}>Own%</span>
-                  <span style={{ flex: 1, textAlign: 'center' }}>Progress</span>
-                  <span style={{ width: '38px', textAlign: 'center' }}>Spd</span>
+                  <span onClick={() => handleSort('price')} style={{ width: '50px', textAlign: 'center', cursor: 'pointer' }}>Price{sortArrow('price')}</span>
+                  <span onClick={() => handleSort('ownership')} style={{ width: '45px', textAlign: 'center', cursor: 'pointer' }}>Own%{sortArrow('ownership')}</span>
+                  <span onClick={() => handleSort('progress')} style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>Progress{sortArrow('progress')}</span>
+                  <span onClick={() => handleSort('speed')} style={{ width: '38px', textAlign: 'center', cursor: 'pointer' }}>Spd{sortArrow('speed')}</span>
                   <span style={{ width: '55px', textAlign: 'center' }}>Time</span>
                 </HeaderRow>
 
                 {allPlayers.map(player => {
                   const isRising = player.progress >= 0;
                   const absProgress = Math.abs(player.progress);
-                  // Speed: based on transfer velocity relative to threshold
-                  // FFF shows 0.1-0.4 per hour typically
                   const speed = absProgress >= 90 ? 0.4 : absProgress >= 60 ? 0.3 : absProgress >= 30 ? 0.2 : 0.1;
 
                   return (
