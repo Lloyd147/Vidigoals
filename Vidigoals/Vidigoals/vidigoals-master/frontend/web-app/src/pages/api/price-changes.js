@@ -19,6 +19,12 @@
 let cache = { data: null, fetchedAt: 0 };
 const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
+// ── Price tracking store ──────────────────────────────────────────────────────
+// Tracks last known price for each player to detect when price actually changes
+// When price moves ±0.1, progress resets to 0%
+let priceStore = {}; // { playerId: lastKnownPrice }
+let resetPlayers = new Set(); // Players whose progress was reset (price changed)
+
 async function fplFetch(url) {
   const res = await fetch(url, {
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; VidiGoals/1.0)' },
@@ -145,6 +151,17 @@ export default async function handler(req, res) {
       const playerName = player.web_name;
       const seedValue = SEED_PROGRESS[playerName] || null;
 
+      // If player's price changed since we started tracking, reset to 0%
+      if (resetPlayers.has(playerName)) {
+        // Price changed — progress resets, start building from 0
+        const threshold = BASE_FACTOR * (1 + Math.pow(ownership + 0.1, 0.55));
+        let riseProgress = netIn > 0 ? (netIn / threshold) * 100 : 0;
+        let fallProgress = netOut > 0 ? (netOut / threshold) * 100 : 0;
+        riseProgress = Math.min(riseProgress, 100);
+        fallProgress = Math.min(fallProgress, 100);
+        return { riseProgress, fallProgress, threshold, netIn, netOut };
+      }
+
       if (seedValue !== null) {
         // Use seed as the base — the formula only adds a tiny delta on top
         // Delta represents movement since the seed was captured
@@ -200,6 +217,19 @@ export default async function handler(req, res) {
     // Calculate for all players
     const risers = [];
     const fallers = [];
+
+    // Check for price changes — compare current prices vs stored prices
+    for (const player of players) {
+      const currentPrice = player.now_cost;
+      const storedPrice = priceStore[player.id];
+      
+      if (storedPrice !== undefined && currentPrice !== storedPrice) {
+        // Price has changed! Reset this player's progress
+        resetPlayers.add(player.web_name);
+      }
+      // Update stored price
+      priceStore[player.id] = currentPrice;
+    }
 
     for (const player of players) {
       // Skip players with no transfer activity

@@ -289,10 +289,12 @@ export default function PriceChanges() {
                 {/* Column headers */}
                 <HeaderRow>
                   <span style={{ width: '140px' }}>Player</span>
+                  <span style={{ width: '22px', textAlign: 'center' }}>Fit</span>
                   <span style={{ width: '50px', textAlign: 'center' }}>Price</span>
                   <span style={{ width: '50px', textAlign: 'center' }}>Own%</span>
                   <span style={{ flex: 1, textAlign: 'center' }}>Progress</span>
-                  <span style={{ width: '60px', textAlign: 'center' }}>Time</span>
+                  <span style={{ width: '35px', textAlign: 'center' }}>Spd</span>
+                  <span style={{ width: '55px', textAlign: 'center' }}>Time</span>
                 </HeaderRow>
 
                 {players.map(player => (
@@ -329,13 +331,10 @@ export default function PriceChanges() {
 
                     {/* Progress */}
                     <div style={{ flex: 1, padding: '0 0.4rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <ProgressBadge value={player.progress} direction={player.direction}>
                           {player.progress.toFixed(1)}%
                         </ProgressBadge>
-                        <NetBadge positive={player.direction === 'rise'}>
-                          {player.direction === 'rise' ? '▲' : '▼'}
-                        </NetBadge>
                       </div>
                       <ProgressBarOuter>
                         <ProgressBarInner pct={player.progress} direction={player.direction} />
@@ -343,7 +342,14 @@ export default function PriceChanges() {
                     </div>
 
                     {/* Change time */}
-                    <div style={{ width: '60px', textAlign: 'center' }}>
+                    <div style={{ width: '35px', textAlign: 'center', fontSize: '0.65rem', fontWeight: 700 }}>
+                      <span style={{ color: player.direction === 'rise' ? '#48bb78' : '#fc8181' }}>
+                        {player.direction === 'rise' ? '▲' : '▼'}{(player.progress > 0 ? 0.1 + Math.floor(player.progress / 30) * 0.1 : 0.1).toFixed(1)}
+                      </span>
+                    </div>
+
+                    {/* Time estimate */}
+                    <div style={{ width: '55px', textAlign: 'center' }}>
                       <ChangeTimeBadge tonight={player.changeTime === 'Tonight' ? 1 : 0}>
                         {player.changeTime}
                       </ChangeTimeBadge>
