@@ -333,12 +333,44 @@ export default function AppShell({ user, page, isLive, onLogout, children }) {
             Coming soon.
           </MenuAccordion>
           <MenuAccordion title="Terms & Conditions">
-            By using VidiGoals, you agree to the following terms. VidiGoals provides live football scores and FPL data sourced from third-party APIs. 
-            While we strive for accuracy, data may not always be 100% up-to-date. VidiGoals is not responsible for discrepancies between displayed data and official results.<br /><br />
-            Match data is provided by API-Football. FPL data is sourced from the official Fantasy Premier League API. 
-            Team logos are property of their respective clubs and used for informational purposes only.<br /><br />
-            VidiGoals is an independent project and is not affiliated with, endorsed by, or connected to the Premier League or FPL. 
-            The service is provided "as is" without warranty. We reserve the right to update these terms at any time.
+            <strong>1. Acceptance of Terms</strong><br />
+            By accessing or using VidiGoals ("the Service"), you agree to be bound by these Terms & Conditions. If you do not agree, please do not use the Service.<br /><br />
+
+            <strong>2. User Accounts & Display Name</strong><br />
+            By signing in with your FPL Manager ID, you consent to your team name and manager name being publicly displayed on VidiGoals, including but not limited to league standings, leaderboards, and competition results. You are responsible for ensuring your display name is appropriate.<br /><br />
+
+            <strong>3. Competitions & Giveaways</strong><br />
+            VidiGoals may run prize giveaways and competitions from time to time. By entering any VidiGoals giveaway or competition, you agree to the following:<br />
+            • Entry is free and no purchase is necessary.<br />
+            • Winners are determined by VidiGoals based on the stated criteria (e.g., highest gameweek score).<br />
+            • All decisions made by VidiGoals regarding winners, eligibility, and prize distribution are final and not subject to appeal.<br />
+            • Prizes will be distributed via email to the address associated with your account. VidiGoals is not responsible for unclaimed prizes.<br />
+            • VidiGoals reserves the right to disqualify any entrant suspected of fraudulent activity.<br />
+            • VidiGoals reserves the right to cancel, modify, or suspend any competition at any time without prior notice.<br /><br />
+
+            <strong>4. Accuracy of Information</strong><br />
+            VidiGoals provides live football scores, FPL data, player statistics, and betting odds sourced from third-party providers. While we strive for accuracy, we cannot guarantee that all information displayed is 100% correct at all times. Data may be delayed, incomplete, or contain errors. VidiGoals is not responsible for any decisions made based on information displayed on the Service.<br /><br />
+
+            <strong>5. Betting & Odds Information</strong><br />
+            Odds displayed on VidiGoals are for informational purposes only. VidiGoals does not operate as a bookmaker and does not accept bets. Users are redirected to third-party betting sites at their own risk. VidiGoals is not responsible for any losses incurred through gambling. Please gamble responsibly.<br /><br />
+
+            <strong>6. Intellectual Property</strong><br />
+            VidiGoals is an independent project and is not affiliated with, endorsed by, or connected to the Premier League, Fantasy Premier League, or any football club. Team logos and player names are property of their respective owners and are used for informational purposes only.<br /><br />
+
+            <strong>7. Limitation of Liability</strong><br />
+            The Service is provided "as is" without warranty of any kind, express or implied. VidiGoals shall not be liable for any direct, indirect, incidental, or consequential damages arising from your use of the Service.<br /><br />
+
+            <strong>8. Privacy</strong><br />
+            VidiGoals does not collect personal data beyond your FPL Manager ID. No passwords are stored. Your usage data may be processed by our hosting provider (Vercel) in accordance with their privacy policy.<br /><br />
+
+            <strong>9. Modifications</strong><br />
+            We reserve the right to update these Terms at any time. Continued use of the Service after changes constitutes acceptance of the revised Terms.<br /><br />
+
+            <strong>10. Data Sources & Technical Information</strong><br />
+            Match data is provided by API-Football. FPL data is sourced from the official Fantasy Premier League API. Odds data is sourced from third-party bookmaker APIs. Data refresh intervals vary by feature and may range from 30 seconds to several hours depending on the type of information and current match status. All times displayed are in UK (Europe/London) timezone.<br /><br />
+
+            <strong>11. Contact</strong><br />
+            For any queries regarding these terms, please contact vidigoals@gmail.com.
           </MenuAccordion>
         </MenuSection>
       </MenuPanel>
