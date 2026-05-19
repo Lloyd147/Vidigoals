@@ -22,18 +22,122 @@ const Wrapper = styled.div`
   background: #1a0a2e;
 `;
 
+const TabRow = styled.div`
+  display: flex;
+  background: #2d0a5e;
+  border-bottom: 1px solid #4a1a8e;
+`;
+
+const Tab = styled.button`
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid ${({ active }) => active ? '#48bb78' : 'transparent'};
+  color: ${({ active }) => active ? '#48bb78' : '#8892b0'};
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.75rem;
+  cursor: pointer;
+  &:last-child {
+    border-bottom-color: ${({ active }) => active ? '#fc8181' : 'transparent'};
+    color: ${({ active }) => active ? '#fc8181' : '#8892b0'};
+  }
+`;
+
 const Content = styled.div`
   flex: 1;
-  padding: 1rem;
+  overflow-y: auto;
   padding-bottom: 70px;
 `;
 
-const PageTitle = styled.h1`
-  font-size: 1.1rem;
+const HeaderRow = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: rgba(45, 10, 94, 0.5);
+  border-bottom: 1px solid #4a1a8e;
+  font-size: 0.62rem;
   font-weight: 700;
-  color: #f5a623;
+  color: #8892b0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+`;
+
+const PlayerRow = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid #2d1a4e;
+  &:hover { background: rgba(108,46,185,0.08); }
+`;
+
+const ProgressBadge = styled.span`
+  display: inline-block;
+  min-width: 52px;
   text-align: center;
-  margin-bottom: 1rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 6px;
+  border-radius: 4px;
+  color: #fff;
+  background: ${({ value, direction }) => {
+    if (direction === 'fall') {
+      if (value >= 90) return '#e53e3e';
+      if (value >= 70) return '#fc8181';
+      return '#feb2b2';
+    }
+    if (value >= 90) return '#38a169';
+    if (value >= 70) return '#48bb78';
+    if (value >= 50) return '#68d391';
+    return '#9ae6b4';
+  }};
+`;
+
+const ProgressBarOuter = styled.div`
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 3px;
+`;
+
+const ProgressBarInner = styled.div`
+  height: 100%;
+  border-radius: 3px;
+  width: ${({ pct }) => Math.min(pct, 100)}%;
+  background: ${({ direction }) => direction === 'rise' ? '#48bb78' : '#fc8181'};
+  transition: width 0.3s;
+`;
+
+const ChangeTimeBadge = styled.span`
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  background: ${({ tonight }) => tonight ? '#48bb78' : 'rgba(255,255,255,0.08)'};
+  color: ${({ tonight }) => tonight ? '#1a0a2e' : '#8892b0'};
+`;
+
+const StatusDot = styled.span`
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+  background: ${({ status }) => {
+    if (status === 'a') return '#48bb78';
+    if (status === 'd') return '#f5a623';
+    if (status === 'i') return '#fc8181';
+    return '#8892b0';
+  }};
+`;
+
+const NetBadge = styled.span`
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: ${({ positive }) => positive ? '#48bb78' : '#fc8181'};
 `;
 
 const StatusMsg = styled.div`
@@ -42,6 +146,13 @@ const StatusMsg = styled.div`
   color: #8892b0;
   font-size: 0.9rem;
   line-height: 1.6;
+`;
+
+const LastUpdated = styled.div`
+  text-align: center;
+  padding: 0.4rem;
+  font-size: 0.6rem;
+  color: #4a1a8e;
 `;
 
 const BottomNav = styled.nav`
@@ -71,6 +182,10 @@ const NavIcon = styled.span`font-size: 1.2rem;`;
 
 export default function PriceChanges() {
   const [user, setUser] = useState(null);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('risers'); // 'risers' | 'fallers'
 
   useEffect(() => {
     try {
@@ -79,10 +194,19 @@ export default function PriceChanges() {
     } catch {}
   }, []);
 
+  useEffect(() => {
+    fetch('/api/price-changes')
+      .then(r => r.ok ? r.json() : Promise.reject('Failed'))
+      .then(d => { setData(d); setLoading(false); })
+      .catch(e => { setError(typeof e === 'string' ? e : e.message); setLoading(false); });
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('vidigoals_user');
     setUser(null);
   };
+
+  const players = activeTab === 'risers' ? (data?.risers || []) : (data?.fallers || []);
 
   return (
     <>
@@ -93,12 +217,93 @@ export default function PriceChanges() {
       <GlobalStyle />
       <Wrapper>
         <AppShell user={user} page="price-changes" onLogout={handleLogout}>
+          <TabRow>
+            <Tab active={activeTab === 'risers' ? 1 : 0} onClick={() => setActiveTab('risers')}>
+              📈 Risers ({data?.risers?.length || 0})
+            </Tab>
+            <Tab active={activeTab === 'fallers' ? 1 : 0} onClick={() => setActiveTab('fallers')}>
+              📉 Fallers ({data?.fallers?.length || 0})
+            </Tab>
+          </TabRow>
+
           <Content>
-            <PageTitle>📈 Price Change Predictions</PageTitle>
-            <StatusMsg>
-              Price change predictions coming soon.<br />
-              Track which players are rising and falling in price.
-            </StatusMsg>
+            {loading && <StatusMsg>Loading price predictions…</StatusMsg>}
+            {error && <StatusMsg>Could not load data.<br />{error}</StatusMsg>}
+
+            {!loading && !error && players.length === 0 && (
+              <StatusMsg>No {activeTab === 'risers' ? 'risers' : 'fallers'} predicted right now.</StatusMsg>
+            )}
+
+            {!loading && !error && players.length > 0 && (
+              <>
+                {/* Column headers */}
+                <HeaderRow>
+                  <span style={{ width: '130px' }}>Player</span>
+                  <span style={{ width: '55px', textAlign: 'center' }}>Price</span>
+                  <span style={{ width: '50px', textAlign: 'center' }}>Own%</span>
+                  <span style={{ flex: 1, textAlign: 'center' }}>Progress</span>
+                  <span style={{ width: '60px', textAlign: 'center' }}>Time</span>
+                </HeaderRow>
+
+                {players.map(player => (
+                  <PlayerRow key={player.id}>
+                    {/* Player info */}
+                    <div style={{ width: '130px', minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <StatusDot status={player.status} />
+                        <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#eaeaea', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.name}</span>
+                      </div>
+                      <div style={{ fontSize: '0.6rem', color: '#8892b0', marginTop: '1px' }}>
+                        {player.position} · {player.teamShort}
+                      </div>
+                    </div>
+
+                    {/* Price */}
+                    <div style={{ width: '55px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fff' }}>£{player.price}</div>
+                      {player.priceChange !== '0.0' && (
+                        <div style={{ fontSize: '0.58rem', color: parseFloat(player.priceChange) > 0 ? '#48bb78' : '#fc8181' }}>
+                          {parseFloat(player.priceChange) > 0 ? '+' : ''}{player.priceChange}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Ownership */}
+                    <div style={{ width: '50px', textAlign: 'center', fontSize: '0.72rem', color: '#8892b0' }}>
+                      {player.ownership}%
+                    </div>
+
+                    {/* Progress */}
+                    <div style={{ flex: 1, padding: '0 0.4rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                        <ProgressBadge value={player.progress} direction={player.direction}>
+                          {player.progress.toFixed(1)}%
+                        </ProgressBadge>
+                        <NetBadge positive={player.direction === 'rise'}>
+                          {player.direction === 'rise' ? '▲' : '▼'}
+                        </NetBadge>
+                      </div>
+                      <ProgressBarOuter>
+                        <ProgressBarInner pct={player.progress} direction={player.direction} />
+                      </ProgressBarOuter>
+                    </div>
+
+                    {/* Change time */}
+                    <div style={{ width: '60px', textAlign: 'center' }}>
+                      <ChangeTimeBadge tonight={player.changeTime === 'Tonight' ? 1 : 0}>
+                        {player.changeTime}
+                      </ChangeTimeBadge>
+                    </div>
+                  </PlayerRow>
+                ))}
+
+                {data?.lastUpdated && (
+                  <LastUpdated>
+                    Last updated: {new Date(data.lastUpdated).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' })}
+                  </LastUpdated>
+                )}
+              </>
+            )}
           </Content>
         </AppShell>
 
