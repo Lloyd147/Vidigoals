@@ -320,17 +320,19 @@ export default function AppShell({ user, page, isLive, onLogout, children }) {
             Built for FPL managers who want instant updates on how their players are performing during live matches.
           </MenuAccordion>
           <MenuAccordion title="FAQ">
-            <strong>How are assists determined?</strong><br />
-            We use FPL's official assist data which may differ from what broadcasters show. FPL awards assists based on their own criteria.<br /><br />
-            <strong>Why do points differ from the FPL app?</strong><br />
-            Points update in real-time during matches. Final points are confirmed after bonus points are awarded (usually within an hour of full-time).<br /><br />
-            <strong>How often does the feed update?</strong><br />
-            Every 30 seconds during live matches, every 5 minutes otherwise.<br /><br />
-            <strong>What is the Bonus Points System?</strong><br />
-            BPS is FPL's scoring system that awards 3, 2, and 1 bonus points to the top performers in each match based on actions like goals, assists, tackles, and more.
+            <strong>What is VidiGoals?</strong><br />
+            VidiGoals is a live FPL companion app that brings you real-time Premier League updates, player statistics, and tools to help you manage your Fantasy Premier League team.<br /><br />
+            <strong>What does VidiGoals offer?</strong><br />
+            Live goal alerts, FPL points tracking, team management with pitch view, player betting odds from bookmakers, price change predictions, match statistics, lineups, and league standings.<br /><br />
+            <strong>What are player price changes?</strong><br />
+            FPL player prices change daily based on transfer activity. If many managers buy a player, their price rises. If many sell, it falls. Our Price Changes page predicts which players are likely to rise or fall next.<br /><br />
+            <strong>What are player odds?</strong><br />
+            Player odds show the bookmaker prices for various markets like Anytime Goalscorer, First Goalscorer, Assists, and Cards. These help you see which players bookies think are most likely to score or get involved.<br /><br />
+            <strong>What are bonus points?</strong><br />
+            FPL awards 3, 2, and 1 bonus points to the top performers in each match. These are calculated using the Bonus Points System (BPS) which scores players based on actions like goals, assists, tackles, and more. Bonus points are confirmed after each match.
           </MenuAccordion>
           <MenuAccordion title="Contact Us">
-            Coming soon.
+            Email: vidigoals@gmail.com
           </MenuAccordion>
           <MenuAccordion title="Terms & Conditions">
             <strong>1. Acceptance of Terms</strong><br />
@@ -344,7 +346,7 @@ export default function AppShell({ user, page, isLive, onLogout, children }) {
             • Entry is free and no purchase is necessary.<br />
             • Winners are determined by VidiGoals based on the stated criteria (e.g., highest gameweek score).<br />
             • All decisions made by VidiGoals regarding winners, eligibility, and prize distribution are final and not subject to appeal.<br />
-            • Prizes will be distributed via email to the address associated with your account. VidiGoals is not responsible for unclaimed prizes.<br />
+            • Prizes will be distributed via email. Winners must email vidigoals@gmail.com to claim their prize. VidiGoals is not responsible for unclaimed prizes.<br />
             • VidiGoals reserves the right to disqualify any entrant suspected of fraudulent activity.<br />
             • VidiGoals reserves the right to cancel, modify, or suspend any competition at any time without prior notice.<br /><br />
 
