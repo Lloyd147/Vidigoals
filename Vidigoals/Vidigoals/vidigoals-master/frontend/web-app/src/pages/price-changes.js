@@ -419,7 +419,7 @@ export default function PriceChanges() {
         <BottomNav>
           <NavItem href="/"><NavIcon>⚽</NavIcon>Goals</NavItem>
           <NavItem href={user ? '/my-team' : '/signin'}><NavIcon>👕</NavIcon>My Team</NavItem>
-          <NavItem href="/leaderboard"><NavIcon>🏆</NavIcon>Leaderboard</NavItem>
+          <NavItem href="/leaderboard"><NavIcon>🏆</NavIcon>Leagues</NavItem>
           <NavItem href="/matches"><NavIcon>📋</NavIcon>Matches</NavItem>
           <NavItem href="/price-changes" active={1}><NavIcon>📈</NavIcon>Prices</NavItem>
         </BottomNav>

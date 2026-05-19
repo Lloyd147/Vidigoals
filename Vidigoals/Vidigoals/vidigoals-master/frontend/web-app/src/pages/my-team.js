@@ -907,7 +907,7 @@ export default function MyTeam() {
         <BottomNav>
           <NavItem href="/"><NavIcon>⚽</NavIcon>Goals</NavItem>
           <NavItem href="/my-team" active={1}><NavIcon>👕</NavIcon>My Team</NavItem>
-          <NavItem href="/leaderboard"><NavIcon>🏆</NavIcon>Leaderboard</NavItem>
+          <NavItem href="/leaderboard"><NavIcon>🏆</NavIcon>Leagues</NavItem>
           <NavItem href="/matches"><NavIcon>📋</NavIcon>Matches</NavItem>
           <NavItem href="/price-changes"><NavIcon>📈</NavIcon>Prices</NavItem>
         </BottomNav>
