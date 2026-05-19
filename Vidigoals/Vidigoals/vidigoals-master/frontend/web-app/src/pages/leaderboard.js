@@ -95,6 +95,15 @@ const CURRENT_GW = 38; // League starts GW38
 export default function Leaderboard() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('vidigoals');
+
+  // Read tab from URL query param (for menu deep links)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (tab === 'myleagues') setActiveTab('myleagues');
+    }
+  }, []);
   const [standings, setStandings] = useState(null);
   const [loadingStandings, setLoadingStandings] = useState(false);
   const [myLeagues, setMyLeagues] = useState(null);

@@ -446,6 +446,16 @@ export default function MyTeam() {
   const [gw, setGw]           = useState(null);
   const [latestGW, setLatestGW] = useState(38);
   const [activeTab, setActiveTab] = useState('points'); // 'points' | 'odds'
+
+  // Read tab from URL query param (for menu deep links)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (tab === 'odds') setActiveTab('odds');
+      if (tab === 'points') setActiveTab('points');
+    }
+  }, []);
   const [odds, setOdds]       = useState(null);
   const [selectedMarket, setSelectedMarket] = useState('anytime');
   const [oddsMarketOpen, setOddsMarket] = useState(false);
