@@ -3,6 +3,7 @@ import Head from 'next/head';
 import styled, { createGlobalStyle } from 'styled-components';
 import AppShell from '../components/AppShell';
 import TeamPitchView from '../components/TeamPitchView';
+import PlayerOddsView from '../components/PlayerOddsView';
 
 const GlobalStyle = createGlobalStyle`
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -411,33 +412,7 @@ export default function Leaderboard() {
                 )}
 
                 {viewingPlayerPicks && viewingTab === 'odds' && (
-                  <div style={{ padding: '0.75rem' }}>
-                    {/* Player Odds - same format as My Team odds tab */}
-                    <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem', background: '#f5a623', color: '#1a0a2e', fontWeight: 700, fontSize: '0.7rem', borderRadius: '6px', marginBottom: '0.5rem' }}>
-                      <span style={{ width: '28px', textAlign: 'center' }}>Pos</span>
-                      <span style={{ flex: 1 }}>Player</span>
-                      <span style={{ width: '65px', textAlign: 'center' }}>GW{viewingGw}</span>
-                      <span style={{ width: '80px', textAlign: 'center' }}>Odds</span>
-                    </div>
-                    {[...(viewingPlayerPicks.starting || []), ...(viewingPlayerPicks.bench || [])].map(player => {
-                      const posLabels = { 1: 'GK', 2: 'D', 3: 'M', 4: 'F' };
-                      const posColors = { 1: '#f5a623', 2: '#48bb78', 3: '#63b3ed', 4: '#fc8181' };
-                      return (
-                        <div key={player.element} style={{ display: 'flex', alignItems: 'center', padding: '0.55rem 0', borderBottom: '1px solid #2d1a4e' }}>
-                          <span style={{ width: '28px', textAlign: 'center', color: posColors[player.element_type], fontWeight: 700, fontSize: '0.7rem' }}>{posLabels[player.element_type]}</span>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#eaeaea' }}>{player.web_name}</div>
-                            <div style={{ fontSize: '0.6rem', color: '#8892b0' }}>{player.team_name}</div>
-                          </div>
-                          <span style={{ width: '65px', textAlign: 'center', fontSize: '0.68rem', color: '#8892b0' }}>{player.fixture || '—'}</span>
-                          <span style={{ width: '80px', textAlign: 'center', fontSize: '0.8rem', color: '#8892b0' }}>—</span>
-                        </div>
-                      );
-                    })}
-                    <div style={{ textAlign: 'center', padding: '1rem', fontSize: '0.75rem', color: '#8892b0' }}>
-                      Odds display coming soon for league player views
-                    </div>
-                  </div>
+                  <PlayerOddsView picks={viewingPlayerPicks} gw={viewingGw} />
                 )}
               </>
             )}
