@@ -801,7 +801,17 @@ export default function MyTeam() {
                             </span>
                           ) : marketOdds ? (
                             <>
-                              <span style={{ color: '#f5a623', fontWeight: 700, fontSize: '0.95rem' }}>{marketOdds.odds}</span>
+                              <span
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // Open Livescorebet event page for this player's match
+                                  const url = playerOdds?.eventUrl;
+                                  if (url) window.open(url, '_blank');
+                                }}
+                                style={{ color: '#f5a623', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '3px' }}
+                              >
+                                {marketOdds.odds}
+                              </span>
                               <div style={{ width: '80px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                 <img src={getBookieLogo(marketOdds.bookie)} alt={marketOdds.bookie} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', borderRadius: '3px' }} onError={e => { e.target.style.display = 'none'; e.target.parentElement.nextSibling && (e.target.parentElement.nextSibling.style.display = 'inline'); }} />
                               </div>

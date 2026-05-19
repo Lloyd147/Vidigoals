@@ -45,14 +45,21 @@ async function fetchAllOdds() {
     }
   }
 
-  // Step 2: For each match, fetch detailed markets (limit to 5 to stay within timeout)
+  // Step 2: For each match, fetch detailed markets
   const allOdds = {};
   const matchesProcessed = [];
+
+  // Build Livescorebet event page URL from team names + event ID
+  function buildEventUrl(home, away, eventId) {
+    const slug = `${home}-${away}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    return `https://www.livescorebet.com/uk/sports/football/england-premier-league/${slug}/${eventId}/?marketGroupId=213`;
+  }
 
   for (const event of events) {
     try {
       const eventData = await fetchJson(`${EVENT_URL}?eventid=${event.id}&lang=en-gb`);
       const markets = eventData.event?.markets || eventData.markets || [];
+      const eventUrl = buildEventUrl(event.home, event.away, event.id);
 
       // Extract goalscorer (anytime)
       const goalscorer = markets.find(m => m.name === 'Goalscorer');
@@ -64,14 +71,14 @@ async function fetchAllOdds() {
 
           const key = playerName.toLowerCase();
           if (!allOdds[key]) {
-            allOdds[key] = { name: playerName, fixture: `${event.home} v ${event.away}` };
+            allOdds[key] = { name: playerName, fixture: `${event.home} v ${event.away}`, eventUrl, selectionId: sel.id || null };
           }
 
           if (type === 'TO_SCORE_ANYTIME' || sel.name?.startsWith('Anytime:')) {
-            allOdds[key].anytime = { odds: sel.odds?.toFixed(2), bookie: 'LivescoreBet' };
+            allOdds[key].anytime = { odds: sel.odds?.toFixed(2), bookie: 'LivescoreBet', selectionId: sel.id || null };
           }
           if (type === 'TO_SCORE_FIRST' || sel.name?.startsWith('First:')) {
-            allOdds[key].firstGoal = { odds: sel.odds?.toFixed(2), bookie: 'LivescoreBet' };
+            allOdds[key].firstGoal = { odds: sel.odds?.toFixed(2), bookie: 'LivescoreBet', selectionId: sel.id || null };
           }
         }
       }
@@ -83,7 +90,7 @@ async function fetchAllOdds() {
           const playerName = sel.name?.replace(' - Yes', '') || '';
           const key = playerName.toLowerCase();
           if (allOdds[key]) {
-            allOdds[key].twoPlus = { odds: sel.odds?.toFixed(2), bookie: 'LivescoreBet' };
+            allOdds[key].twoPlus = { odds: sel.odds?.toFixed(2), bookie: 'LivescoreBet', selectionId: sel.id || null };
           }
         }
       }
@@ -95,7 +102,7 @@ async function fetchAllOdds() {
           const playerName = sel.name?.replace(' - Yes', '') || '';
           const key = playerName.toLowerCase();
           if (allOdds[key]) {
-            allOdds[key].hatTrick = { odds: sel.odds?.toFixed(2), bookie: 'LivescoreBet' };
+            allOdds[key].hatTrick = { odds: sel.odds?.toFixed(2), bookie: 'LivescoreBet', selectionId: sel.id || null };
           }
         }
       }
@@ -107,9 +114,9 @@ async function fetchAllOdds() {
           const playerName = sel.name?.replace(' - Yes', '') || '';
           const key = playerName.toLowerCase();
           if (!allOdds[key]) {
-            allOdds[key] = { name: playerName, fixture: `${event.home} v ${event.away}` };
+            allOdds[key] = { name: playerName, fixture: `${event.home} v ${event.away}`, eventUrl, selectionId: sel.id || null };
           }
-          allOdds[key].assists = { odds: sel.odds?.toFixed(2), bookie: 'LivescoreBet' };
+          allOdds[key].assists = { odds: sel.odds?.toFixed(2), bookie: 'LivescoreBet', selectionId: sel.id || null };
         }
       }
 
@@ -120,9 +127,9 @@ async function fetchAllOdds() {
           const playerName = sel.name?.replace(' - Yes', '') || '';
           const key = playerName.toLowerCase();
           if (!allOdds[key]) {
-            allOdds[key] = { name: playerName, fixture: `${event.home} v ${event.away}` };
+            allOdds[key] = { name: playerName, fixture: `${event.home} v ${event.away}`, eventUrl, selectionId: sel.id || null };
           }
-          allOdds[key].yellowCard = { odds: sel.odds?.toFixed(2), bookie: 'LivescoreBet' };
+          allOdds[key].yellowCard = { odds: sel.odds?.toFixed(2), bookie: 'LivescoreBet', selectionId: sel.id || null };
         }
       }
 
