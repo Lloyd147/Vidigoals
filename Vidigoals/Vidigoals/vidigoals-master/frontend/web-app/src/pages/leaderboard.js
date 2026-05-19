@@ -81,8 +81,8 @@ const NavItem = styled.a`
 const NavIcon = styled.span`font-size: 1.2rem;`;
 
 // VidiGoals League Code (FPL league)
-const VIDIGOALS_LEAGUE_CODE = 'V5497Y';
-const VIDIGOALS_LEAGUE_ID = 1234567; // Replace with actual FPL league ID
+const VIDIGOALS_LEAGUE_CODE = 'u282gn';
+const VIDIGOALS_LEAGUE_ID = null; // Set once league is approved and ID is known
 
 export default function Leaderboard() {
   const [user, setUser] = useState(null);
@@ -106,15 +106,17 @@ export default function Leaderboard() {
 
   // Fetch VidiGoals league standings
   useEffect(() => {
+    if (!VIDIGOALS_LEAGUE_ID) {
+      setLoadingStandings(false);
+      return;
+    }
     setLoadingStandings(true);
     fetch(`/api/leagues?leagueId=${VIDIGOALS_LEAGUE_ID}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data) {
           setStandings(data);
-          // Determine current GW from first entry's event_total
           if (!gw && data.standings?.length > 0) {
-            // We'll get GW from bootstrap
             fetch('/api/fpl-picks?id=' + (user?.id || '1'))
               .then(r => r.ok ? r.json() : null)
               .then(d => { if (d?.gameweek) setGw(d.gameweek); })
