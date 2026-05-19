@@ -107,6 +107,7 @@ export default function Leaderboard() {
   const [loadingPlayerPicks, setLoadingPlayerPicks] = useState(false);
   const [viewingGw, setViewingGw] = useState(CURRENT_GW);
   const [viewingTab, setViewingTab] = useState('points'); // 'points' | 'odds'
+  const [gwDropdownOpen, setGwDropdownOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -361,7 +362,20 @@ export default function Leaderboard() {
                 {/* GW Navigation */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.6rem', gap: '1.5rem', background: '#2d0a5e', borderBottom: '1px solid #4a1a8e' }}>
                   <button onClick={() => { if (viewingGw > 1) { setViewingGw(g => g - 1); fetchViewingPicks(viewingPlayer.entry, viewingGw - 1); } }} disabled={viewingGw <= 1} style={{ background: 'transparent', border: 'none', color: viewingGw > 1 ? '#f5a623' : '#4a1a8e', fontSize: '1.5rem', cursor: viewingGw > 1 ? 'pointer' : 'not-allowed' }}>‹</button>
-                  <span style={{ fontWeight: 700, fontSize: '1.05rem', color: '#fff', minWidth: '140px', textAlign: 'center' }}>Gameweek {viewingGw}</span>
+                  <div style={{ position: 'relative' }}>
+                    <span onClick={() => setGwDropdownOpen(o => !o)} style={{ fontWeight: 700, fontSize: '1.05rem', color: '#fff', minWidth: '140px', textAlign: 'center', cursor: 'pointer', display: 'inline-block' }}>
+                      Gameweek {viewingGw} <span style={{ fontSize: '0.7rem', color: '#f5a623' }}>▼</span>
+                    </span>
+                    {gwDropdownOpen && (
+                      <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', background: '#2d0a5e', border: '1px solid #4a1a8e', borderRadius: '6px', zIndex: 50, marginTop: '6px', maxHeight: '200px', overflowY: 'auto', width: '140px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                        {Array.from({ length: 38 }, (_, i) => i + 1).map(n => (
+                          <div key={n} onClick={() => { setViewingGw(n); setGwDropdownOpen(false); fetchViewingPicks(viewingPlayer.entry, n); }} style={{ padding: '0.5rem 0.75rem', fontSize: '0.82rem', color: n === viewingGw ? '#f5a623' : '#ccc', fontWeight: n === viewingGw ? 700 : 400, background: n === viewingGw ? 'rgba(245,166,35,0.1)' : 'transparent', cursor: 'pointer', borderBottom: '1px solid #4a1a8e' }}>
+                            Gameweek {n}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <button onClick={() => { if (viewingGw < 38) { setViewingGw(g => g + 1); fetchViewingPicks(viewingPlayer.entry, viewingGw + 1); } }} disabled={viewingGw >= 38} style={{ background: 'transparent', border: 'none', color: viewingGw < 38 ? '#f5a623' : '#4a1a8e', fontSize: '1.5rem', cursor: viewingGw < 38 ? 'pointer' : 'not-allowed' }}>›</button>
                 </div>
 

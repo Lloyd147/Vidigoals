@@ -451,6 +451,7 @@ export default function MyTeam() {
   const [oddsMarketOpen, setOddsMarket] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [playerDetail, setPlayerDetail] = useState(null);
+  const [gwDropdownOpen, setGwDropdownOpen] = useState(false);
 
   function fetchPlayerDetail(player) {
     fetch(`/api/player-detail?id=${player.element}&gw=${gw}`)
@@ -592,7 +593,18 @@ export default function MyTeam() {
                     disabled={!canGoBack}
                     aria-label="Previous gameweek"
                   >‹</GWBtn>
-                  <GWLabel>Gameweek {gw || '—'}</GWLabel>
+                  <GWLabel style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setGwDropdownOpen(o => !o)}>
+                    Gameweek {gw || '—'} <span style={{ fontSize: '0.7rem', color: '#f5a623' }}>▼</span>
+                    {gwDropdownOpen && (
+                      <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', background: '#2d0a5e', border: '1px solid #4a1a8e', borderRadius: '6px', zIndex: 50, marginTop: '6px', maxHeight: '200px', overflowY: 'auto', width: '140px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                        {Array.from({ length: 38 }, (_, i) => i + 1).map(n => (
+                          <div key={n} onClick={() => { setGw(n); setGwDropdownOpen(false); }} style={{ padding: '0.5rem 0.75rem', fontSize: '0.82rem', color: n === gw ? '#f5a623' : '#ccc', fontWeight: n === gw ? 700 : 400, background: n === gw ? 'rgba(245,166,35,0.1)' : 'transparent', cursor: 'pointer', borderBottom: '1px solid #4a1a8e' }}>
+                            Gameweek {n}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </GWLabel>
                   <GWBtn
                     onClick={() => canGoForward && setGw(g => g + 1)}
                     disabled={!canGoForward}
