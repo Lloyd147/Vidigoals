@@ -315,9 +315,22 @@ export default function AppShell({ user, page, isLive, onLogout, children }) {
         <MenuSection>
           <MenuSectionTitle>Settings</MenuSectionTitle>
           <MenuAccordion title="About VidiGoals">
-            VidiGoals is a live FPL companion app that brings you real-time Premier League goal alerts, 
-            FPL points tracking, bonus point system scores, and match statistics — all in one place. 
-            Built for FPL managers who want instant updates on how their players are performing during live matches.
+            VidiGoals is the go-to companion app for Fantasy Premier League managers who want to stay on top of everything happening in the Premier League.<br /><br />
+            <strong>Live Goal Feed</strong><br />
+            Get instant alerts for every Premier League goal, card, substitution, and penalty as they happen. See running scores, assist providers, and FPL points awarded in real time.<br /><br />
+            <strong>My Team</strong><br />
+            View your FPL team on a pitch with player shirts, live points, captain badges, and fixture info. Track your gameweek score as it updates during matches. Navigate through every gameweek to review past performance.<br /><br />
+            <strong>Player Odds</strong><br />
+            See betting odds for your players across markets like Anytime Goalscorer, First Goalscorer, Assists, and Cards. Tap the odds to go straight to the bookmaker. After matches, see whether your players scored, assisted, or picked up cards.<br /><br />
+            <strong>Price Changes</strong><br />
+            Track which players are rising and falling in price. See progress bars showing how close each player is to a price change, their current speed of movement, and estimated change time.<br /><br />
+            <strong>Matches</strong><br />
+            Browse fixtures by gameweek with live scores, match stats, lineups, bonus points, and defensive contribution data. Predicted lineups shown when official ones are not yet available.<br /><br />
+            <strong>Leagues</strong><br />
+            Join the VidiGoals league to compete for weekly prizes. View all your FPL leagues, see standings, and check any manager's team with full pitch view and player odds.<br /><br />
+            <strong>Multi-Country Support</strong><br />
+            VidiGoals detects your location and shows odds from bookmakers available in your country with links to the correct regional site.<br /><br />
+            Built for FPL managers who want everything in one place — scores, points, odds, prices, and leagues — without switching between multiple apps.
           </MenuAccordion>
           <MenuAccordion title="FAQ">
             <strong>What is VidiGoals?</strong><br />
