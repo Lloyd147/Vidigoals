@@ -80,14 +80,15 @@ const NavItem = styled.a`
 
 const NavIcon = styled.span`font-size: 1.2rem;`;
 
-// VidiGoals League Code (FPL league)
+// VidiGoals League Config
 const VIDIGOALS_LEAGUE_CODE = 'u282gn';
-const VIDIGOALS_LEAGUE_ID = null; // Set once league is approved and ID is known
+const VIDIGOALS_JOIN_URL = 'https://fantasy.premierleague.com/leagues/auto-join/u282gn';
+const VIDIGOALS_LEAGUE_ID = null; // Set once league is approved
+const CURRENT_GW = 38; // League starts GW38
 
 export default function Leaderboard() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('vidigoals');
-  const [gw, setGw] = useState(null);
   const [standings, setStandings] = useState(null);
   const [loadingStandings, setLoadingStandings] = useState(false);
   const [myLeagues, setMyLeagues] = useState(null);
@@ -95,7 +96,9 @@ export default function Leaderboard() {
   const [selectedLeague, setSelectedLeague] = useState(null);
   const [leagueStandings, setLeagueStandings] = useState(null);
   const [loadingLeagueStandings, setLoadingLeagueStandings] = useState(false);
-  const [viewMode, setViewMode] = useState('gw'); // 'gw' | 'overall'
+  const [viewingPlayer, setViewingPlayer] = useState(null); // { entry, playerName, entryName }
+  const [viewingPlayerPicks, setViewingPlayerPicks] = useState(null);
+  const [loadingPlayerPicks, setLoadingPlayerPicks] = useState(false);
 
   useEffect(() => {
     try {
@@ -113,18 +116,7 @@ export default function Leaderboard() {
     setLoadingStandings(true);
     fetch(`/api/leagues?leagueId=${VIDIGOALS_LEAGUE_ID}`)
       .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data) {
-          setStandings(data);
-          if (!gw && data.standings?.length > 0) {
-            fetch('/api/fpl-picks?id=' + (user?.id || '1'))
-              .then(r => r.ok ? r.json() : null)
-              .then(d => { if (d?.gameweek) setGw(d.gameweek); })
-              .catch(() => setGw(37));
-          }
-        }
-        setLoadingStandings(false);
-      })
+      .then(data => { if (data) setStandings(data); setLoadingStandings(false); })
       .catch(() => setLoadingStandings(false));
   }, []);
 
@@ -139,9 +131,9 @@ export default function Leaderboard() {
     }
   }, [activeTab, user]);
 
-  // Fetch specific league standings
   function openLeague(league) {
     setSelectedLeague(league);
+    setViewingPlayer(null);
     setLoadingLeagueStandings(true);
     fetch(`/api/leagues?leagueId=${league.id}`)
       .then(r => r.ok ? r.json() : null)
@@ -149,17 +141,24 @@ export default function Leaderboard() {
       .catch(() => setLoadingLeagueStandings(false));
   }
 
+  // View another player's team
+  function viewPlayerTeam(entry) {
+    setViewingPlayer(entry);
+    setLoadingPlayerPicks(true);
+    fetch(`/api/fpl-picks?id=${entry.entry}&gw=${CURRENT_GW}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { setViewingPlayerPicks(data); setLoadingPlayerPicks(false); })
+      .catch(() => setLoadingPlayerPicks(false));
+  }
+
   const handleLogout = () => {
     localStorage.removeItem('vidigoals_user');
     setUser(null);
   };
 
-  // Sort standings by GW points or overall
   const sortedStandings = standings?.standings
-    ? [...standings.standings].sort((a, b) => viewMode === 'overall' ? b.total - a.total : b.eventTotal - a.eventTotal)
+    ? [...standings.standings].sort((a, b) => b.eventTotal - a.eventTotal)
     : [];
-
-  const winner = sortedStandings[0] || null;
 
   return (
     <>
@@ -171,8 +170,8 @@ export default function Leaderboard() {
       <Wrapper>
         <AppShell user={user} page="leaderboard" onLogout={handleLogout}>
           <TabRow>
-            <Tab active={activeTab === 'vidigoals' ? 1 : 0} onClick={() => { setActiveTab('vidigoals'); setSelectedLeague(null); }}>VidiGoals</Tab>
-            <Tab active={activeTab === 'myleagues' ? 1 : 0} onClick={() => { setActiveTab('myleagues'); setSelectedLeague(null); }}>My Leagues</Tab>
+            <Tab active={activeTab === 'vidigoals' ? 1 : 0} onClick={() => { setActiveTab('vidigoals'); setSelectedLeague(null); setViewingPlayer(null); }}>VidiGoals</Tab>
+            <Tab active={activeTab === 'myleagues' ? 1 : 0} onClick={() => { setActiveTab('myleagues'); setSelectedLeague(null); setViewingPlayer(null); }}>My Leagues</Tab>
           </TabRow>
 
           <Content>
@@ -185,71 +184,61 @@ export default function Leaderboard() {
                     <div>
                       <span style={{ color: '#f5a623', fontWeight: 700, fontSize: '0.9rem' }}>Code: {VIDIGOALS_LEAGUE_CODE}</span>
                     </div>
-                    <a href="https://fantasy.premierleague.com/leagues/join" target="_blank" rel="noopener noreferrer" style={{ background: '#4a1a8e', color: '#ccc', fontSize: '0.75rem', fontWeight: 700, padding: '0.4rem 0.8rem', borderRadius: '6px', textDecoration: 'none' }}>
-                      Create/Join Leagues &gt;
+                    <a href={VIDIGOALS_JOIN_URL} target="_blank" rel="noopener noreferrer" style={{ background: '#f5a623', color: '#1a0a2e', fontSize: '0.75rem', fontWeight: 700, padding: '0.4rem 0.8rem', borderRadius: '6px', textDecoration: 'none' }}>
+                      Join League
                     </a>
                   </div>
                 </div>
 
-                {/* GW Navigation + Overall toggle */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.6rem', gap: '1rem', background: '#2d0a5e', borderBottom: '1px solid #4a1a8e' }}>
-                  <button onClick={() => gw > 1 && setGw(g => g - 1)} disabled={!gw || gw <= 1} style={{ background: 'transparent', border: 'none', color: gw > 1 ? '#f5a623' : '#4a1a8e', fontSize: '1.5rem', cursor: gw > 1 ? 'pointer' : 'not-allowed' }}>‹</button>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button onClick={() => setViewMode('gw')} style={{ background: viewMode === 'gw' ? '#f5a623' : 'transparent', color: viewMode === 'gw' ? '#1a0a2e' : '#8892b0', border: viewMode === 'gw' ? 'none' : '1px solid #4a1a8e', fontWeight: 700, fontSize: '0.85rem', padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer' }}>
-                      Gameweek {gw || '—'}
-                    </button>
-                    <button onClick={() => setViewMode('overall')} style={{ background: viewMode === 'overall' ? '#f5a623' : 'transparent', color: viewMode === 'overall' ? '#1a0a2e' : '#8892b0', border: viewMode === 'overall' ? 'none' : '1px solid #4a1a8e', fontWeight: 700, fontSize: '0.85rem', padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer' }}>
-                      Overall
-                    </button>
-                  </div>
-                  <button onClick={() => gw < 38 && setGw(g => g + 1)} disabled={!gw || gw >= 38} style={{ background: 'transparent', border: 'none', color: gw < 38 ? '#f5a623' : '#4a1a8e', fontSize: '1.5rem', cursor: gw < 38 ? 'pointer' : 'not-allowed' }}>›</button>
+                {/* Fixed GW38 header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.6rem', background: '#2d0a5e', borderBottom: '1px solid #4a1a8e' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff' }}>Gameweek {CURRENT_GW}</span>
                 </div>
 
-                {/* Winner banner */}
-                {winner && (
-                  <div style={{ margin: '0.75rem', background: 'linear-gradient(135deg, #f5a623, #e09510)', borderRadius: '10px', padding: '1rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>🏆</div>
-                    <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#1a0a2e' }}>{winner.playerName}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#4a3000', marginTop: '2px' }}>
-                      {viewMode === 'overall' ? 'We will email you your $100 Gift Voucher Code.' : 'We will email you your $10 Gift Voucher Code.'}
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: '#4a3000', marginTop: '4px' }}>Any issues please mail <span style={{ textDecoration: 'underline' }}>vidigoals@gmail.com</span></div>
-                    <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#1a0a2e', marginTop: '0.5rem' }}>{viewMode === 'overall' ? winner.total : winner.eventTotal}</div>
+                {/* Winner banner — pending */}
+                <div style={{ margin: '0.75rem', background: 'linear-gradient(135deg, #f5a623, #e09510)', borderRadius: '10px', padding: '1rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>🏆</div>
+                  <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#1a0a2e' }}>Pending</div>
+                  <div style={{ fontSize: '0.75rem', color: '#4a3000', marginTop: '4px' }}>
+                    $100 prize awarded to GW{CURRENT_GW} winner
                   </div>
-                )}
+                  <div style={{ fontSize: '0.7rem', color: '#4a3000', marginTop: '4px' }}>Any issues please mail <span style={{ textDecoration: 'underline' }}>vidigoals@gmail.com</span></div>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#1a0a2e', marginTop: '0.5rem' }}>0</div>
+                </div>
 
                 {/* Standings table */}
                 <div style={{ padding: '0 0.5rem' }}>
                   <div style={{ display: 'flex', padding: '0.5rem 0.5rem', fontSize: '0.7rem', fontWeight: 700, color: '#8892b0', borderBottom: '1px solid #4a1a8e' }}>
                     <span style={{ width: '35px' }}>Pos</span>
                     <span style={{ flex: 1 }}>Player</span>
-                    <span style={{ width: '50px', textAlign: 'right' }}>{viewMode === 'overall' ? 'Total' : `GW${gw || ''}`}</span>
+                    <span style={{ width: '50px', textAlign: 'right' }}>GW{CURRENT_GW}</span>
                   </div>
 
                   {loadingStandings && <StatusMsg>Loading standings…</StatusMsg>}
 
-                  {sortedStandings.map((entry, i) => (
-                    <div key={entry.entry} style={{ display: 'flex', alignItems: 'center', padding: '0.7rem 0.5rem', borderBottom: '1px solid #2d1a4e' }}>
+                  {sortedStandings.length > 0 ? sortedStandings.map((entry, i) => (
+                    <div key={entry.entry} onClick={() => viewPlayerTeam(entry)} style={{ display: 'flex', alignItems: 'center', padding: '0.7rem 0.5rem', borderBottom: '1px solid #2d1a4e', cursor: 'pointer' }}>
                       <span style={{ width: '35px', fontWeight: 700, fontSize: '0.85rem', color: i === 0 ? '#f5a623' : '#fff' }}>{i + 1}</span>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#eaeaea' }}>{entry.playerName}</div>
                         <div style={{ fontSize: '0.65rem', color: '#8892b0' }}>{entry.entryName}</div>
                       </div>
                       <span style={{ width: '50px', textAlign: 'right', fontWeight: 700, fontSize: '0.9rem', color: i === 0 ? '#f5a623' : '#fff' }}>
-                        {viewMode === 'overall' ? entry.total : entry.eventTotal}
+                        {entry.eventTotal || 0}
                       </span>
                     </div>
-                  ))}
-
-                  {!loadingStandings && sortedStandings.length === 0 && (
-                    <StatusMsg>No players in the VidiGoals league yet.<br />Join with code <strong style={{ color: '#f5a623' }}>{VIDIGOALS_LEAGUE_CODE}</strong></StatusMsg>
+                  )) : (
+                    <StatusMsg>
+                      Join the VidiGoals league to compete!<br />
+                      Use code <strong style={{ color: '#f5a623' }}>{VIDIGOALS_LEAGUE_CODE}</strong> or click Join League above.
+                    </StatusMsg>
                   )}
                 </div>
               </>
             )}
 
             {/* ── My Leagues Tab ── */}
-            {activeTab === 'myleagues' && !selectedLeague && (
+            {activeTab === 'myleagues' && !selectedLeague && !viewingPlayer && (
               <>
                 {!user && (
                   <StatusMsg>
@@ -264,8 +253,8 @@ export default function Leaderboard() {
                   <div style={{ padding: '0.75rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                       <h2 style={{ fontSize: '1rem', fontWeight: 700 }}>My Leagues</h2>
-                      <a href="https://fantasy.premierleague.com/leagues/join" target="_blank" rel="noopener noreferrer" style={{ background: '#4a1a8e', color: '#ccc', fontSize: '0.7rem', fontWeight: 700, padding: '0.35rem 0.7rem', borderRadius: '6px', textDecoration: 'none' }}>
-                        Create/Join Leagues &gt;
+                      <a href={VIDIGOALS_JOIN_URL} target="_blank" rel="noopener noreferrer" style={{ background: '#f5a623', color: '#1a0a2e', fontSize: '0.7rem', fontWeight: 700, padding: '0.35rem 0.7rem', borderRadius: '6px', textDecoration: 'none' }}>
+                        Join League
                       </a>
                     </div>
 
@@ -306,7 +295,7 @@ export default function Leaderboard() {
             )}
 
             {/* ── Selected League View ── */}
-            {activeTab === 'myleagues' && selectedLeague && (
+            {activeTab === 'myleagues' && selectedLeague && !viewingPlayer && (
               <>
                 <div style={{ padding: '0.75rem', borderBottom: '1px solid #4a1a8e', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <button onClick={() => { setSelectedLeague(null); setLeagueStandings(null); }} style={{ background: 'transparent', border: 'none', color: '#f5a623', fontSize: '1.2rem', cursor: 'pointer' }}>←</button>
@@ -325,7 +314,7 @@ export default function Leaderboard() {
                     </div>
 
                     {leagueStandings.standings?.map((entry, i) => (
-                      <div key={entry.entry} style={{ display: 'flex', alignItems: 'center', padding: '0.65rem 0.5rem', borderBottom: '1px solid #2d1a4e' }}>
+                      <div key={entry.entry} onClick={() => viewPlayerTeam(entry)} style={{ display: 'flex', alignItems: 'center', padding: '0.65rem 0.5rem', borderBottom: '1px solid #2d1a4e', cursor: 'pointer' }}>
                         <span style={{ width: '35px', fontWeight: 700, fontSize: '0.82rem', color: i === 0 ? '#f5a623' : '#fff' }}>{entry.rank}</span>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#eaeaea' }}>{entry.playerName}</div>
@@ -333,6 +322,63 @@ export default function Leaderboard() {
                         </div>
                         <span style={{ width: '50px', textAlign: 'right', fontSize: '0.82rem', color: '#8892b0' }}>{entry.eventTotal}</span>
                         <span style={{ width: '55px', textAlign: 'right', fontWeight: 700, fontSize: '0.85rem', color: i === 0 ? '#f5a623' : '#fff' }}>{entry.total}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ── Viewing Another Player's Team ── */}
+            {viewingPlayer && (
+              <>
+                <div style={{ padding: '0.75rem', borderBottom: '1px solid #4a1a8e', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <button onClick={() => { setViewingPlayer(null); setViewingPlayerPicks(null); }} style={{ background: 'transparent', border: 'none', color: '#f5a623', fontSize: '1.2rem', cursor: 'pointer' }}>←</button>
+                  <div>
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#fff' }}>{viewingPlayer.playerName}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#8892b0' }}>{viewingPlayer.entryName}</div>
+                  </div>
+                </div>
+
+                {loadingPlayerPicks && <StatusMsg>Loading team…</StatusMsg>}
+
+                {viewingPlayerPicks && (
+                  <div style={{ padding: '0.5rem' }}>
+                    {/* GW Points summary */}
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', padding: '0.75rem', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', marginBottom: '0.75rem' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f5a623' }}>
+                          {viewingPlayerPicks.starting?.reduce((sum, p) => sum + (p.event_points || 0) * (p.multiplier || 1), 0) || 0}
+                        </div>
+                        <div style={{ fontSize: '0.6rem', color: '#8892b0' }}>GW{CURRENT_GW} Points</div>
+                      </div>
+                    </div>
+
+                    {/* Starting XI */}
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#8892b0', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Starting XI</div>
+                    {viewingPlayerPicks.starting?.map(player => (
+                      <div key={player.element} style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.25rem', borderBottom: '1px solid #2d1a4e' }}>
+                        <span style={{ width: '30px', fontSize: '0.65rem', color: '#8892b0', fontWeight: 700 }}>{player.pos_label}</span>
+                        <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 600, color: '#eaeaea' }}>
+                          {player.web_name}
+                          {player.is_captain && <span style={{ color: '#f5a623', marginLeft: '4px', fontSize: '0.7rem' }}>(C)</span>}
+                          {player.is_vice_captain && <span style={{ color: '#9b59b6', marginLeft: '4px', fontSize: '0.7rem' }}>(V)</span>}
+                        </span>
+                        <span style={{ width: '55px', textAlign: 'right', fontSize: '0.72rem', color: '#8892b0' }}>{player.fixture || ''}</span>
+                        <span style={{ width: '35px', textAlign: 'right', fontWeight: 700, fontSize: '0.85rem', color: player.event_points > 0 ? '#48bb78' : '#fff' }}>
+                          {(player.event_points || 0) * (player.multiplier || 1)}
+                        </span>
+                      </div>
+                    ))}
+
+                    {/* Bench */}
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#8892b0', marginTop: '0.75rem', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Bench</div>
+                    {viewingPlayerPicks.bench?.map(player => (
+                      <div key={player.element} style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 0.25rem', borderBottom: '1px solid #2d1a4e', opacity: 0.6 }}>
+                        <span style={{ width: '30px', fontSize: '0.65rem', color: '#8892b0', fontWeight: 700 }}>{player.pos_label}</span>
+                        <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 600, color: '#eaeaea' }}>{player.web_name}</span>
+                        <span style={{ width: '55px', textAlign: 'right', fontSize: '0.72rem', color: '#8892b0' }}>{player.fixture || ''}</span>
+                        <span style={{ width: '35px', textAlign: 'right', fontSize: '0.82rem', color: '#8892b0' }}>{player.event_points || 0}</span>
                       </div>
                     ))}
                   </div>
