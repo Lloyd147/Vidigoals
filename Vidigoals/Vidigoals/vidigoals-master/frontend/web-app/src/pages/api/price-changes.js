@@ -148,12 +148,14 @@ export default async function handler(req, res) {
       if (seedValue !== null) {
         // Use seed as the base — the formula only adds a tiny delta on top
         // Delta represents movement since the seed was captured
+        // FFF shows ~0.10-0.20% per hour for active players
+        // With 15-min polling, each poll adds ~0.03-0.05%
         const threshold = BASE_FACTOR * (1 + Math.pow(ownership + 0.1, 0.55));
         let delta = 0;
         if (netIn > 0) {
-          delta = (netIn / threshold) * 2; // Small positive delta
+          delta = (netIn / threshold) * 0.3; // ~0.05% per poll for typical player
         } else if (netOut > 0) {
-          delta = -(netOut / threshold) * 2; // Small negative delta
+          delta = -(netOut / threshold) * 0.3;
         }
 
         let progress = seedValue + delta;
