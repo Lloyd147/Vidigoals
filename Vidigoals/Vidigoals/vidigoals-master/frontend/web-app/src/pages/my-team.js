@@ -554,7 +554,7 @@ export default function MyTeam() {
   const liveGwPoints = picks?.starting
     ? picks.starting.reduce((sum, p) => sum + (p.event_points || 0) * (p.multiplier || 1), 0) - (history?.event_transfers_cost || 0)
     : null;
-  const displayGwPoints = liveGwPoints || history?.points || '—';
+  const displayGwPoints = liveGwPoints !== null ? liveGwPoints : (history?.points || '—');
 
   const canGoBack    = gw > 1;
   const canGoForward = gw < 38;
