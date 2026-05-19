@@ -201,6 +201,11 @@ async function fetchAllOdds(country) {
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'GET only' });
 
+  // Rate limiting + origin check
+  const { protect } = await import('../../lib/api-protection');
+  const blocked = protect(req, res);
+  if (blocked) return;
+
   // Detect country: query param override > Vercel geo header > default UK
   const queryCountry = (req.query.country || '').toLowerCase();
   const vercelCountry = (req.headers['x-vercel-ip-country'] || '').toLowerCase();

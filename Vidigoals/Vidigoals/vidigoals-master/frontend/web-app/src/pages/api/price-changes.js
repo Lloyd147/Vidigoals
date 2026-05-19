@@ -36,6 +36,11 @@ async function fplFetch(url) {
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'GET only' });
 
+  // Rate limiting + origin check
+  const { protect } = await import('../../lib/api-protection');
+  const blocked = protect(req, res);
+  if (blocked) return;
+
   // Return cached if fresh
   if (cache.data && Date.now() - cache.fetchedAt < CACHE_TTL) {
     return res.status(200).json({ ...cache.data, cached: true });

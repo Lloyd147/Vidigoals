@@ -896,6 +896,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Rate limiting + origin check
+  const { protect } = await import('../../lib/api-protection');
+  const blocked = protect(req, res);
+  if (blocked) return;
+
   if (!API_KEY) {
     return res.status(500).json({ error: 'API key not configured' });
   }
