@@ -235,7 +235,6 @@ export default function PriceChanges() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('risers'); // 'risers' | 'fallers'
 
   useEffect(() => {
     try {
@@ -256,7 +255,9 @@ export default function PriceChanges() {
     setUser(null);
   };
 
-  const players = activeTab === 'risers' ? (data?.risers || []) : (data?.fallers || []);
+  // Single list: combine risers and fallers, sort by progress (highest + first, lowest - last)
+  const allPlayers = [...(data?.risers || []), ...(data?.fallers || []).map(p => ({ ...p, progress: -p.progress }))];
+  allPlayers.sort((a, b) => b.progress - a.progress);
 
   return (
     <>
@@ -267,37 +268,36 @@ export default function PriceChanges() {
       <GlobalStyle />
       <Wrapper>
         <AppShell user={user} page="price-changes" onLogout={handleLogout}>
-          <TabRow>
-            <Tab active={activeTab === 'risers' ? 1 : 0} onClick={() => setActiveTab('risers')}>
-              📈 Risers ({data?.risers?.length || 0})
-            </Tab>
-            <Tab active={activeTab === 'fallers' ? 1 : 0} onClick={() => setActiveTab('fallers')}>
-              📉 Fallers ({data?.fallers?.length || 0})
-            </Tab>
-          </TabRow>
 
           <Content>
             {loading && <StatusMsg>Loading price predictions…</StatusMsg>}
             {error && <StatusMsg>Could not load data.<br />{error}</StatusMsg>}
 
-            {!loading && !error && players.length === 0 && (
-              <StatusMsg>No {activeTab === 'risers' ? 'risers' : 'fallers'} predicted right now.</StatusMsg>
+            {!loading && !error && allPlayers.length === 0 && (
+              <StatusMsg>No price change data available right now.</StatusMsg>
             )}
 
-            {!loading && !error && players.length > 0 && (
+            {!loading && !error && allPlayers.length > 0 && (
               <>
                 {/* Column headers */}
                 <HeaderRow>
                   <span style={{ width: '140px' }}>Player</span>
-                  <span style={{ width: '22px', textAlign: 'center' }}>Fit</span>
+                  <span style={{ width: '40px', textAlign: 'center' }}>Fitness</span>
                   <span style={{ width: '50px', textAlign: 'center' }}>Price</span>
-                  <span style={{ width: '50px', textAlign: 'center' }}>Own%</span>
+                  <span style={{ width: '45px', textAlign: 'center' }}>Own%</span>
                   <span style={{ flex: 1, textAlign: 'center' }}>Progress</span>
-                  <span style={{ width: '35px', textAlign: 'center' }}>Spd</span>
+                  <span style={{ width: '38px', textAlign: 'center' }}>Spd</span>
                   <span style={{ width: '55px', textAlign: 'center' }}>Time</span>
                 </HeaderRow>
 
-                {players.map(player => (
+                {allPlayers.map(player => {
+                  const isRising = player.progress >= 0;
+                  const absProgress = Math.abs(player.progress);
+                  // Speed: based on transfer velocity relative to threshold
+                  // FFF shows 0.1-0.4 per hour typically
+                  const speed = absProgress >= 90 ? 0.4 : absProgress >= 60 ? 0.3 : absProgress >= 30 ? 0.2 : 0.1;
+
+                  return (
                   <PlayerRow key={player.id}>
                     {/* Shirt + Player info */}
                     <div style={{ width: '140px', minWidth: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -310,8 +310,8 @@ export default function PriceChanges() {
                       </div>
                     </div>
 
-                    {/* Status icon between name and price */}
-                    <div style={{ width: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {/* Fitness status */}
+                    <div style={{ width: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {player.status === 'i' && <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fc8181', lineHeight: 1 }} title="Injured">+</span>}
                       {player.status === 's' && <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#fc8181', lineHeight: 1 }} title="Suspended">!</span>}
                       {player.status === 'd' && <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f5a623', lineHeight: 1 }} title="Doubtful">?</span>}
@@ -325,26 +325,26 @@ export default function PriceChanges() {
                     </div>
 
                     {/* Ownership */}
-                    <div style={{ width: '50px', textAlign: 'center', fontSize: '0.72rem', color: '#8892b0' }}>
+                    <div style={{ width: '45px', textAlign: 'center', fontSize: '0.72rem', color: '#8892b0' }}>
                       {player.ownership}%
                     </div>
 
                     {/* Progress */}
-                    <div style={{ flex: 1, padding: '0 0.4rem' }}>
+                    <div style={{ flex: 1, padding: '0 0.3rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <ProgressBadge value={player.progress} direction={player.direction}>
-                          {player.progress.toFixed(1)}%
+                        <ProgressBadge value={absProgress} direction={isRising ? 'rise' : 'fall'}>
+                          {isRising ? '' : '-'}{absProgress.toFixed(1)}%
                         </ProgressBadge>
                       </div>
                       <ProgressBarOuter>
-                        <ProgressBarInner pct={player.progress} direction={player.direction} />
+                        <ProgressBarInner pct={absProgress} direction={isRising ? 'rise' : 'fall'} />
                       </ProgressBarOuter>
                     </div>
 
-                    {/* Change time */}
-                    <div style={{ width: '35px', textAlign: 'center', fontSize: '0.65rem', fontWeight: 700 }}>
-                      <span style={{ color: player.direction === 'rise' ? '#48bb78' : '#fc8181' }}>
-                        {player.direction === 'rise' ? '▲' : '▼'}{(player.progress > 0 ? 0.1 + Math.floor(player.progress / 30) * 0.1 : 0.1).toFixed(1)}
+                    {/* Speed */}
+                    <div style={{ width: '38px', textAlign: 'center', fontSize: '0.65rem', fontWeight: 700 }}>
+                      <span style={{ color: isRising ? '#48bb78' : '#fc8181' }}>
+                        {isRising ? '▲' : '▼'}{speed.toFixed(1)}
                       </span>
                     </div>
 
@@ -355,7 +355,8 @@ export default function PriceChanges() {
                       </ChangeTimeBadge>
                     </div>
                   </PlayerRow>
-                ))}
+                  );
+                })}
 
                 {data?.lastUpdated && (
                   <LastUpdated>
