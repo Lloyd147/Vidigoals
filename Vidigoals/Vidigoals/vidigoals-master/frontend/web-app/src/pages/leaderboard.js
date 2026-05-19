@@ -108,6 +108,7 @@ export default function Leaderboard() {
   const [viewingGw, setViewingGw] = useState(CURRENT_GW);
   const [viewingTab, setViewingTab] = useState('points'); // 'points' | 'odds'
   const [gwDropdownOpen, setGwDropdownOpen] = useState(false);
+  const [h2hView, setH2hView] = useState('matches'); // 'matches' | 'standings'
 
   useEffect(() => {
     try {
@@ -333,33 +334,65 @@ export default function Leaderboard() {
 
                 {leagueStandings && leagueStandings.type === 'h2h' && (
                   <div style={{ padding: '0.5rem' }}>
-                    {/* H2H Match View */}
-                    {leagueStandings.matches?.length > 0 ? (
-                      leagueStandings.matches.map((match, i) => {
-                        const isUserMatch = match.player1.entry === Number(user?.id) || match.player2.entry === Number(user?.id);
-                        return (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '0.75rem 0.5rem', borderBottom: '1px solid #2d1a4e', background: isUserMatch ? 'linear-gradient(135deg, rgba(108,46,185,0.3), rgba(99,179,237,0.15))' : 'transparent', borderRadius: isUserMatch ? '8px' : 0, marginBottom: isUserMatch ? '4px' : 0 }}>
-                            <span style={{ width: '35px', fontSize: '0.6rem', color: '#8892b0', fontWeight: 700 }}>GW{match.event}</span>
-                            {/* Player 1 */}
-                            <div style={{ flex: 1, textAlign: 'right', paddingRight: '8px' }} onClick={() => viewPlayerTeam({ entry: match.player1.entry, playerName: match.player1.name, entryName: match.player1.teamName })}>
-                              <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#eaeaea', cursor: 'pointer' }}>{match.player1.name}</div>
-                              <div style={{ fontSize: '0.6rem', color: '#8892b0' }}>{match.player1.teamName}</div>
+                    {/* H2H Tabs: Matches | Standings */}
+                    <div style={{ display: 'flex', marginBottom: '0.5rem', borderBottom: '1px solid #4a1a8e' }}>
+                      <button onClick={() => setH2hView('matches')} style={{ flex: 1, background: 'transparent', border: 'none', borderBottom: (h2hView || 'matches') === 'matches' ? '2px solid #f5a623' : '2px solid transparent', color: (h2hView || 'matches') === 'matches' ? '#f5a623' : '#8892b0', fontWeight: 700, fontSize: '0.82rem', padding: '0.5rem', cursor: 'pointer' }}>Matches</button>
+                      <button onClick={() => setH2hView('standings')} style={{ flex: 1, background: 'transparent', border: 'none', borderBottom: h2hView === 'standings' ? '2px solid #f5a623' : '2px solid transparent', color: h2hView === 'standings' ? '#f5a623' : '#8892b0', fontWeight: 700, fontSize: '0.82rem', padding: '0.5rem', cursor: 'pointer' }}>Standings</button>
+                    </div>
+
+                    {/* H2H Matches */}
+                    {(h2hView || 'matches') === 'matches' && (
+                      leagueStandings.matches?.length > 0 ? (
+                        leagueStandings.matches.map((match, i) => {
+                          const isUserMatch = match.player1.entry === Number(user?.id) || match.player2.entry === Number(user?.id);
+                          return (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '0.75rem 0.5rem', borderBottom: '1px solid #2d1a4e', background: isUserMatch ? 'linear-gradient(135deg, rgba(108,46,185,0.3), rgba(99,179,237,0.15))' : 'transparent', borderRadius: isUserMatch ? '8px' : 0, marginBottom: isUserMatch ? '4px' : 0 }}>
+                              <span style={{ width: '35px', fontSize: '0.6rem', color: '#8892b0', fontWeight: 700 }}>GW{match.event}</span>
+                              <div style={{ flex: 1, textAlign: 'right', paddingRight: '8px' }} onClick={() => viewPlayerTeam({ entry: match.player1.entry, playerName: match.player1.name, entryName: match.player1.teamName })}>
+                                <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#eaeaea', cursor: 'pointer' }}>{match.player1.name}</div>
+                                <div style={{ fontSize: '0.6rem', color: '#8892b0' }}>{match.player1.teamName}</div>
+                              </div>
+                              <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                                <span style={{ background: '#2d0a5e', color: '#fff', fontWeight: 700, fontSize: '0.85rem', padding: '4px 8px', borderRadius: '4px 0 0 4px', minWidth: '32px', textAlign: 'center' }}>{match.player1.points}</span>
+                                <span style={{ background: '#2d0a5e', color: '#fff', fontWeight: 700, fontSize: '0.85rem', padding: '4px 8px', borderRadius: '0 4px 4px 0', minWidth: '32px', textAlign: 'center' }}>{match.player2.points}</span>
+                              </div>
+                              <div style={{ flex: 1, paddingLeft: '8px' }} onClick={() => viewPlayerTeam({ entry: match.player2.entry, playerName: match.player2.name, entryName: match.player2.teamName })}>
+                                <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#eaeaea', cursor: 'pointer' }}>{match.player2.name}</div>
+                                <div style={{ fontSize: '0.6rem', color: '#8892b0' }}>{match.player2.teamName}</div>
+                              </div>
                             </div>
-                            {/* Scores */}
-                            <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-                              <span style={{ background: '#2d0a5e', color: '#fff', fontWeight: 700, fontSize: '0.85rem', padding: '4px 8px', borderRadius: '4px 0 0 4px', minWidth: '32px', textAlign: 'center' }}>{match.player1.points}</span>
-                              <span style={{ background: '#2d0a5e', color: '#fff', fontWeight: 700, fontSize: '0.85rem', padding: '4px 8px', borderRadius: '0 4px 4px 0', minWidth: '32px', textAlign: 'center' }}>{match.player2.points}</span>
+                          );
+                        })
+                      ) : (
+                        <StatusMsg>No H2H matches found.</StatusMsg>
+                      )
+                    )}
+
+                    {/* H2H Standings */}
+                    {h2hView === 'standings' && leagueStandings.standings?.length > 0 && (
+                      <>
+                        <div style={{ display: 'flex', padding: '0.4rem 0.5rem', fontSize: '0.6rem', fontWeight: 700, color: '#8892b0', borderBottom: '1px solid #4a1a8e' }}>
+                          <span style={{ width: '25px' }}>#</span>
+                          <span style={{ flex: 1 }}>Player</span>
+                          <span style={{ width: '25px', textAlign: 'center' }}>W</span>
+                          <span style={{ width: '25px', textAlign: 'center' }}>D</span>
+                          <span style={{ width: '25px', textAlign: 'center' }}>L</span>
+                          <span style={{ width: '40px', textAlign: 'right' }}>Pts</span>
+                        </div>
+                        {leagueStandings.standings.map((entry, i) => (
+                          <div key={entry.entry} onClick={() => viewPlayerTeam(entry)} style={{ display: 'flex', alignItems: 'center', padding: '0.55rem 0.5rem', borderBottom: '1px solid #2d1a4e', cursor: 'pointer' }}>
+                            <span style={{ width: '25px', fontWeight: 700, fontSize: '0.8rem', color: i === 0 ? '#f5a623' : '#fff' }}>{entry.rank}</span>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#eaeaea' }}>{entry.playerName}</div>
+                              <div style={{ fontSize: '0.58rem', color: '#8892b0' }}>{entry.entryName}</div>
                             </div>
-                            {/* Player 2 */}
-                            <div style={{ flex: 1, paddingLeft: '8px' }} onClick={() => viewPlayerTeam({ entry: match.player2.entry, playerName: match.player2.name, entryName: match.player2.teamName })}>
-                              <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#eaeaea', cursor: 'pointer' }}>{match.player2.name}</div>
-                              <div style={{ fontSize: '0.6rem', color: '#8892b0' }}>{match.player2.teamName}</div>
-                            </div>
+                            <span style={{ width: '25px', textAlign: 'center', fontSize: '0.75rem', color: '#48bb78' }}>{entry.wins || 0}</span>
+                            <span style={{ width: '25px', textAlign: 'center', fontSize: '0.75rem', color: '#8892b0' }}>{entry.draws || 0}</span>
+                            <span style={{ width: '25px', textAlign: 'center', fontSize: '0.75rem', color: '#fc8181' }}>{entry.losses || 0}</span>
+                            <span style={{ width: '40px', textAlign: 'right', fontWeight: 700, fontSize: '0.85rem', color: i === 0 ? '#f5a623' : '#fff' }}>{entry.total}</span>
                           </div>
-                        );
-                      })
-                    ) : (
-                      <StatusMsg>No H2H matches found for this gameweek.</StatusMsg>
+                        ))}
+                      </>
                     )}
                   </div>
                 )}
