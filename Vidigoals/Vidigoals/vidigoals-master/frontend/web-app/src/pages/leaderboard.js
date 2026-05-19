@@ -154,9 +154,18 @@ export default function Leaderboard() {
   // View another player's team
   function viewPlayerTeam(entry) {
     setViewingPlayer(entry);
-    setViewingGw(CURRENT_GW);
     setViewingTab('points');
-    fetchViewingPicks(entry.entry, CURRENT_GW);
+    setGwDropdownOpen(false);
+    // Fetch without specifying GW — API will return the current active GW
+    setLoadingPlayerPicks(true);
+    fetch(`/api/fpl-picks?id=${entry.entry}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        setViewingPlayerPicks(data);
+        if (data?.gameweek) setViewingGw(data.gameweek); // Use actual current GW from API
+        setLoadingPlayerPicks(false);
+      })
+      .catch(() => setLoadingPlayerPicks(false));
   }
 
   function fetchViewingPicks(entryId, gwNum) {
@@ -380,7 +389,7 @@ export default function Leaderboard() {
                 </div>
 
                 {/* Current Round Active indicator */}
-                {viewingGw === CURRENT_GW && (
+                {viewingPlayerPicks?.latestGW && viewingGw === viewingPlayerPicks.latestGW && (
                   <div style={{ textAlign: 'center', padding: '0.3rem 0', fontSize: '0.65rem', color: '#48bb78', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', background: '#2d0a5e' }}>
                     <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#48bb78', display: 'inline-block', animation: 'pulse-dot 1.5s infinite' }} />
                     CURRENT ROUND ACTIVE
@@ -395,7 +404,7 @@ export default function Leaderboard() {
                     <div style={{ display: 'flex', gap: '0.5rem', padding: '0.75rem' }}>
                       <div style={{ flex: 1, textAlign: 'center', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '0.5rem 0.25rem' }}>
                         <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f5a623' }}>
-                          {viewingGw === CURRENT_GW && <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#48bb78', marginRight: '4px', animation: 'pulse-dot 1.5s infinite' }} />}
+                          {viewingPlayerPicks?.latestGW && viewingGw === viewingPlayerPicks.latestGW && <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#48bb78', marginRight: '4px', animation: 'pulse-dot 1.5s infinite' }} />}
                           {viewingPlayerPicks.starting?.reduce((sum, p) => sum + (p.event_points || 0) * (p.multiplier || 1), 0) || 0}
                         </div>
                         <div style={{ fontSize: '0.6rem', color: '#8892b0', marginTop: '2px' }}>GW POINTS</div>
