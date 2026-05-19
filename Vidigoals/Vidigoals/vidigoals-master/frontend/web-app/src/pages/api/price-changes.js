@@ -50,22 +50,21 @@ export default async function handler(req, res) {
     // ── Price change model ────────────────────────────────────────────────
     // Calibrated against Fantasy Football Fix data (May 2026):
     //
-    // Reference points (risers):
+    // Key insight: Progress should be 0-100% range for risers, 0 to -100% for fallers.
+    // 100% = price change tonight. Progress CAPS at 100%.
+    //
+    // FFF reference (risers):
     //   Doku: 6.5% own → 100.1%   |  Mitchell: 2.4% → 88.8%
-    //   Guehi: 32.8% → 78.2%     |  Haaland: 64.5% → 51.7%
-    //   Saka: 13% → 48.2%        |  Lewis-Skelly: 1.9% → 46.5%
+    //   Guehi: 32.8% → 78.2%     |  Truffert: 4.7% → 76.5%
+    //   Haaland: 64.5% → 51.7%   |  Saka: 13% → 48.2%
     //
-    // Reference points (fallers):
+    // FFF reference (fallers):
     //   Walker-Peters: 0.3% → -100.1%  |  Chalobah: 8.9% → -100%
-    //   Palmer: 12.5% → -65.3%         |  Salah: 13.7% → -79.3%
+    //   Cucurella: 14.4% → -51.3%      |  Palmer: 12.5% → -65.3%
     //
-    // Formula: threshold = BASE × (1 + ownership^0.45)
-    // This produces a curve where:
-    //   - Low ownership (0-5%): threshold ~BASE to ~3×BASE
-    //   - Mid ownership (10-30%): threshold ~4-6×BASE
-    //   - High ownership (50%+): threshold ~8-10×BASE
-    //
-    const BASE_FACTOR = 1250;
+    // Formula: threshold = BASE × (1 + ownership^0.55)
+    // BASE calibrated so Doku (6.5% own, high net transfers) hits ~100%
+    const BASE_FACTOR = 8500;
 
     function calculateProgress(player) {
       const ownership = parseFloat(player.selected_by_percent) || 0;
@@ -75,31 +74,34 @@ export default async function handler(req, res) {
       const netOut = transfersOut - transfersIn;
       const alreadyChanged = (player.cost_change_event || 0) !== 0;
 
-      // Threshold scales with ownership using power curve
-      const threshold = BASE_FACTOR * (1 + Math.pow(ownership + 0.1, 0.45));
+      // Threshold scales with ownership — higher ownership = harder to move
+      const threshold = BASE_FACTOR * (1 + Math.pow(ownership + 0.1, 0.55));
 
       // Rising progress (net transfers IN)
       let riseProgress = netIn > 0 ? (netIn / threshold) * 100 : 0;
 
-      // Falling progress (net transfers OUT)  
+      // Falling progress (net transfers OUT)
       let fallProgress = netOut > 0 ? (netOut / threshold) * 100 : 0;
 
-      // If player already changed price this GW, their counter has partially reset
-      // Reduce progress by ~60% to account for the reset mid-GW
+      // If player already changed price this GW, reduce progress (counter partially reset)
       if (alreadyChanged) {
         riseProgress *= 0.4;
         fallProgress *= 0.4;
       }
 
+      // Cap at 100% — once at 100 it means "changing tonight"
+      riseProgress = Math.min(riseProgress, 100);
+      fallProgress = Math.min(fallProgress, 100);
+
       return { riseProgress, fallProgress, threshold, netIn, netOut };
     }
 
     function estimateChangeTime(progress) {
-      if (progress >= 100) return 'Tonight';
-      if (progress >= 90) return 'Tonight';
-      if (progress >= 70) return '< 2 days';
-      if (progress >= 50) return '> 2 days';
-      if (progress >= 30) return '> 3 days';
+      if (progress >= 95) return 'Tonight';
+      if (progress >= 80) return 'Tomorrow';
+      if (progress >= 60) return '< 2 days';
+      if (progress >= 40) return '> 2 days';
+      if (progress >= 25) return '> 3 days';
       return '> 4 days';
     }
 
