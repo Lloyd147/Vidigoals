@@ -116,7 +116,6 @@ export default function Projections() {
                 <div style={{ padding: '1rem', textAlign: 'center', borderBottom: '1px solid #4a1a8e' }}>
                   <div style={{ fontSize: '0.7rem', color: '#8892b0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Gameweek {data.gameweek} Projected Best XI</div>
                   <div style={{ fontSize: '2rem', fontWeight: 800, color: '#f5a623', marginTop: '0.25rem' }}>{data.totalProjected} pts</div>
-                  <div style={{ fontSize: '0.65rem', color: '#8892b0', marginTop: '0.25rem' }}>Based on fixture difficulty, form, odds & availability</div>
                 </div>
 
                 {/* Pitch view with projected points */}
