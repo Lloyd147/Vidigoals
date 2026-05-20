@@ -77,10 +77,17 @@ export default async function handler(req, res) {
       if (player.status === 'i' || player.status === 'u') continue;
       if (chanceOfPlaying !== null && chanceOfPlaying < 50) continue;
 
-      // Base projection: FPL's own expected points
-      let baseProjection = parseFloat(player.ep_next) || 0;
-      if (baseProjection === 0 && player.form) baseProjection = parseFloat(player.form) || 0;
-      if (baseProjection <= 0) continue; // Skip players with no expected output
+      // Base projection: season average points per game (large sample, 20+ games)
+      // total_points / (minutes / 90) = points per 90 minutes played
+      const minutesPlayed = player.minutes || 0;
+      const totalPoints = player.total_points || 0;
+      const gamesPlayed = minutesPlayed / 90;
+
+      // Only consider players with meaningful minutes (at least 10 games worth)
+      if (gamesPlayed < 10) continue;
+
+      const seasonAvg = totalPoints / gamesPlayed;
+      if (seasonAvg <= 0) continue;
 
       // Fixture difficulty adjustment
       let fdrMultiplier = 1.0;
@@ -114,7 +121,7 @@ export default async function handler(req, res) {
         }
       }
 
-      const projectedPoints = Math.round(((baseProjection * fdrMultiplier) + oddsBoost) * playingMult * 10) / 10;
+      const projectedPoints = Math.round(((seasonAvg * fdrMultiplier) + oddsBoost) * playingMult * 10) / 10;
 
       projections.push({
         id: player.id,
@@ -128,7 +135,7 @@ export default async function handler(req, res) {
         fixture: `${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})`,
         difficulty: fixture.difficulty,
         projectedPoints,
-        epNext: parseFloat(player.ep_next) || 0,
+        seasonAvg: Math.round(seasonAvg * 10) / 10,
         form: parseFloat(player.form) || 0,
         price: (player.now_cost / 10).toFixed(1),
       });

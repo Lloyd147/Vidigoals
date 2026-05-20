@@ -142,7 +142,7 @@ export default function Projections() {
                     <span style={{ flex: 1 }}>Player</span>
                     <span style={{ width: '55px', textAlign: 'center' }}>Fixture</span>
                     <span style={{ width: '35px', textAlign: 'center' }}>FDR</span>
-                    <span style={{ width: '35px', textAlign: 'center' }}>Form</span>
+                    <span style={{ width: '35px', textAlign: 'center' }}>Avg</span>
                     <span style={{ width: '45px', textAlign: 'right' }}>Proj</span>
                   </div>
                   {data.starting.map((p, i) => (
@@ -154,7 +154,7 @@ export default function Projections() {
                       </div>
                       <span style={{ width: '55px', textAlign: 'center', fontSize: '0.68rem', color: '#8892b0' }}>{p.fixture}</span>
                       <span style={{ width: '35px', textAlign: 'center', fontSize: '0.7rem', fontWeight: 700, color: fdrColor(p.difficulty) }}>{p.difficulty}</span>
-                      <span style={{ width: '35px', textAlign: 'center', fontSize: '0.7rem', color: '#8892b0' }}>{p.form}</span>
+                      <span style={{ width: '35px', textAlign: 'center', fontSize: '0.7rem', color: '#8892b0' }}>{p.seasonAvg || p.form}</span>
                       <span style={{ width: '45px', textAlign: 'right', fontWeight: 700, fontSize: '0.85rem', color: '#f5a623' }}>{p.projectedPoints}</span>
                     </div>
                   ))}
