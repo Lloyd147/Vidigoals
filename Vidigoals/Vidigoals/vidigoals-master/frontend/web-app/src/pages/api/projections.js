@@ -32,9 +32,9 @@ export default async function handler(req, res) {
     gameweek: 38,
     totalProjected: 52.8,
     starting: [
-      { id: 1, name: 'Hermansen', position: 1, posLabel: 'GKP', team: 'Leicester', teamShort: 'LEI', teamId: 8, fixture: 'CHE (A)', difficulty: 4, projectedPoints: 3.8, seasonAvg: 3.8 },
+      { id: 1, name: 'Hermansen', position: 1, posLabel: 'GKP', team: 'Leicester', teamShort: 'LEI', teamId: 8, fixture: 'LEE (H)', difficulty: 2, projectedPoints: 4.9, seasonAvg: 4.2 },
       { id: 2, name: "O'Reilly", position: 2, posLabel: 'DEF', team: 'Man City', teamShort: 'MCI', teamId: 13, fixture: 'AVL (H)', difficulty: 3, projectedPoints: 4.5, seasonAvg: 4.2 },
-      { id: 3, name: 'Virgil', position: 2, posLabel: 'DEF', team: 'Liverpool', teamShort: 'LIV', teamId: 12, fixture: 'BRI (A)', difficulty: 3, projectedPoints: 4.8, seasonAvg: 4.6 },
+      { id: 3, name: 'Van Dijk', position: 2, posLabel: 'DEF', team: 'Liverpool', teamShort: 'LIV', teamId: 12, fixture: 'BRI (A)', difficulty: 3, projectedPoints: 4.8, seasonAvg: 4.6 },
       { id: 4, name: 'Porro', position: 2, posLabel: 'DEF', team: 'Spurs', teamShort: 'TOT', teamId: 18, fixture: 'EVE (H)', difficulty: 2, projectedPoints: 5.0, seasonAvg: 4.5 },
       { id: 5, name: 'Gibbs-White', position: 3, posLabel: 'MID', team: "Nott'm Forest", teamShort: 'NFO', teamId: 16, fixture: 'BUR (A)', difficulty: 2, projectedPoints: 5.2, seasonAvg: 4.8 },
       { id: 6, name: 'Semenyo', position: 3, posLabel: 'MID', team: 'Bournemouth', teamShort: 'BOU', teamId: 4, fixture: 'MCI (H)', difficulty: 5, projectedPoints: 4.2, seasonAvg: 4.5 },
@@ -48,7 +48,7 @@ export default async function handler(req, res) {
 
   try {
     const bootstrap = await fplFetch('https://fantasy.premierleague.com/api/bootstrap-static/');
-    if (!bootstrap) return res.status(500).json({ error: 'Could not fetch FPL data' });
+    if (!bootstrap) return res.status(200).json(GW38_FALLBACK);
 
     const players = bootstrap.elements || [];
     const teams = bootstrap.teams || [];

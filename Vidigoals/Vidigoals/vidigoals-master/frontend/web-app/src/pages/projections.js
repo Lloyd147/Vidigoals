@@ -134,31 +134,6 @@ export default function Projections() {
                   fixtureLive: false,
                 })), bench: [] }} gw={data.gameweek} />
 
-                {/* Detailed breakdown table */}
-                <div style={{ padding: '0.75rem' }}>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#8892b0', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Projection Breakdown</div>
-                  <div style={{ display: 'flex', padding: '0.4rem 0.5rem', fontSize: '0.6rem', fontWeight: 700, color: '#6b7280', borderBottom: '1px solid #4a1a8e' }}>
-                    <span style={{ width: '30px' }}>Pos</span>
-                    <span style={{ flex: 1 }}>Player</span>
-                    <span style={{ width: '55px', textAlign: 'center' }}>Fixture</span>
-                    <span style={{ width: '35px', textAlign: 'center' }}>FDR</span>
-                    <span style={{ width: '35px', textAlign: 'center' }}>Avg</span>
-                    <span style={{ width: '45px', textAlign: 'right' }}>Proj</span>
-                  </div>
-                  {data.starting.map((p, i) => (
-                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', padding: '0.5rem', borderBottom: '1px solid #2d1a4e' }}>
-                      <span style={{ width: '30px', fontSize: '0.65rem', color: '#8892b0', fontWeight: 700 }}>{p.posLabel}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.8rem', color: '#eaeaea' }}>{p.name}</div>
-                        <div style={{ fontSize: '0.58rem', color: '#8892b0' }}>{p.teamShort}</div>
-                      </div>
-                      <span style={{ width: '55px', textAlign: 'center', fontSize: '0.68rem', color: '#8892b0' }}>{p.fixture}</span>
-                      <span style={{ width: '35px', textAlign: 'center', fontSize: '0.7rem', fontWeight: 700, color: fdrColor(p.difficulty) }}>{p.difficulty}</span>
-                      <span style={{ width: '35px', textAlign: 'center', fontSize: '0.7rem', color: '#8892b0' }}>{p.seasonAvg || p.form}</span>
-                      <span style={{ width: '45px', textAlign: 'right', fontWeight: 700, fontSize: '0.85rem', color: '#f5a623' }}>{p.projectedPoints}</span>
-                    </div>
-                  ))}
-                </div>
               </>
             )}
           </Content>
