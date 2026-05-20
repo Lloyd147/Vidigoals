@@ -8,14 +8,14 @@
 
 const GW38_BEST_XI = {
   gameweek: 38,
-  totalProjected: 57.4,
+  totalProjected: 61.6,
   starting: [
-    { id: 1, name: 'Hermansen', position: 1, posLabel: 'GKP', team: 'West Ham', teamShort: 'WHU', teamId: 19, fixture: 'BRI (H)', difficulty: 3, projectedPoints: 4.2, seasonAvg: 4.0 },
+    { id: 1, name: 'Hermansen', position: 1, posLabel: 'GKP', team: 'West Ham', teamShort: 'WHU', teamId: 19, fixture: 'BRI (H)', difficulty: 3, projectedPoints: 4.9, seasonAvg: 4.0 },
     { id: 2, name: "O'Reilly", position: 2, posLabel: 'DEF', team: 'Man City', teamShort: 'MCI', teamId: 13, fixture: 'AVL (H)', difficulty: 3, projectedPoints: 5.1, seasonAvg: 4.6 },
-    { id: 3, name: 'Van Dijk', position: 2, posLabel: 'DEF', team: 'Liverpool', teamShort: 'LIV', teamId: 12, fixture: 'BRI (A)', difficulty: 3, projectedPoints: 4.8, seasonAvg: 4.6 },
-    { id: 4, name: 'Porro', position: 2, posLabel: 'DEF', team: 'Spurs', teamShort: 'TOT', teamId: 18, fixture: 'EVE (H)', difficulty: 2, projectedPoints: 5.3, seasonAvg: 4.8 },
+    { id: 3, name: 'Van Dijk', position: 2, posLabel: 'DEF', team: 'Liverpool', teamShort: 'LIV', teamId: 12, fixture: 'BRI (A)', difficulty: 3, projectedPoints: 5.0, seasonAvg: 4.6 },
+    { id: 4, name: 'Porro', position: 2, posLabel: 'DEF', team: 'Spurs', teamShort: 'TOT', teamId: 18, fixture: 'EVE (H)', difficulty: 2, projectedPoints: 5.0, seasonAvg: 4.8 },
     { id: 5, name: 'Gibbs-White', position: 3, posLabel: 'MID', team: "Nott'm Forest", teamShort: 'NFO', teamId: 16, fixture: 'BUR (A)', difficulty: 2, projectedPoints: 5.8, seasonAvg: 5.2 },
-    { id: 6, name: 'Semenyo', position: 3, posLabel: 'MID', team: 'Man City', teamShort: 'MCI', teamId: 13, fixture: 'AVL (H)', difficulty: 3, projectedPoints: 5.4, seasonAvg: 4.9 },
+    { id: 6, name: 'Semenyo', position: 3, posLabel: 'MID', team: 'Man City', teamShort: 'MCI', teamId: 13, fixture: 'AVL (H)', difficulty: 3, projectedPoints: 6.2, seasonAvg: 4.9 },
     { id: 7, name: 'Szoboszlai', position: 3, posLabel: 'MID', team: 'Liverpool', teamShort: 'LIV', teamId: 12, fixture: 'BRI (A)', difficulty: 3, projectedPoints: 5.5, seasonAvg: 5.0 },
     { id: 8, name: 'B.Fernandes', position: 3, posLabel: 'MID', team: 'Man Utd', teamShort: 'MUN', teamId: 14, fixture: 'BHA (A)', difficulty: 3, projectedPoints: 6.2, seasonAvg: 5.8 },
     { id: 9, name: 'Bowen', position: 4, posLabel: 'FWD', team: 'West Ham', teamShort: 'WHU', teamId: 19, fixture: 'BRI (H)', difficulty: 3, projectedPoints: 5.7, seasonAvg: 5.2 },
