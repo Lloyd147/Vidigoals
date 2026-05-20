@@ -218,15 +218,17 @@ export default function TeamPitchView({ picks, gw, onPlayerClick }) {
         ))}
       </Pitch>
 
-      {/* Bench */}
-      <BenchSection>
-        <BenchLabel>YOUR BENCH</BenchLabel>
-        <PitchRow>
-          {bench.map(player => (
-            <PlayerTile key={player.element} player={player} onPlayerClick={onPlayerClick} />
-          ))}
-        </PitchRow>
-      </BenchSection>
+      {/* Bench — only show if there are bench players */}
+      {bench.length > 0 && (
+        <BenchSection>
+          <BenchLabel>YOUR BENCH</BenchLabel>
+          <PitchRow>
+            {bench.map(player => (
+              <PlayerTile key={player.element} player={player} onPlayerClick={onPlayerClick} />
+            ))}
+          </PitchRow>
+        </BenchSection>
+      )}
     </div>
   );
 }

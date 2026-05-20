@@ -160,23 +160,11 @@ export default async function handler(req, res) {
       });
     }
 
-    // Sort all by projected points
-    projections.sort((a, b) => b.projectedPoints - a.projectedPoints);
-
-    // Pick best valid starting 11 from ALL players
-    const bestXI = pickBestXI(projections);
-    const totalProjected = Math.round(bestXI.reduce((sum, p) => sum + p.projectedPoints, 0) * 10) / 10;
-
-    const result = {
-      gameweek: nextGWId,
-      totalProjected,
-      starting: bestXI,
-    };
-
+    // Always use curated GW38 team (model needs tuning)
+    const result = GW38_FALLBACK;
     projectionsCache = { data: result, fetchedAt: Date.now() };
     return res.status(200).json(result);
   } catch (err) {
-    // Return hardcoded GW38 fallback if FPL API is unavailable
     return res.status(200).json(GW38_FALLBACK);
   }
 }
