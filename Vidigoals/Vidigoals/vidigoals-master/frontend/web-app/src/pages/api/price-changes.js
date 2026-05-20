@@ -80,6 +80,8 @@ export default async function handler(req, res) {
     // ── Seed data from Fantasy Football Fix (GW37, May 19 2026) ───────────
     // These are the starting progress percentages. Our formula only adds/subtracts
     // small deltas from these starting points based on ongoing transfer activity.
+    // ── Seed data from Fantasy Football Fix (May 20 2026, ~03:00 UTC) ─────
+    // Progress values at time of seeding. The formula adds speed × hours_elapsed.
     const SEED_PROGRESS = {
       // RISERS — Updated May 20 2026 from FFF
       'Doku': 99.7, 'Truffert': 76.5, 'Kroupi.Jr': 62.7,
@@ -92,73 +94,63 @@ export default async function handler(req, res) {
       'Havertz': -79.7, 'Semenyo': -102.7, 'Casemiro': -6.7,
       'Okafor': -72.0, 'Thiago': -22.8, 'Wilson': -1.2,
       'Gyokeres': -3.8, 'Strand Larsen': -1.3, 'Garner': -2.6,
-      'Schade': -11.0, 'J.Palhinha': -27.3, 'Wilson': -72.1,
+      'Schade': -11.0, 'J.Palhinha': -27.3,
     };
+    const SEED_TIMESTAMP = new Date('2026-05-20T03:00:00Z').getTime();
 
     function calculateProgress(player) {
       const ownership = parseFloat(player.selected_by_percent) || 0;
       const transfersIn = player.transfers_in_event || 0;
       const transfersOut = player.transfers_out_event || 0;
       const netIn = transfersIn - transfersOut;
-      const netOut = transfersOut - transfersIn;
       const alreadyChanged = (player.cost_change_event || 0) !== 0;
-
-      // Check if this player has seed data from FFF
       const playerName = player.web_name;
-      const seedValue = SEED_PROGRESS[playerName] || null;
 
-      // If player's price changed since we started tracking, reset to 0%
+      // Threshold: net transfers needed for price change (scales with ownership)
+      const threshold = BASE_FACTOR * (1 + Math.pow(ownership + 0.1, 0.55));
+
+      // Speed: how fast progress moves per hour
+      // = (net transfers per hour) / threshold × 100
+      // Use 24hr window as approximation of current rate
+      const hoursInGW = 24;
+      const netPerHour = netIn / hoursInGW;
+      const rawSpeed = (netPerHour / threshold) * 100;
+      // Speed value (always positive, direction separate)
+      const speed = (transfersIn > 0 || transfersOut > 0) ? Math.min(1.0, Math.round(Math.abs(rawSpeed) * 10) / 10) : 0;
+      // Direction: positive net = being bought (up), negative = being sold (down)
+      const speedDirection = netIn >= 0 ? 'up' : 'down';
+
+      // If price already changed, reset progress
       if (resetPlayers.has(playerName)) {
-        // Price changed — progress resets, start building from 0
-        const threshold = BASE_FACTOR * (1 + Math.pow(ownership + 0.1, 0.55));
-        let riseProgress = netIn > 0 ? (netIn / threshold) * 100 : 0;
-        let fallProgress = netOut > 0 ? (netOut / threshold) * 100 : 0;
-        riseProgress = Math.min(riseProgress, 100);
-        fallProgress = Math.min(fallProgress, 100);
-        return { riseProgress, fallProgress, threshold, netIn, netOut };
+        let riseProgress = netIn > 0 ? Math.min(100, (netIn / threshold) * 100) : 0;
+        let fallProgress = netIn < 0 ? Math.min(100, (Math.abs(netIn) / threshold) * 100) : 0;
+        return { riseProgress, fallProgress, threshold, netIn, netOut: -netIn, speed, speedDirection };
       }
 
-      if (seedValue !== null) {
-        // Use seed as the base — the formula only adds a tiny delta on top
-        // Delta represents movement since the seed was captured
-        // FFF shows ~0.10-0.20% per hour for active players
-        // With 15-min polling, each poll adds ~0.03-0.05%
-        const threshold = BASE_FACTOR * (1 + Math.pow(ownership + 0.1, 0.55));
-        let delta = 0;
-        if (netIn > 0) {
-          delta = (netIn / threshold) * 0.3; // ~0.05% per poll for typical player
-        } else if (netOut > 0) {
-          delta = -(netOut / threshold) * 0.3;
-        }
+      const seedValue = SEED_PROGRESS[playerName] || null;
 
-        let progress = seedValue + delta;
-        // Cap at 100 for risers, -100 for fallers
-        if (progress > 0) progress = Math.min(progress, 100);
-        if (progress < 0) progress = Math.max(progress, -100);
+      if (seedValue !== null) {
+        // Progress = seed + (speed × hours since seed)
+        // Speed moves progress toward +100 (if buying) or -100 (if selling)
+        const hoursElapsed = Math.max(0, (Date.now() - SEED_TIMESTAMP) / (1000 * 60 * 60));
+        const progressDelta = rawSpeed * Math.min(hoursElapsed, 72);
+        let progress = seedValue + progressDelta;
+        progress = Math.max(-100, Math.min(100, progress));
 
         const isRising = progress >= 0;
         return {
           riseProgress: isRising ? progress : 0,
           fallProgress: isRising ? 0 : Math.abs(progress),
-          threshold, netIn, netOut
+          threshold, netIn, netOut: -netIn, speed, speedDirection
         };
       }
 
-      // No seed data — start from 0% and calculate purely from transfers
-      const threshold = BASE_FACTOR * (1 + Math.pow(ownership + 0.1, 0.55));
+      // No seed — pure calculation
+      let riseProgress = netIn > 0 ? Math.min(100, (netIn / threshold) * 100) : 0;
+      let fallProgress = netIn < 0 ? Math.min(100, (Math.abs(netIn) / threshold) * 100) : 0;
+      if (alreadyChanged) { riseProgress *= 0.4; fallProgress *= 0.4; }
 
-      let riseProgress = netIn > 0 ? (netIn / threshold) * 100 : 0;
-      let fallProgress = netOut > 0 ? (netOut / threshold) * 100 : 0;
-
-      if (alreadyChanged) {
-        riseProgress *= 0.4;
-        fallProgress *= 0.4;
-      }
-
-      riseProgress = Math.min(riseProgress, 100);
-      fallProgress = Math.min(fallProgress, 100);
-
-      return { riseProgress, fallProgress, threshold, netIn, netOut };
+      return { riseProgress, fallProgress, threshold, netIn, netOut: -netIn, speed, speedDirection };
     }
 
     function estimateChangeTime(progress) {
