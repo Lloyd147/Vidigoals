@@ -90,17 +90,19 @@ export default function PlayerOddsView({ picks, gw, odds: externalOdds }) {
           const webName = (player.web_name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss');
           const fullName = (player.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss');
           const lastName = fullName.split(' ').pop() || '';
+          // Compact form: strip hyphens, spaces, dots for fuzzy matching
+          const webCompact = webName.replace(/[-\s.']/g, '');
           const match = Object.values(odds).find(o => {
             const oddsName = (o.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss');
             const oddsLast = oddsName.split(' ').pop() || '';
-            // Match strategies: exact full, web_name contains, last name match, hyphenated name
+            const oddsCompact = oddsName.replace(/[-\s.']/g, '');
             if (oddsName === fullName) return true;
             if (oddsName.includes(webName)) return true;
             if (webName.includes(oddsLast) && oddsLast.length > 3) return true;
             if (oddsLast === lastName && lastName.length > 3) return true;
-            // Hyphenated: "Dewsbury-Hall" should match "Kiernan Dewsbury-Hall"
-            if (webName.includes('-') && oddsName.includes(webName)) return true;
-            if (oddsName.includes('-') && webName.includes(oddsName.split(' ').pop())) return true;
+            // Compact match: "dewsburyhall" matches "kiernan dewsburyhall"
+            if (oddsCompact.includes(webCompact) && webCompact.length > 5) return true;
+            if (webCompact.includes(oddsCompact.split(' ').pop()) && oddsCompact.length > 5) return true;
             return false;
           });
           if (match && player.fixture) {
