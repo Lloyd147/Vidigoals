@@ -754,16 +754,19 @@ export default function MyTeam() {
                     // Match player to odds by name
                     let playerOdds = null;
                     if (odds) {
-                      const webName = (player.web_name || '').toLowerCase();
-                      const fullName = (player.name || '').toLowerCase();
+                      const webName = (player.web_name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss');
+                      const fullName = (player.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss');
                       const lastName = fullName.split(' ').pop() || '';
                       const match = Object.values(odds).find(o => {
-                        const oddsName = (o.name || '').toLowerCase();
+                        const oddsName = (o.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss');
                         const oddsLast = oddsName.split(' ').pop() || '';
-                        return oddsName === fullName ||
-                               oddsName.includes(webName) ||
-                               webName.includes(oddsLast) ||
-                               oddsLast === lastName;
+                        if (oddsName === fullName) return true;
+                        if (oddsName.includes(webName)) return true;
+                        if (webName.includes(oddsLast) && oddsLast.length > 3) return true;
+                        if (oddsLast === lastName && lastName.length > 3) return true;
+                        if (webName.includes('-') && oddsName.includes(webName)) return true;
+                        if (oddsName.includes('-') && webName.includes(oddsName.split(' ').pop())) return true;
+                        return false;
                       });
                       // Only show odds if the fixture matches (odds are for a specific match)
                       if (match && player.fixture) {
