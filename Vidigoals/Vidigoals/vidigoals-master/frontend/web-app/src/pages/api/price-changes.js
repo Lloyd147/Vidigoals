@@ -81,67 +81,18 @@ export default async function handler(req, res) {
     // These are the starting progress percentages. Our formula only adds/subtracts
     // small deltas from these starting points based on ongoing transfer activity.
     const SEED_PROGRESS = {
-      // RISERS (positive progress)
-      'Doku': 100.1, 'Mitchell': 88.8, 'Guehi': 78.2, 'Truffert': 76.5,
-      'Richards': 68.3, 'Alderete': 67.0, 'Kroupi.Jr': 60.3, 'Henderson': 57.6,
-      'B.Fernandes': 55.4, 'Mateta': 55.4, 'Aaronson': 53.6, 'Haaland': 51.7,
-      'Cherki': 50.1, 'Saka': 48.2, 'Lewis-Skelly': 46.5, 'Ngumoha': 44.7,
-      'Rice': 44.1, 'Szoboszlai': 40.9, 'Damsgaard': 35.7, 'Minteh': 35.4,
-      'Amad': 33.7, 'Lammens': 33.5, 'Shaw': 33.4, 'Igor Jesus': 32.6,
-      'Ait-Nouri': 30.3, 'Barry': 29.7, 'Keane': 29.2, 'Wan-Bissaka': 28.9,
-      'Donnarumma': 28.0, 'Rayan': 27.4, 'Khusanov': 27.3, 'Baleba': 26.8,
-      'Dowman': 26.0, 'Gabriel': 25.5, 'Ampadu': 24.8, 'Canvot': 24.8,
-      'Dewsbury-Hall': 24.6, 'M.Fernandes': 24.5, 'Flemming': 23.8,
-      'Maguire': 23.2, 'Mainoo': 22.3, 'Anderson': 20.6, 'Bassey': 20.5,
-      'Hermansen': 19.4, 'Stach': 17.9, 'Calvert-Lewin': 17.8, 'Bijol': 17.4,
-      'Acheampong': 16.5, 'Kelleher': 16.2, 'Adli': 15.8, 'Madueke': 15.3,
-      'Bruno G.': 15.2, 'Wharton': 14.6, 'Eze': 14.5, 'Gros': 14.4,
-      'Seung soo': 13.7, 'Barnes': 12.5, 'Maatsen': 12.4, 'Hincapie': 12.3,
-      'J.Gomes': 11.9,
-      // FALLERS (negative progress)
-      'Ake': -17.8, 'Struijk': -18.0, 'Ugochukwu': -18.2, 'Wieffer': -18.5,
-      'Munoz': -18.6, 'Abraham': -18.7, 'Meslier': -18.8, 'Jair Cunha': -19.3,
-      'M.Bizot': -20.4, 'Marsh': -20.5, 'Mosquera': -20.6, 'Gusto': -20.8,
-      'Fraser': -21.1, 'Matthews': -21.3, 'Reed': -21.3, 'Mitoma': -21.3,
-      'Romero': -22.4, 'Barkley': -22.4, 'Watkins': -23.3, 'Robertson': -24.6,
-      'Pedro Lima': -24.9, 'Tolu': -25.8, 'Boly': -26.1, 'Dalot': -26.3,
-      'Gakpo': -27.5, 'Hutchinson': -27.7, 'Tzimas': -28.2, 'Buendia': -28.6,
-      'J.Palhinha': -29.0, 'Welbeck': -29.3, 'J.Timber': -29.3, 'Gittens': -30.6,
-      'Aznou': -31.1, 'Mavropanos': -32.0, 'Sessegnon': -32.0, 'McAtee': -32.1,
-      'Isak': -32.2, 'Woodman': -32.5, 'Bayindir': -32.7, 'Bowen': -32.8,
-      'Eyestone': -32.9, 'Areola': -34.1, 'Kinsky': -34.2, 'Endo': -35.5,
-      'Calafiori': -36.7, 'Gravenberch': -36.8, 'Kostoulas': -36.9,
-      'Danns': -37.6, 'L.Miley': -38.3, 'Sancho': -38.5, 'Davies': -39.1,
-      'Diakite': -39.9, 'Chukwueze': -39.9, 'J.Murphy': -40.0, 'Jose Sa': -40.2,
-      'Mings': -41.1, 'Mbeumo': -41.5, 'Livramento': -41.9, 'Johnson': -41.9,
-      'Muniz': -42.8, 'N.Gonzalez': -44.0, 'Ndoye': -44.8, 'Trippier': -45.0,
-      'Cash': -45.7, 'King': -46.2, 'Caicedo': -46.3, 'Murillo': -47.3,
-      'Van de Ven': -47.8, 'Schar': -48.0, 'Estevao': -48.3, 'Brooks': -48.4,
-      'Gordon': -49.3, 'Balcombe': -49.3, 'Solanke': -50.4, 'Cucurella': -51.3,
-      'Fofana': -51.7, 'Barnes': -52.1, 'Grealish': -52.3, 'Potts': -52.7,
-      'Foden': -52.9, 'Woltemade': -53.7, 'Raul': -54.3, 'Devenny': -55.1,
-      'Isidor': -56.4, 'Bradley': -56.7, 'Diouf': -57.2, 'Cairns': -57.3,
-      'De Ligt': -58.2, 'Nketiah': -58.4, 'Tete': -58.7, 'Hill': -59.2,
-      'Hudson-Odoi': -59.5, 'Norgaard': -62.0, 'Ekdal': -63.2, 'Pau': -64.0,
-      'Xavi': -64.2, 'Gunn': -87.7, 'Garnacho': -89.4, 'Rigg': -90.3,
-      'Gomez': -90.8, 'Havertz': -91.3, 'Piroe': -91.9, 'Hume': -92.3,
-      'Walker': -92.4, 'Proctor': -93.6, 'Christie': -84.2, 'Ba': -85.9,
-      'Neto': -86.4, 'Alcaraz': -87.4, 'Henderson': -87.5, 'Xhaka': -87.6,
-      'Krejci': -68.7, 'Martinelli': -69.2, 'Mee': -70.4, 'Amissah': -70.4,
-      'Hladky': -72.3, 'Rogers': -72.3, 'Milenkovic': -72.6, 'Welch': -73.4,
-      'Slonina': -73.6, 'Wright': -74.1, 'Wilson': -74.9, 'Doherty': -76.8,
-      'Zirkzee': -77.1, 'Steele': -77.3, 'Reijnders': -77.4, 'A.Murphy': -78.4,
-      'Longstaff': -78.5, 'A.Becker': -78.7, 'Palmer': -65.3, 'Gibbs-White': -66.1,
-      'Okafor': -66.7, 'Gillespie': -67.1, 'McGill': -67.2, 'Savinho': -67.9,
-      'Mount': -68.2, 'Cullen': -68.7, 'Kudus': -79.1, 'M.Salah': -79.3,
-      'Kolo Muani': -79.9, 'Patterson': -80.4, 'Lecomte': -80.7, 'Trafford': -80.9,
-      'Hickey': -81.6, 'Gudmundsson': -82.0, 'Kilman': -82.0, 'Perri': -83.1,
-      'Bettinelli': -93.7, 'Chiesa': -94.1, 'Roefs': -94.8, 'Austin': -95.2,
-      'Ramsdale': -95.5, 'James': -96.2, 'King': -96.5, 'Bogarde': -96.6,
-      'Gonzalez': -96.6, 'Nyoni': -96.8, 'Obi': -97.1, 'Pivas': -97.2,
-      'Clyne': -97.5, 'Tuanzebe': -97.8, 'Digne': -98.0, 'Foster': -98.5,
-      'Ruben': -99.1, 'Semenyo': -99.6, 'Sanchez': -99.6, 'Martinez': -99.7,
-      'Wirtz': -99.8, 'Chalobah': -100.0, 'Walker-Peters': -100.1,
+      // RISERS — Updated May 20 2026 from FFF
+      'Doku': 99.7, 'Truffert': 76.5, 'Kroupi.Jr': 62.7,
+      'Mateta': 54.0, 'Haaland': 51.8, 'Szoboszlai': 45.9,
+      'Rice': 42.9, 'Anderson': 26.7, 'Cherki': 45.2,
+      'Virgil': 11.2, 'Enzo': 8.9, 'Richarlison': 2.9,
+      'Senesi': 2.1,
+      // FALLERS — Updated May 20 2026 from FFF
+      'Gibbs-White': -55.6, 'Mavropanos': -15.8, 'Bowen': -28.1,
+      'Havertz': -79.7, 'Semenyo': -102.7, 'Casemiro': -6.7,
+      'Okafor': -72.0, 'Thiago': -22.8, 'Wilson': -1.2,
+      'Gyokeres': -3.8, 'Strand Larsen': -1.3, 'Garner': -2.6,
+      'Schade': -11.0, 'J.Palhinha': -27.3, 'Wilson': -72.1,
     };
 
     function calculateProgress(player) {
@@ -253,16 +204,14 @@ export default async function handler(req, res) {
       const transfersInRate = transfersIn;
       const transfersOutRate = transfersOut;
       // Speed = how fast progress is currently moving (per hour)
-      // Use net transfers relative to threshold, assume ~24 hours of activity
-      // Lower ownership players move faster with same transfer volume
-      const hoursActive = 24;
-      const netRate = Math.abs(transfersIn - transfersOut) / hoursActive;
+      // Use net transfers relative to threshold, assume ~12 hours of activity for more responsive speed
+      const hoursActive = 12;
+      const netRate = (transfersIn - transfersOut) / hoursActive;
       const rawSpeed = (netRate / threshold) * 100;
-      // Round to nearest 0.1, min 0.1 if any activity, cap at 0.5
-      const speed = (transfersIn > 0 || transfersOut > 0) ? Math.min(0.5, Math.max(0.1, Math.round(rawSpeed * 10) / 10)) : 0;
-      // Speed direction: if net transfers IN > OUT, speed is ▲ (rising), else ▼ (falling)
-      // This is independent of whether the player is in risers or fallers list
-      const speedDirection = (transfersIn >= transfersOut) ? 'up' : 'down';
+      // Round to nearest 0.1, cap at 1.0
+      const speed = (transfersIn > 0 || transfersOut > 0) ? Math.min(1.0, Math.max(0.1, Math.round(Math.abs(rawSpeed) * 10) / 10)) : 0;
+      // Speed direction: positive = being bought (progress moving toward +), negative = being sold
+      const speedDirection = netRate >= 0 ? 'up' : 'down';
 
       const playerData = {
         id: player.id,
