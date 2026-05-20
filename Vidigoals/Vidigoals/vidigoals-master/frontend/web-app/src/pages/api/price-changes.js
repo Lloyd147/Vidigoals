@@ -130,11 +130,21 @@ export default async function handler(req, res) {
       const seedValue = SEED_PROGRESS[playerName] || null;
 
       if (seedValue !== null) {
-        // Progress = seed + (speed × hours since seed)
-        // Speed moves progress toward +100 (if buying) or -100 (if selling)
+        // Progress = seed + (speed × hours since seed) - daily decay
+        // FFF reduces progress by ~1.5% per day (transfers age out)
         const hoursElapsed = Math.max(0, (Date.now() - SEED_TIMESTAMP) / (1000 * 60 * 60));
+        const daysElapsed = hoursElapsed / 24;
+        const dailyDecay = daysElapsed * 1.5; // ~1.5% reduction per day
         const progressDelta = rawSpeed * Math.min(hoursElapsed, 72);
+        
+        // Apply: seed + transfer-driven movement - daily decay
+        // Decay pulls progress toward 0 (risers decrease, fallers increase toward 0)
         let progress = seedValue + progressDelta;
+        if (progress > 0) {
+          progress = Math.max(0, progress - dailyDecay);
+        } else {
+          progress = Math.min(0, progress + dailyDecay);
+        }
         progress = Math.max(-100, Math.min(100, progress));
 
         const isRising = progress >= 0;
