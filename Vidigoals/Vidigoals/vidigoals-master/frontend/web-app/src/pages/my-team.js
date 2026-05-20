@@ -758,16 +758,35 @@ export default function MyTeam() {
                       const fullName = (player.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss');
                       const lastName = fullName.split(' ').pop() || '';
                       const webCompact = webName.replace(/[-\s.']/g, '');
+                      const playerTeamLower = (player.team_name || '').toLowerCase();
+                      const playerShortLower = (player.team_short || '').toLowerCase();
+
                       const match = Object.values(odds).find(o => {
                         const oddsName = (o.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss');
                         const oddsLast = oddsName.split(' ').pop() || '';
                         const oddsCompact = oddsName.replace(/[-\s.']/g, '');
+                        const oddsFixture = (o.fixture || '').toLowerCase();
+
+                        const teamVariants = [playerTeamLower, playerShortLower];
+                        if (playerTeamLower === 'spurs') teamVariants.push('tottenham');
+                        if (playerTeamLower === 'wolves') teamVariants.push('wolverhampton');
+                        if (playerTeamLower.includes('man city')) teamVariants.push('manchester city');
+                        if (playerTeamLower.includes('man utd')) teamVariants.push('manchester united');
+                        if (playerTeamLower.includes("nott'm forest")) teamVariants.push('nottingham forest');
+                        const sameFixture = teamVariants.some(v => oddsFixture.includes(v));
+
                         if (oddsName === fullName) return true;
-                        if (oddsName.includes(webName)) return true;
-                        if (webName.includes(oddsLast) && oddsLast.length > 3) return true;
-                        if (oddsLast === lastName && lastName.length > 3) return true;
+                        if (oddsName.includes(webName) && webName.length > 4) return true;
                         if (oddsCompact.includes(webCompact) && webCompact.length > 5) return true;
-                        if (webCompact.includes(oddsCompact.split(' ').pop()) && oddsCompact.length > 5) return true;
+
+                        if (sameFixture) {
+                          const webParts = webName.split(/[-\s]/);
+                          for (const part of webParts) {
+                            if (part.length >= 4 && oddsName.includes(part)) return true;
+                          }
+                          if (oddsLast === lastName && lastName.length > 2) return true;
+                          if (webName.includes(oddsLast) && oddsLast.length > 3) return true;
+                        }
                         return false;
                       });
                       // Only show odds if the fixture matches (odds are for a specific match)
