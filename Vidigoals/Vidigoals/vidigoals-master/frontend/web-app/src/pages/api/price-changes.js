@@ -75,7 +75,7 @@ export default async function handler(req, res) {
     //
     // Formula: threshold = BASE × (1 + ownership^0.55)
     // BASE calibrated so Doku (6.5% own, high net transfers) hits ~100%
-    const BASE_FACTOR = 65000;
+    const BASE_FACTOR = 130000;
 
     // ── Seed data from Fantasy Football Fix (GW37, May 19 2026) ───────────
     // These are the starting progress percentages. Our formula only adds/subtracts
